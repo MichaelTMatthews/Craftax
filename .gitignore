@@ -1,0 +1,11 @@
+tmp/
+wandb/
+res/
+runs/
+
+.idea
+__pycache__/
+*.DS_Store
+
+# Pyenv
+.python-version
