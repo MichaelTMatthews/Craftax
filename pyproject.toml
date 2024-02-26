@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "craftax"
+version = "0.0.1"
+authors = [
+  { name="Michael Matthews", email="michael.matthews@eng.ox.ac.uk" },
+]
+description = "An open-world environment for training RL agents"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "jax",
+    "distrax",
+    "optax",
+    "flax",
+    "numpy",
+    "black==23.3.0",
+    "pre-commit==3.3.3",
+    "argparse",
+    "wandb",
+    "orbax-checkpoint",
+    "pygame",
+    "gymnax",
+    "chex",
+    "matplotlib",
+    "imageio",
+]
+
+[project.scripts]
+play_craftax = "play_craftax:entry_point"
+play_craftax_classic = "play_craftax_classic:main"
+
+[project.urls]
+Homepage = "https://github.com/MichaelTMatthews/Craftax"
+Issues = "https://github.com/MichaelTMatthews/Craftax/issues"
+
+[tool.setuptools.packages.find]
+where=["src"]

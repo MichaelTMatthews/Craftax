@@ -1,14 +1,115 @@
+<p align="center">
+ <img width="80%" src="images/logo.png" />
+</p>
+
+# Craftax
+Craftax is an RL environment written entirely in <a href="https://github.com/google/jax">JAX</a>.  Craftax reimplements and significantly extends the game mechanics of <a href="https://danijar.com/project/crafter/">Crafter</a>, taking inspiration from roguelike games such as <a href="https://github.com/facebookresearch/nle">NetHack</a>.
+Craftax conforms to the <a href="https://github.com/RobertTLange/gymnax">gymnax</a> interface, allowing easy integration with existing JAX-based frameworks like <a href="https://chrislu.page/blog/meta-disco/">PureJaxRL</a>.
+
+<p align="middle">
+  <img src="images/archery.gif" width="200" />
+  <img src="images/building.gif" width="200" /> 
+  <img src="images/dungeon_crawling.gif" width="200" />
+</p>
+<p align="middle">
+  <img src="images/farming.gif" width="200" />
+  <img src="images/magic.gif" width="200" /> 
+  <img src="images/mining.gif" width="200" />
+</p>
+
+# Basic Usage
+Craftax conforms to the gymnax interface:
+```
+rng = jax.random.PRGNKey(0)
+rng, _rng = jax.random.split(rng)
+rngs = jax.random.split(_rng, 3)
+
+# Create environment
+env = AutoResetEnvWrapper(CraftaxSymbolicEnv())
+
+# Get an initial state and observation
+obs, env_state = env.reset(rngs[0], env_params)
+
+# Pick random action
+action = env.action_space(env_params).sample(rngs[1])
+
+# Step environment
+obs, env_state, reward, done, info = env.step(rngs[2], state, action, env_params)
+```
+
 # Installation
+The latest Craftax release can be installed from PyPi:
 ```
-git clone ...
+pip install craftax
+```
+If you want the most recent commit instead use:
+```
+pip install git+https://github.com/MichaelTMatthews/Craftax.git@main
+```
+
+## Extending Craftax
+If you want to extend Craftax, run:
+```
+git clone https://github.com/MichaelTMatthews/Craftax.git
 cd Craftax
-pip install -r requirements.txt
-pre-commit install
+pip install --editable .
 ```
 
-Then install jax with GPU enabled
+# Play
+To play Craftax run:
+```
+python -m src.play_craftax
+```
+or to play Craftax-Classic run:
+```
+python -m src.play_craftax_classic
+```
+Since Craftax runs entirely in JAX, it will take some time to compile the rendering and step functions - it might take around 30s to render the first frame and then another 20s to take the first action.  After this it should be very quick.  A tutorial for how to beat the game is present in `tutorial.md`.  The controls are printed out at the beginning of play.
+# Experiment
+To run PPO with default hyperparameters run:
+```
+python -m src.ppo
+```
+or to run PPO with memory call:
+```
+python -m src.ppo_rnn
+```
+To use ICM or E3B with the default parameters use the `--train_icm` and `--use_e3b` flags.
+Use the `env_name` parameter to control which environment is used.  It can be set to  `"Craftax-Symbolic-v1"`, `"Craftax-Pixels-v1"`, `"Craftax-Classic-Symbolic-v1"` or `"Craftax-Classic-Pixels-v1"`
 
-# Run
-Run `ppo.py` for experiments, the default arguments should work fine.
-To play Craftax run `play_craftax.py` and to play Craftax-Clssic run `play_craftax_classic.py`.
-The initial rendering and first 2 movements will trigger JIT compilation and be very slow but after that it should run very fast.
+# Gotchas
+Craftax provides the option to use optimistic resets to improve performance, which means that (unlike regular gymnax environments) it **does not auto-reset** by default.
+This means that the environment should always be wrapped either in `EfficientResetVecEnvWrapper` or `AutoResetEnvWrapper`.  See `ppo.py` for correct usage of both wrappers.
+
+# Scoreboard
+If you would like to add an algorithm please open a PR and provide a reference to the source of the results.
+
+## Craftax-1B
+| Algorithm | Reward (% max) |                                  Source                                   |
+|:----------|---------------:|:-------------------------------------------------------------------------:|
+| PPO-RNN   |           15.3 | <a href="https://github.com/luchris429/purejaxrl/tree/main">PureJaxRL</a> |
+| PPO       |           11.9 | <a href="https://github.com/luchris429/purejaxrl/tree/main">PureJaxRL</a> |
+| ICM       |           11.9 |           <a href="https://arxiv.org/abs/1705.05363">ICM</a>              |
+| E3B       |           11.0 |            <a href="https://arxiv.org/abs/2210.05805">E3B</a>             |
+
+
+## Craftax-1M
+| Algorithm | Reward (% max) |                                  Source                                   |
+|:----------|---------------:|:-------------------------------------------------------------------------:|
+| PPO-RNN   |            2.3 | <a href="https://github.com/luchris429/purejaxrl/tree/main">PureJaxRL</a> |
+| PPO       |            2.2 | <a href="https://github.com/luchris429/purejaxrl/tree/main">PureJaxRL</a> |
+| ICM       |            2.2 |           <a href="https://arxiv.org/abs/1705.05363">ICM</a>              |
+| E3B       |            2.2 |            <a href="https://arxiv.org/abs/2210.05805">E3B</a>             |
+
+
+
+# Citation
+If you use Craftax in your work please cite it as follows:
+```
+@article{matthews2024craftax,
+  title={Craftax: A Lightning-Fast Benchmark for Open-Ended Reinforcement Learning},
+  author={Michael Matthews and Michael Beukman and Benjamin Ellis and Mikayel Samvelyan and Matthew Jackson and Samuel Coward and Jakob Foerster},
+  journal={arXiv preprint},
+  year={2024},
+}
+```

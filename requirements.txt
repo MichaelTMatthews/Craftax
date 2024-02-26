@@ -1,0 +1,15 @@
+jax
+distrax
+optax
+flax
+numpy
+black==23.3.0
+pre-commit==3.3.3
+argparse
+wandb
+orbax-checkpoint
+pygame
+gymnax
+chex
+matplotlib
+imageio
