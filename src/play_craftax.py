@@ -191,18 +191,20 @@ def main(args):
 
         renderer.render(env_state)
 
-    save_name = f"play_data/trajectories_{int(time.time())}"
-    if args.god_mode:
-        save_name += "_GM"
-    save_name += ".pkl"
-    Path("play_data").mkdir(parents=True, exist_ok=True)
-    save_compressed_pickle(save_name, traj_history)
+    if args.save_trajectories:
+        save_name = f"play_data/trajectories_{int(time.time())}"
+        if args.god_mode:
+            save_name += "_GM"
+        save_name += ".pkl"
+        Path("play_data").mkdir(parents=True, exist_ok=True)
+        save_compressed_pickle(save_name, traj_history)
 
 
 def entry_point():
     parser = argparse.ArgumentParser()
     parser.add_argument("--god_mode", action="store_true")
     parser.add_argument("--debug", action="store_true")
+    parser.add_argument("--save_trajectories", action="store_true")
 
     args, rest_args = parser.parse_known_args(sys.argv[1:])
     if rest_args:
