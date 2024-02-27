@@ -8,7 +8,7 @@
        <a href= "https://craftaxenv.github.io/">
         <img src="https://img.shields.io/badge/blog_post-purple" /></a>
        <a href= "https://arxiv.org/pdf/2402.16801.pdf">
-        <img src="https://img.shields.io/badge/arxiv-2402.16801-red" /></a>
+        <img src="https://img.shields.io/badge/arxiv-2402.16801-b31b1b" /></a>
        <a href= "https://github.com/psf/black">
         <img src="https://img.shields.io/badge/code%20style-black-000000.svg" /></a>
 </p>
