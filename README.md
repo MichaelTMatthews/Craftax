@@ -7,8 +7,8 @@
         <img src="https://img.shields.io/badge/License-MIT-blue" /></a>
        <a href= "https://craftaxenv.github.io/">
         <img src="https://img.shields.io/badge/blog_post-purple" /></a>
-       <a href= "https://arxiv.org/">
-        <img src="https://img.shields.io/badge/arxiv-XXXX-red" /></a>
+       <a href= "https://arxiv.org/pdf/2402.16801.pdf">
+        <img src="https://img.shields.io/badge/arxiv-2402.16801-red" /></a>
        <a href= "https://github.com/psf/black">
         <img src="https://img.shields.io/badge/code%20style-black-000000.svg" /></a>
 </p>
@@ -48,7 +48,7 @@ obs, state = env.reset(rngs[0], env_params)
 action = env.action_space(env_params).sample(rngs[1])
 
 # Step environment
-obs, env_state, reward, done, info = env.step(rngs[2], state, action, env_params)
+obs, state, reward, done, info = env.step(rngs[2], state, action, env_params)
 ```
 
 # Installation
