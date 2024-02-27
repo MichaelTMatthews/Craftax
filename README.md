@@ -2,6 +2,19 @@
  <img width="80%" src="images/logo.png" />
 </p>
 
+<p align="center">
+       <a href= "https://github.com/MichaelTMatthews/Craftax/blob/main/LICENSE">
+        <img src="https://img.shields.io/badge/License-MIT-blue" /></a>
+       <a href= "https://craftaxenv.github.io/">
+        <img src="https://img.shields.io/badge/blog_post-purple" /></a>
+       <a href= "https://arxiv.org/">
+        <img src="https://img.shields.io/badge/arxiv-XXXX-red" /></a>
+       <a href= "https://github.com/psf/black">
+        <img src="https://img.shields.io/badge/code%20style-black-000000.svg" /></a>
+</p>
+
+
+
 # Craftax
 Craftax is an RL environment written entirely in <a href="https://github.com/google/jax">JAX</a>.  Craftax reimplements and significantly extends the game mechanics of <a href="https://danijar.com/project/crafter/">Crafter</a>, taking inspiration from roguelike games such as <a href="https://github.com/facebookresearch/nle">NetHack</a>.
 Craftax conforms to the <a href="https://github.com/RobertTLange/gymnax">gymnax</a> interface, allowing easy integration with existing JAX-based frameworks like <a href="https://chrislu.page/blog/meta-disco/">PureJaxRL</a>.
@@ -20,15 +33,16 @@ Craftax conforms to the <a href="https://github.com/RobertTLange/gymnax">gymnax<
 # Basic Usage
 Craftax conforms to the gymnax interface:
 ```
-rng = jax.random.PRGNKey(0)
+rng = jax.random.PRNGKey(0)
 rng, _rng = jax.random.split(rng)
 rngs = jax.random.split(_rng, 3)
 
 # Create environment
 env = AutoResetEnvWrapper(CraftaxSymbolicEnv())
+env_params = env.default_params
 
 # Get an initial state and observation
-obs, env_state = env.reset(rngs[0], env_params)
+obs, state = env.reset(rngs[0], env_params)
 
 # Pick random action
 action = env.action_space(env_params).sample(rngs[1])
