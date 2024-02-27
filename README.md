@@ -69,6 +69,13 @@ cd Craftax
 pip install --editable .
 ```
 
+## GPU-Enabled JAX
+By default, both of the above methods will install JAX on the CPU.  If you want to run JAX on a GPU/TPU, you'll need to install the correct wheel for your system from <a href="https://github.com/google/jax?tab=readme-ov-file#installation">JAX</a>.
+For NVIDIA GPU the command is:
+```
+pip install -U "jax[cuda12_pip]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
+```
+
 # Play
 To play Craftax run:
 ```
