@@ -30,7 +30,6 @@ from environment_base.wrappers import (
     AutoResetEnvWrapper,
     BatchEnvWrapper,
 )
-from tech_tree_gridworld.gridworld_tech_tree import Gridworld
 
 
 class Transition(NamedTuple):
