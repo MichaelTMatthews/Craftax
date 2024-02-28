@@ -12,12 +12,12 @@ from craftax_classic.renderer import render_craftax_symbolic
 from craftax_classic.world_gen import generate_world
 
 
-class CraftaxEnv(EnvironmentNoAutoReset):
+class CraftaxClassicSymbolicEnv(EnvironmentNoAutoReset):
     def __init__(self, static_env_params: StaticEnvParams = None):
         super().__init__()
 
         if static_env_params is None:
-            static_env_params = CraftaxEnv.default_static_params()
+            static_env_params = CraftaxClassicSymbolicEnv.default_static_params()
         self.static_env_params = static_env_params
 
     @property
@@ -90,7 +90,7 @@ class CraftaxEnv(EnvironmentNoAutoReset):
 
     @staticmethod
     def get_flat_map_obs_shape():
-        map_obs_shape = CraftaxEnv.get_map_obs_shape()
+        map_obs_shape = CraftaxClassicSymbolicEnv.get_map_obs_shape()
         return map_obs_shape[0] * map_obs_shape[1] * map_obs_shape[2]
 
     @staticmethod

@@ -12,12 +12,12 @@ from craftax_classic.renderer import render_craftax_pixels
 from craftax_classic.world_gen import generate_world
 
 
-class CraftaxEnv(EnvironmentNoAutoReset):
+class CraftaxClassicPixelsEnv(EnvironmentNoAutoReset):
     def __init__(self, static_env_params: StaticEnvParams = None):
         super().__init__()
 
         if static_env_params is None:
-            static_env_params = CraftaxEnv.default_static_params()
+            static_env_params = CraftaxClassicPixelsEnv.default_static_params()
         self.static_env_params = static_env_params
 
     @property

@@ -13,12 +13,12 @@ from craftax.world_gen.world_gen import generate_world
 from environment_base.environment_no_auto_reset import EnvironmentNoAutoReset
 
 
-class CraftaxEnv(EnvironmentNoAutoReset):
+class CraftaxPixelsEnv(EnvironmentNoAutoReset):
     def __init__(self, static_env_params: Optional[StaticEnvParams] = None):
         super().__init__()
 
         if static_env_params is None:
-            static_env_params = CraftaxEnv.default_static_params()
+            static_env_params = CraftaxPixelsEnv.default_static_params()
         self.static_env_params = static_env_params
 
     @property
