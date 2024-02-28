@@ -182,13 +182,7 @@ def render_craftax_symbolic(state: EnvState):
     return all_flattened
 
 
-@partial(
-    jax.jit,
-    static_argnums=(
-        1,
-        2,
-    ),
-)
+@partial(jax.jit, static_argnums=(1,2,))
 def render_craftax_pixels(state, block_pixel_size, do_night_noise=True):
     textures = TEXTURES[block_pixel_size]
     obs_dim_array = jnp.array([OBS_DIM[0], OBS_DIM[1]], dtype=jnp.int32)
@@ -889,13 +883,277 @@ def render_craftax_pixels(state, block_pixel_size, do_night_noise=True):
     return pixels
 
 
-def render_pixels_empty(block_pixel_size):
-    pixels = jnp.zeros(
+def render_craftax_text(state: EnvState):
+
+    text_obs = "Map:\n"
+
+    # Map
+    map = state.map[state.player_level]
+
+    obs_dim_array = jnp.array([OBS_DIM[0], OBS_DIM[1]], dtype=jnp.int32)
+
+    # Map
+    padded_grid = jnp.pad(
+        map,
+        (MAX_OBS_DIM + 2, MAX_OBS_DIM + 2),
+        constant_values=BlockType.OUT_OF_BOUNDS.value,
+    )
+
+    tl_corner = state.player_position - obs_dim_array // 2 + MAX_OBS_DIM + 2
+
+    map_view = jax.lax.dynamic_slice(padded_grid, tl_corner, OBS_DIM)
+
+
+    padded_items_map = jnp.pad(
+        state.item_map[state.player_level],
+        (MAX_OBS_DIM + 2, MAX_OBS_DIM + 2),
+        constant_values=ItemType.NONE.value,
+    )
+
+    item_map_view = jax.lax.dynamic_slice(padded_items_map, tl_corner, OBS_DIM)
+
+    # Mobs
+    mob_types_per_class = 8
+    mob_map = jnp.zeros(
+        (*OBS_DIM, 5 * mob_types_per_class), dtype=jnp.int32
+    )  # 5 classes * 8 types
+
+    def _add_mob_to_map(carry, mob_index):
+        mob_map, mobs, mob_class_index = carry
+
+        local_position = (
+                mobs.position[mob_index]
+                - state.player_position
+                + jnp.array([OBS_DIM[0], OBS_DIM[1]]) // 2
+        )
+        on_screen = jnp.logical_and(
+            local_position >= 0, local_position < jnp.array([OBS_DIM[0], OBS_DIM[1]])
+        ).all()
+        on_screen *= mobs.mask[mob_index]
+
+        mob_identifier = mob_class_index * mob_types_per_class + mobs.type_id[mob_index]
+        mob_map = mob_map.at[local_position[0], local_position[1], mob_identifier].set(
+            on_screen.astype(jnp.int32)
+        )
+
+        return (mob_map, mobs, mob_class_index), None
+
+    (mob_map, _, _), _ = jax.lax.scan(
+        _add_mob_to_map,
+        (mob_map, jax.tree_map(lambda x: x[state.player_level], state.melee_mobs), 0),
+        jnp.arange(state.melee_mobs.mask.shape[1]),
+    )
+    (mob_map, _, _), _ = jax.lax.scan(
+        _add_mob_to_map,
+        (mob_map, jax.tree_map(lambda x: x[state.player_level], state.passive_mobs), 1),
+        jnp.arange(state.passive_mobs.mask.shape[1]),
+    )
+    (mob_map, _, _), _ = jax.lax.scan(
+        _add_mob_to_map,
+        (mob_map, jax.tree_map(lambda x: x[state.player_level], state.ranged_mobs), 2),
+        jnp.arange(state.ranged_mobs.mask.shape[1]),
+    )
+    (mob_map, _, _), _ = jax.lax.scan(
+        _add_mob_to_map,
         (
-            OBS_DIM * block_pixel_size,
-            (OBS_DIM + INVENTORY_OBS_HEIGHT) * block_pixel_size,
+            mob_map,
+            jax.tree_map(lambda x: x[state.player_level], state.mob_projectiles),
             3,
         ),
-        dtype=jnp.float32,
+        jnp.arange(state.mob_projectiles.mask.shape[1]),
     )
-    return pixels
+    (mob_map, _, _), _ = jax.lax.scan(
+        _add_mob_to_map,
+        (
+            mob_map,
+            jax.tree_map(lambda x: x[state.player_level], state.player_projectiles),
+            4,
+        ),
+        jnp.arange(state.player_projectiles.mask.shape[1]),
+    )
+
+    def mob_id_to_name(id):
+        if id == 0:
+            return "Zombie"
+        elif id == 1:
+            return "Gnome Warrior"
+        elif id == 2:
+            return "Orc Soldier"
+        elif id == 3:
+            return "Lizard"
+        elif id == 4:
+            return "Knight"
+        elif id == 5:
+            return "Troll"
+        elif id == 6:
+            return "Pigman"
+        elif id == 7:
+            return "Frost Troll"
+        elif id == 8:
+            return "Cow"
+        elif id == 9:
+            return "Bat"
+        elif id == 10:
+            return "Snail"
+        elif id == 16:
+            return "Skeleton"
+        elif id == 17:
+            return "Gnome Archer"
+        elif id == 18:
+            return "Orc Mage"
+        elif id == 19:
+            return "Kobold"
+        elif id == 20:
+            return "Archer"
+        elif id == 21:
+            return "Deep Thing"
+        elif id == 22:
+            return "Fire Elemental"
+        elif id == 23:
+            return "Ice Elemental"
+        elif id == 24:
+            return "Arrow"
+        elif id == 25:
+            return "Dagger"
+        elif id == 26:
+            return "Fireball"
+        elif id == 27:
+            return "Iceball"
+        elif id == 28:
+            return "Arrow"
+        elif id == 29:
+            return "Slimeball"
+        elif id == 30:
+            return "Fireball"
+        elif id == 31:
+            return "Iceball"
+        elif id == 32:
+            return "Arrow (Player)"
+        elif id == 33:
+            return "Dagger (Player)"
+        elif id == 34:
+            return "Fireball (Player)"
+        elif id == 35:
+            return "Iceball (Player)"
+        elif id == 36:
+            return "Arrow (Player)"
+        elif id == 37:
+            return "Slimeball (Player)"
+        elif id == 38:
+            return "Fireball (Player)"
+        elif id == 39:
+            return "Iceball (Player)"
+
+
+    padded_light_map = jnp.pad(
+        state.light_map[state.player_level],
+        (MAX_OBS_DIM + 2, MAX_OBS_DIM + 2),
+        constant_values=0.0,
+    )
+    light_map_view = jax.lax.dynamic_slice(padded_light_map, tl_corner, OBS_DIM) > 0.05
+
+    for x in range(OBS_DIM[0]):
+        for y in range(OBS_DIM[1]):
+            text_obs += f"{y - OBS_DIM[1] // 2}, {x - OBS_DIM[0] // 2}: "
+            if light_map_view[x, y]:
+                if mob_map[x, y].max() > 0.5:
+                    text_obs += mob_id_to_name(mob_map[x, y].argmax()) + " on "
+                if item_map_view[x, y] != ItemType.NONE.value:
+                    text_obs += ItemType(item_map_view[x, y]).name.lower() + " on "
+                text_obs += BlockType(map_view[x, y]).name.lower() + "\n"
+            else:
+                text_obs += "Darkness\n"
+
+    # Inventory
+    text_obs += "\nInventory:\n"
+    text_obs += f"Wood: {state.inventory.wood}\n"
+    text_obs += f"Stone: {state.inventory.stone}\n"
+    text_obs += f"Coal: {state.inventory.coal}\n"
+    text_obs += f"Iron: {state.inventory.iron}\n"
+    text_obs += f"Diamond: {state.inventory.diamond}\n"
+    text_obs += f"Sapphire: {state.inventory.sapphire}\n"
+    text_obs += f"Ruby: {state.inventory.ruby}\n"
+    text_obs += f"Sapling: {state.inventory.sapling}\n"
+    text_obs += f"Torch: {state.inventory.torches}\n"
+    text_obs += f"Arrow: {state.inventory.arrows}\n"
+    text_obs += f"Book: {state.inventory.books}\n"
+
+    def level_to_material(level):
+        if level == 1:
+            return "Wood"
+        elif level == 2:
+            return "Stone"
+        elif level == 3:
+            return "Iron"
+        elif level == 4:
+            return "Diamond"
+
+
+    def level_to_enchantment(level):
+        if level == 0:
+            return "No"
+        if level == 1:
+            return "Fire"
+        elif level == 2:
+            return "Ice"
+
+    if state.inventory.pickaxe > 0:
+        text_obs += level_to_material(state.inventory.pickaxe) + " Pickaxe\n"
+    if state.inventory.sword > 0:
+        text_obs += level_to_material(state.inventory.sword) + " Sword"
+        text_obs += " with " + level_to_enchantment(state.sword_enchantment) + " enchantment\n"
+    if state.inventory.bow > 0:
+        text_obs += "Bow with " + level_to_enchantment(state.bow_enchantment) + " enchantment\n"
+
+    text_obs += f"Red potion: {state.inventory.potions[0]}\n"
+    text_obs += f"Green potion: {state.inventory.potions[1]}\n"
+    text_obs += f"Blue potion: {state.inventory.potions[2]}\n"
+    text_obs += f"Pink potion: {state.inventory.potions[3]}\n"
+    text_obs += f"Cyan potion: {state.inventory.potions[4]}\n"
+    text_obs += f"Yellow potion: {state.inventory.potions[5]}\n"
+
+    def get_armour_level(level):
+        if level == 1:
+            return "Iron"
+        elif level == 2:
+            return "Diamond"
+
+    if state.inventory.armour[0] > 0:
+        text_obs += f"{get_armour_level(state.inventory.armour[0])} Helmet"
+        text_obs += " with " + level_to_enchantment(state.armour_enchantments[0]) + " enchantment\n"
+
+    if state.inventory.armour[1] > 0:
+        text_obs += f"{get_armour_level(state.inventory.armour[1])} Chestplate"
+        text_obs += " with " + level_to_enchantment(state.armour_enchantments[1]) + " enchantment\n"
+
+    if state.inventory.armour[2] > 0:
+        text_obs += f"{get_armour_level(state.inventory.armour[2])} Leggings"
+        text_obs += " with " + level_to_enchantment(state.armour_enchantments[2]) + " enchantment\n"
+
+    if state.inventory.armour[3] > 0:
+        text_obs += f"{get_armour_level(state.inventory.armour[3])} Boots"
+        text_obs += " with " + level_to_enchantment(state.armour_enchantments[3]) + " enchantment\n"
+
+    text_obs += f"Health: {state.player_health}\n"
+    text_obs += f"Food: {state.player_food}\n"
+    text_obs += f"Drink: {state.player_drink}\n"
+    text_obs += f"Energy: {state.player_energy}\n"
+    text_obs += f"Mana: {state.player_mana}\n"
+    text_obs += f"XP: {state.player_xp}\n"
+    text_obs += f"Dexterity: {state.player_dexterity}\n"
+    text_obs += f"Strength: {state.player_strength}\n"
+    text_obs += f"Intelligence: {state.player_intelligence}\n"
+
+    text_obs += f"Direction: {Action(state.player_direction).name.lower()}\n"
+
+    text_obs += f"Light: {state.light_level}\n"
+    text_obs += f"Is Sleeping: {state.is_sleeping}\n"
+    text_obs += f"Is Resting: {state.is_resting}\n"
+    text_obs += f"Learned Fireball: {state.learned_spells[0]}\n"
+    text_obs += f"Learned Iceball: {state.learned_spells[1]}\n"
+    text_obs += f"Floor: {state.player_level}\n"
+    text_obs += f"Ladder Open: {state.monsters_killed[state.player_level] >= MONSTERS_KILLED_TO_CLEAR_LEVEL}\n"
+    text_obs += f"Is Boss Vulnerable: {is_boss_vulnerable(state)}\n"
+
+    return text_obs
+

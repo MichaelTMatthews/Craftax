@@ -50,7 +50,7 @@ def get_new_full_inventory():
         iron=jnp.asarray(99, dtype=jnp.int32),
         diamond=jnp.asarray(99, dtype=jnp.int32),
         sapling=jnp.asarray(99, dtype=jnp.int32),
-        pickaxe=jnp.asarray(99, dtype=jnp.int32),
+        pickaxe=jnp.asarray(4, dtype=jnp.int32),
         sword=jnp.asarray(4, dtype=jnp.int32),
         bow=jnp.asarray(1, dtype=jnp.int32),
         arrows=jnp.asarray(99, dtype=jnp.int32),
