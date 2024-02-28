@@ -62,7 +62,7 @@ pip install git+https://github.com/MichaelTMatthews/Craftax.git@main
 ```
 
 ## Extending Craftax
-If you want to extend Craftax, run:
+If you want to extend Craftax, run (make sure you have `pip>=23.0`):
 ```
 git clone https://github.com/MichaelTMatthews/Craftax.git
 cd Craftax
