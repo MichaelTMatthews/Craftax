@@ -135,24 +135,24 @@ def make_train(config):
     )
 
     if config["ENV_NAME"] == "Craftax-Classic-Symbolic-v1":
-        from craftax_classic import CraftaxSymbolicEnv
+        from craftax_classic.envs.craftax_symbolic_env import CraftaxClassicSymbolicEnv
 
-        env = CraftaxSymbolicEnv(CraftaxSymbolicEnv.default_static_params())
+        env = CraftaxClassicSymbolicEnv()
         is_symbolic = True
     elif config["ENV_NAME"] == "Craftax-Classic-Pixels-v1":
-        from craftax_classic import CraftaxPixelsEnv
+        from craftax_classic.envs.craftax_pixels_env import CraftaxClassicPixelsEnv
 
-        env = CraftaxPixelsEnv(CraftaxPixelsEnv.default_static_params())
+        env = CraftaxClassicPixelsEnv()
         is_symbolic = False
     elif config["ENV_NAME"] == "Craftax-Symbolic-v1":
-        from craftax import CraftaxSymbolicEnv
+        from craftax.envs.craftax_symbolic_env import CraftaxSymbolicEnv
 
-        env = CraftaxSymbolicEnv(CraftaxSymbolicEnv.default_static_params())
+        env = CraftaxSymbolicEnv()
         is_symbolic = True
     elif config["ENV_NAME"] == "Craftax-Pixels-v1":
-        from craftax import CraftaxPixelsEnv
+        from craftax.envs.craftax_pixels_env import CraftaxPixelsEnv
 
-        env = CraftaxPixelsEnv(CraftaxPixelsEnv.default_static_params())
+        env = CraftaxPixelsEnv()
         is_symbolic = False
     else:
         raise ValueError(f"Unknown env: {config['ENV_NAME']}")

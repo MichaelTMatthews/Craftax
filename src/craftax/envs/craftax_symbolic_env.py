@@ -14,12 +14,12 @@ from craftax.util.game_logic_utils import has_beaten_boss
 from craftax.world_gen.world_gen import generate_world
 
 
-class CraftaxEnv(EnvironmentNoAutoReset):
+class CraftaxSymbolicEnv(EnvironmentNoAutoReset):
     def __init__(self, static_env_params: Optional[StaticEnvParams] = None):
         super().__init__()
 
         if static_env_params is None:
-            static_env_params = CraftaxEnv.default_static_params()
+            static_env_params = CraftaxSymbolicEnv.default_static_params()
         self.static_env_params = static_env_params
 
     @property
@@ -95,7 +95,7 @@ class CraftaxEnv(EnvironmentNoAutoReset):
 
     @staticmethod
     def get_flat_map_obs_shape():
-        map_obs_shape = CraftaxEnv.get_map_obs_shape()
+        map_obs_shape = CraftaxSymbolicEnv.get_map_obs_shape()
         return map_obs_shape[0] * map_obs_shape[1] * map_obs_shape[2]
 
     @staticmethod
