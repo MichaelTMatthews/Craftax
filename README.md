@@ -17,7 +17,7 @@
 
 # Craftax
 Craftax is an RL environment written entirely in <a href="https://github.com/google/jax">JAX</a>.  Craftax reimplements and significantly extends the game mechanics of <a href="https://danijar.com/project/crafter/">Crafter</a>, taking inspiration from roguelike games such as <a href="https://github.com/facebookresearch/nle">NetHack</a>.
-Craftax conforms to the <a href="https://github.com/RobertTLange/gymnax">gymnax</a> interface, allowing easy integration with existing JAX-based frameworks like <a href="https://chrislu.page/blog/meta-disco/">PureJaxRL</a>.
+Craftax conforms to the <a href="https://github.com/RobertTLange/gymnax">gymnax</a> interface, allowing easy integration with existing JAX-based frameworks like <a href="https://chrislu.page/blog/meta-disco/">PureJaxRL</a> and [JaxUED](https://github.com/DramaCow/jaxued).
 
 <p align="middle">
   <img src="images/archery.gif" width="200" />
@@ -123,6 +123,12 @@ If you would like to add an algorithm please open a PR and provide a reference t
 | E3B       |            2.2 |            <a href="https://arxiv.org/abs/2210.05805">E3B</a>             |
 
 
+# See Also
+- [JaxUED](https://github.com/DramaCow/jaxued): CleanRL style UED implementations
+- [PureJaxRL](https://github.com/luchris429/purejaxrl) End-to-end RL implementations in Jax
+- [Gymnax](https://github.com/RobertTLange/gymnax): Standard RL interface with several environments, such as classic control and MinAtar.
+- [Minimax](https://github.com/facebookresearch/minimax): UED baselines, with support for multi-gpu training, and more parallel versions of PLR/ACCEL
+- [JaxMARL](https://github.com/FLAIROx/JaxMARL): Lots of different multi-agent RL algorithms
 
 # Citation
 If you use Craftax in your work please cite it as follows:
