@@ -13,6 +13,7 @@ OBS_DIM = (9, 11)
 assert OBS_DIM[0] % 2 == 1 and OBS_DIM[1] % 2 == 1
 MAX_OBS_DIM = max(OBS_DIM)
 BLOCK_PIXEL_SIZE_HUMAN = 64
+BLOCK_PIXEL_SIZE_IMG   = 16
 BLOCK_PIXEL_SIZE_AGENT = 7
 INVENTORY_OBS_HEIGHT = 4
 TEXTURE_CACHE_FILE = os.path.join(pathlib.Path(__file__).parent.resolve(), "assets", "texture_cache.pbz2")
@@ -1113,6 +1114,7 @@ if os.path.exists(TEXTURE_CACHE_FILE):
 else:
     TEXTURES = {
         BLOCK_PIXEL_SIZE_AGENT: load_all_textures(BLOCK_PIXEL_SIZE_AGENT),
+        BLOCK_PIXEL_SIZE_IMG: load_all_textures(BLOCK_PIXEL_SIZE_IMG),
         BLOCK_PIXEL_SIZE_HUMAN: load_all_textures(BLOCK_PIXEL_SIZE_HUMAN),
     }
     save_compressed_pickle(TEXTURE_CACHE_FILE, TEXTURES)
