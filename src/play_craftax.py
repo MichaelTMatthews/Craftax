@@ -20,7 +20,7 @@ from craftax.constants import (
     Action,
     Achievement,
 )
-from craftax.envs.craftax_symbolic_env import CraftaxEnv
+from craftax.envs.craftax_symbolic_env import CraftaxSymbolicEnv as CraftaxEnv
 from environment_base.wrappers import AutoResetEnvWrapper
 from craftax.renderer import render_craftax_pixels
 
