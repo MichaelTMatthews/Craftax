@@ -1,22 +1,22 @@
 import os
 import pathlib
 from enum import Enum
-
 import jax.numpy as jnp
 import imageio.v3 as iio
 import numpy as np
 from PIL import Image
-
 from craftax.util.maths_utils import get_distance_map
+from environment_base.util import load_compressed_pickle, save_compressed_pickle
 
 # GAME CONSTANTS
 OBS_DIM = (9, 11)
 assert OBS_DIM[0] % 2 == 1 and OBS_DIM[1] % 2 == 1
 MAX_OBS_DIM = max(OBS_DIM)
 BLOCK_PIXEL_SIZE_HUMAN = 64
+BLOCK_PIXEL_SIZE_IMG   = 16
 BLOCK_PIXEL_SIZE_AGENT = 7
 INVENTORY_OBS_HEIGHT = 4
-
+TEXTURE_CACHE_FILE = os.path.join(pathlib.Path(__file__).parent.resolve(), "assets", "texture_cache.pbz2")
 
 # ENUMS
 class BlockType(Enum):
@@ -1109,7 +1109,12 @@ def load_all_textures(block_pixel_size):
     }
 
 
-TEXTURES = {
-    BLOCK_PIXEL_SIZE_AGENT: load_all_textures(BLOCK_PIXEL_SIZE_AGENT),
-    BLOCK_PIXEL_SIZE_HUMAN: load_all_textures(BLOCK_PIXEL_SIZE_HUMAN),
-}
+if os.path.exists(TEXTURE_CACHE_FILE):
+    TEXTURES = load_compressed_pickle(TEXTURE_CACHE_FILE)
+else:
+    TEXTURES = {
+        BLOCK_PIXEL_SIZE_AGENT: load_all_textures(BLOCK_PIXEL_SIZE_AGENT),
+        BLOCK_PIXEL_SIZE_IMG: load_all_textures(BLOCK_PIXEL_SIZE_IMG),
+        BLOCK_PIXEL_SIZE_HUMAN: load_all_textures(BLOCK_PIXEL_SIZE_HUMAN),
+    }
+    save_compressed_pickle(TEXTURE_CACHE_FILE, TEXTURES)
