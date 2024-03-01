@@ -1110,11 +1110,14 @@ def load_all_textures(block_pixel_size):
 
 
 if os.path.exists(TEXTURE_CACHE_FILE):
+    print("Loading textures from cache")
     TEXTURES = load_compressed_pickle(TEXTURE_CACHE_FILE)
 else:
+    print("Processing textures")
     TEXTURES = {
         BLOCK_PIXEL_SIZE_AGENT: load_all_textures(BLOCK_PIXEL_SIZE_AGENT),
         BLOCK_PIXEL_SIZE_IMG: load_all_textures(BLOCK_PIXEL_SIZE_IMG),
         BLOCK_PIXEL_SIZE_HUMAN: load_all_textures(BLOCK_PIXEL_SIZE_HUMAN),
     }
     save_compressed_pickle(TEXTURE_CACHE_FILE, TEXTURES)
+    print("Textures saved to cache")
