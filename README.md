@@ -102,6 +102,11 @@ Use the `env_name` parameter to control which environment is used.  It can be se
 Craftax provides the option to use optimistic resets to improve performance, which means that (unlike regular gymnax environments) it **does not auto-reset** by default.
 This means that the environment should always be wrapped either in `EfficientResetVecEnvWrapper` or `AutoResetEnvWrapper`.  See `ppo.py` for correct usage of both wrappers.
 
+We use a texture cache to avoid recreating the texture atlas every time Craftax is imported. If the cache is stale, it may be the cause of errors. You can export the following environment variable to force textures to be created from scratch.
+```
+export CRAFTAX_RELOAD_TEXTURES=true
+```
+
 # Scoreboard
 If you would like to add an algorithm please open a PR and provide a reference to the source of the results.
 
