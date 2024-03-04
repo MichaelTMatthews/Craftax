@@ -7,6 +7,7 @@ from craftax_classic.util.noise import generate_fractal_noise_2d
 
 
 def generate_world(rng, params, static_params):
+    fractal_noise_angles = params.fractal_noise_angles
     rng, _rng = jax.random.split(rng, num=2)
 
     player_position = jnp.array(
@@ -28,7 +29,7 @@ def generate_world(rng, params, static_params):
     # x_res = large_res
 
     water = generate_fractal_noise_2d(
-        _rng, static_params.map_size, small_res, octaves=1
+        _rng, static_params.map_size, small_res, octaves=1, override_angles=fractal_noise_angles[0]
     )
     water = water + player_proximity_map - 1.0
 
@@ -62,7 +63,7 @@ def generate_world(rng, params, static_params):
 
     rng, _rng = jax.random.split(rng)
     mountain = (
-        generate_fractal_noise_2d(_rng, static_params.map_size, small_res, octaves=1)
+        generate_fractal_noise_2d(_rng, static_params.map_size, small_res, octaves=1, override_angles=fractal_noise_angles[1])
         + 0.05
     )
     mountain = mountain + player_proximity_map - 1.0
@@ -70,7 +71,7 @@ def generate_world(rng, params, static_params):
 
     # Paths
     rng, _rng = jax.random.split(rng)
-    path_x = generate_fractal_noise_2d(_rng, static_params.map_size, x_res, octaves=1)
+    path_x = generate_fractal_noise_2d(_rng, static_params.map_size, x_res, octaves=1, override_angles=fractal_noise_angles[2])
     path = jnp.logical_and(mountain > mountain_threshold, path_x > 0.8)
     map = jnp.where(path > 0.5, BlockType.PATH.value, map)
 
@@ -108,7 +109,7 @@ def generate_world(rng, params, static_params):
     # Trees
     rng, _rng = jax.random.split(rng)
     tree_noise = generate_fractal_noise_2d(
-        _rng, static_params.map_size, larger_res, octaves=1
+        _rng, static_params.map_size, larger_res, octaves=1, override_angles=fractal_noise_angles[3]
     )
     tree = (tree_noise > 0.5) * jax.random.uniform(
         rng, shape=static_params.map_size

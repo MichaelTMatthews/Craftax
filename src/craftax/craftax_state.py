@@ -111,6 +111,8 @@ class EnvState:
 
     timestep: int
 
+    fractal_noise_angles: tuple[int, int, int, int] = (None, None, None, None)
+
 
 @struct.dataclass
 class EnvParams:
@@ -125,6 +127,8 @@ class EnvParams:
     max_attribute: int = 5
 
     god_mode: bool = False
+
+    fractal_noise_angles: tuple[int, int, int, int] = (None, None, None, None)
 
 
 @struct.dataclass
