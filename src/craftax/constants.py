@@ -1109,7 +1109,7 @@ def load_all_textures(block_pixel_size):
     }
 
 
-if os.path.exists(TEXTURE_CACHE_FILE):
+if os.path.exists(TEXTURE_CACHE_FILE) and not os.environ.get("CRAFTAX_RELOAD_TEXTURES", False):
     print("Loading textures from cache")
     TEXTURES = load_compressed_pickle(TEXTURE_CACHE_FILE)
 else:

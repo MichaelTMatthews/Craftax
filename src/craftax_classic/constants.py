@@ -431,7 +431,7 @@ def load_all_textures(block_pixel_size):
         "night_noise_intensity_texture": night_noise_intensity_texture,
     }
 
-if os.path.exists(TEXTURE_CACHE_FILE):
+if os.path.exists(TEXTURE_CACHE_FILE) and not os.environ.get("CRAFTAX_RELOAD_TEXTURES", False):
     TEXTURES = load_compressed_pickle(TEXTURE_CACHE_FILE)
 else:
     TEXTURES = {
