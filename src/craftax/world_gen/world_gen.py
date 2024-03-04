@@ -354,7 +354,12 @@ def generate_dungeon(rng, static_params, config):
     return map, item_map, light_map, ladder_down_position, ladder_up_position
 
 
-def generate_smoothworld(rng, static_params, player_position, config):
+def generate_smoothworld(rng, static_params, player_position, config, params=None):
+    if params is not None:
+        fractal_noise_angles = params.fractal_noise_angles
+    else:
+        fractal_noise_angles = (None, None, None, None, None)
+
     player_proximity_map = get_distance_map(
         player_position, static_params.map_size
     ).astype(jnp.float32)
@@ -380,7 +385,8 @@ def generate_smoothworld(rng, static_params, player_position, config):
 
     rng, _rng = jax.random.split(rng)
     water = generate_fractal_noise_2d(
-        _rng, static_params.map_size, small_res, octaves=1
+        _rng, static_params.map_size, small_res, octaves=1, override_angles=fractal_noise_angles[0]
+        
     )
     water = water + player_proximity_map_water - 1.0
 
@@ -402,7 +408,7 @@ def generate_smoothworld(rng, static_params, player_position, config):
 
     rng, _rng = jax.random.split(rng)
     mountain = (
-        generate_fractal_noise_2d(_rng, static_params.map_size, small_res, octaves=1)
+        generate_fractal_noise_2d(_rng, static_params.map_size, small_res, octaves=1, override_angles=fractal_noise_angles[1])
         + 0.05
     )
     mountain = mountain + player_proximity_map_mountain - 1.0
@@ -410,7 +416,7 @@ def generate_smoothworld(rng, static_params, player_position, config):
 
     # Paths
     rng, _rng = jax.random.split(rng)
-    path_x = generate_fractal_noise_2d(_rng, static_params.map_size, x_res, octaves=1)
+    path_x = generate_fractal_noise_2d(_rng, static_params.map_size, x_res, octaves=1, override_angles=fractal_noise_angles[2])
     path = jnp.logical_and(mountain > mountain_threshold, path_x > 0.8)
     map = jnp.where(path > 0.5, config.path_block, map)
 
@@ -426,7 +432,7 @@ def generate_smoothworld(rng, static_params, player_position, config):
     # Trees
     rng, _rng = jax.random.split(rng)
     tree_noise = generate_fractal_noise_2d(
-        _rng, static_params.map_size, larger_res, octaves=1
+        _rng, static_params.map_size, larger_res, octaves=1, override_angles=fractal_noise_angles[3]
     )
     tree = (tree_noise > config.tree_threshold_perlin) * jax.random.uniform(
         rng, shape=static_params.map_size
@@ -530,9 +536,15 @@ def generate_world(rng, params, static_params):
     # Generate smoothgens (overworld, caves, elemental levels, boss level)
     rngs = jax.random.split(rng, 7)
     rng, _rng = rngs[0], rngs[1:]
+    
+    overworld = generate_smoothworld(_rng[0], static_params, player_position, jax.tree_map(lambda x: x[0], ALL_SMOOTHGEN_CONFIGS), params=params)
+
     smoothgens = jax.vmap(generate_smoothworld, in_axes=(0, None, None, 0))(
-        _rng, static_params, player_position, ALL_SMOOTHGEN_CONFIGS
+        _rng[1:], static_params, player_position, jax.tree_map(lambda x: x[1:], ALL_SMOOTHGEN_CONFIGS)
     )
+
+    smoothgens = jax.tree_map(lambda over, others: jnp.concatenate([jnp.array([over]), others], axis=0), overworld, smoothgens)
+
 
     # Generate dungeons
     rngs = jax.random.split(rng, 4)
