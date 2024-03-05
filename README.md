@@ -3,10 +3,14 @@
 </p>
 
 <p align="center">
+        <a href= "https://pypi.org/project/craftax/">
+        <img src="https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-blue" /></a>
+        <a href= "https://pypi.org/project/craftax/">
+        <img src="https://img.shields.io/badge/pypi-1.1.0-green" /></a>
        <a href= "https://github.com/MichaelTMatthews/Craftax/blob/main/LICENSE">
-        <img src="https://img.shields.io/badge/License-MIT-blue" /></a>
+        <img src="https://img.shields.io/badge/License-MIT-yellow" /></a>
        <a href= "https://craftaxenv.github.io/">
-        <img src="https://img.shields.io/badge/blog_post-purple" /></a>
+        <img src="https://img.shields.io/badge/blog-link-purple" /></a>
        <a href= "https://arxiv.org/pdf/2402.16801.pdf">
         <img src="https://img.shields.io/badge/arxiv-2402.16801-b31b1b" /></a>
        <a href= "https://github.com/psf/black">

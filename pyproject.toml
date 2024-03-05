@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "craftax"
-version = "1.0.0"
+version = "1.1.0"
 authors = [
   { name="Michael Matthews", email="michael.matthews@eng.ox.ac.uk" },
 ]
 description = "An open-world environment for training RL agents"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
@@ -22,8 +22,8 @@ dependencies = [
     "optax",
     "flax",
     "numpy",
-    "black==23.3.0",
-    "pre-commit==3.3.3",
+    "black",
+    "pre-commit",
     "argparse",
     "wandb",
     "orbax-checkpoint",
