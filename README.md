@@ -1,5 +1,5 @@
 <p align="center">
- <img width="80%" src="images/logo.png" />
+ <img width="80%" src="https://raw.githubusercontent.com/MichaelTMatthews/Craftax/main/images/logo.png" />
 </p>
 
 <p align="center">
@@ -20,14 +20,14 @@ Craftax is an RL environment written entirely in <a href="https://github.com/goo
 Craftax conforms to the <a href="https://github.com/RobertTLange/gymnax">gymnax</a> interface, allowing easy integration with existing JAX-based frameworks like <a href="https://chrislu.page/blog/meta-disco/">PureJaxRL</a> and [JaxUED](https://github.com/DramaCow/jaxued).
 
 <p align="middle">
-  <img src="images/archery.gif" width="200" />
-  <img src="images/building.gif" width="200" /> 
-  <img src="images/dungeon_crawling.gif" width="200" />
+  <img src="https://raw.githubusercontent.com/MichaelTMatthews/Craftax/main/images/archery.gif" width="200" />
+  <img src="https://raw.githubusercontent.com/MichaelTMatthews/Craftax/main/images/building.gif" width="200" /> 
+  <img src="https://raw.githubusercontent.com/MichaelTMatthews/Craftax/main/images/dungeon_crawling.gif" width="200" />
 </p>
 <p align="middle">
-  <img src="images/farming.gif" width="200" />
-  <img src="images/magic.gif" width="200" /> 
-  <img src="images/mining.gif" width="200" />
+  <img src="https://raw.githubusercontent.com/MichaelTMatthews/Craftax/main/images/farming.gif" width="200" />
+  <img src="https://raw.githubusercontent.com/MichaelTMatthews/Craftax/main/images/magic.gif" width="200" /> 
+  <img src="https://raw.githubusercontent.com/MichaelTMatthews/Craftax/main/images/mining.gif" width="200" />
 </p>
 
 # Basic Usage
@@ -99,10 +99,12 @@ To use ICM or E3B with the default parameters use the `--train_icm` and `--use_e
 Use the `env_name` parameter to control which environment is used.  It can be set to  `"Craftax-Symbolic-v1"`, `"Craftax-Pixels-v1"`, `"Craftax-Classic-Symbolic-v1"` or `"Craftax-Classic-Pixels-v1"`
 
 # Gotchas
+### Optimistic Resets
 Craftax provides the option to use optimistic resets to improve performance, which means that (unlike regular gymnax environments) it **does not auto-reset** by default.
-This means that the environment should always be wrapped either in `EfficientResetVecEnvWrapper` or `AutoResetEnvWrapper`.  See `ppo.py` for correct usage of both wrappers.
+This means that the environment should always be wrapped either in `OptimisticResetVecEnvWrapper` or `AutoResetEnvWrapper`.  See `ppo.py` for correct usage of both wrappers.
 
-We use a texture cache to avoid recreating the texture atlas every time Craftax is imported. If the cache is stale, it may be the cause of errors. You can export the following environment variable to force textures to be created from scratch.
+### Texture Caching
+We use a texture cache to avoid recreating the texture atlas every time Craftax is imported. If you are just running Craftax as a benchmark this will not affect you.  However, if you are editing the game (e.g. adding new blocks, entities etc.) then a stale cache could cause errors. You can export the following environment variable to force textures to be created from scratch.
 ```
 export CRAFTAX_RELOAD_TEXTURES=true
 ```
@@ -129,11 +131,13 @@ If you would like to add an algorithm please open a PR and provide a reference t
 
 
 # See Also
-- [JaxUED](https://github.com/DramaCow/jaxued): CleanRL style UED implementations
-- [PureJaxRL](https://github.com/luchris429/purejaxrl) End-to-end RL implementations in Jax
-- [Gymnax](https://github.com/RobertTLange/gymnax): Standard RL interface with several environments, such as classic control and MinAtar.
-- [Minimax](https://github.com/facebookresearch/minimax): UED baselines, with support for multi-gpu training, and more parallel versions of PLR/ACCEL
-- [JaxMARL](https://github.com/FLAIROx/JaxMARL): Lots of different multi-agent RL algorithms
+- ⛏️ [Crafter](https://github.com/danijar/crafter) The original Crafter benchmark.
+- ⚔️ [NLE](https://github.com/facebookresearch/nle) NetHack as an RL environment.
+- ⚡ [PureJaxRL](https://github.com/luchris429/purejaxrl) End-to-end RL implementations in Jax.
+- 🌎 [JaxUED](https://github.com/DramaCow/jaxued): CleanRL style UED implementations in Jax.
+- 🌍 [Minimax](https://github.com/facebookresearch/minimax): Modular UED implementations in Jax.
+- 🏋️ [Gymnax](https://github.com/RobertTLange/gymnax): Standard Jax RL interface with classic environments.
+- 🧑‍🤝‍🧑 [JaxMARL](https://github.com/FLAIROx/JaxMARL): Multi-agent RL in Jax.
 
 # Citation
 If you use Craftax in your work please cite it as follows:

@@ -9,8 +9,7 @@ We welcome
 - Proposals for changes/extensions to the core game in limited circumstances (a loophole has been discovered, some technique has been found to be extremely overpowered etc.)
 
 ## Issues / Pull Requests
-For trivial bug fixes (e.g. one-line updates for dependencies) feel free to open a PR by forking Craftax.
-For anything else please open an associated issue for discussion as well.
+If you would like to contribute please open a PR and create and link to the associated issue (if there is one).
 
 ### Black
 We use <a href="https://github.com/psf/black">black</a> to format our code.  If you are contributing we recommend setting it up as a pre-commit hook for ease of use.
