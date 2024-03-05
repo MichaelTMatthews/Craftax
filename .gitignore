@@ -166,3 +166,4 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 .idea/
 texture_cache.pbz2
+texture_cache*.pbz2
