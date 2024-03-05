@@ -83,11 +83,11 @@ pip install -U "jax[cuda12_pip]" -f https://storage.googleapis.com/jax-releases/
 # Play
 To play Craftax run:
 ```
-python -m src.play_craftax
+play_craftax
 ```
 or to play Craftax-Classic run:
 ```
-python -m src.play_craftax_classic
+play_craftax_classic
 ```
 Since Craftax runs entirely in JAX, it will take some time to compile the rendering and step functions - it might take around 30s to render the first frame and then another 20s to take the first action.  After this it should be very quick.  A tutorial for how to beat the game is present in `tutorial.md`.  The controls are printed out at the beginning of play.
 # Experiment
@@ -105,7 +105,7 @@ Use the `env_name` parameter to control which environment is used.  It can be se
 # Gotchas
 ### Optimistic Resets
 Craftax provides the option to use optimistic resets to improve performance, which means that (unlike regular gymnax environments) it **does not auto-reset** by default.
-This means that the environment should always be wrapped either in `OptimisticResetVecEnvWrapper` or `AutoResetEnvWrapper`.  See `ppo.py` for correct usage of both wrappers.
+This means that the environment should always be wrapped either in `OptimisticResetVecEnvWrapper` (for efficient resets) or `AutoResetEnvWrapper` (to recover the default gymnax auto-reset behaviour).  See `ppo.py` for correct usage of both wrappers.
 
 ### Texture Caching
 We use a texture cache to avoid recreating the texture atlas every time Craftax is imported. If you are just running Craftax as a benchmark this will not affect you.  However, if you are editing the game (e.g. adding new blocks, entities etc.) then a stale cache could cause errors. You can export the following environment variable to force textures to be created from scratch.
@@ -115,6 +115,7 @@ export CRAFTAX_RELOAD_TEXTURES=true
 
 # Scoreboard
 If you would like to add an algorithm please open a PR and provide a reference to the source of the results.
+We report reward as a % of the maximum (226).
 
 ## Craftax-1B
 | Algorithm | Reward (% max) |                                  Source                                   |
