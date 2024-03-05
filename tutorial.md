@@ -8,7 +8,7 @@ The player can move in the four cardinal directions using WASD and can interact 
 Interacting can cause the player to attempt to mine (a block), attack (a creature), drink (water or from a fountain), eat (fruit) or open a chest.
 
 The player has 5 'intrinsics': health, hunger, thirst, energy and mana (magical energy).
-Hunger, thirst and energy will naturally decrease and must be replenished by eating, drinking and sleeping respecitvely.
+Hunger, thirst and energy will naturally decrease and must be replenished by eating, drinking and sleeping respectively.
 Mana is used for casting spells or enchanting items and will naturally recover.
 Health will recover when hunger, thirst and energy are non-zero and will decrease if any of these are 0.
 If the players health falls beneath 0 they will die and the game will restart.
