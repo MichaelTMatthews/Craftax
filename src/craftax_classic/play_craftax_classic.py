@@ -11,7 +11,9 @@ from craftax_classic.constants import (
     Achievement,
     BLOCK_PIXEL_SIZE_HUMAN,
 )
-from craftax_classic.envs.craftax_symbolic_env import CraftaxClassicSymbolicEnv as CraftaxEnv
+from craftax_classic.envs.craftax_symbolic_env import (
+    CraftaxClassicSymbolicEnv as CraftaxEnv,
+)
 from craftax_classic.renderer import render_craftax_pixels
 
 KEY_MAPPING = {
