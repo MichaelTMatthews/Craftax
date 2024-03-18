@@ -2429,19 +2429,18 @@ def change_floor(
         == ItemType.LADDER_DOWN.value
     )
     is_moving_down = jnp.logical_and(
-        on_down_ladder,
-        jnp.logical_and(
-            action == Action.DESCEND.value,
+        action == Action.DESCEND.value,
+        jnp.logical_or(
+            env_params.god_mode,
             jnp.logical_and(
-                state.player_level < static_params.num_levels - 1,
+                on_down_ladder,
                 state.monsters_killed[state.player_level]
                 >= MONSTERS_KILLED_TO_CLEAR_LEVEL,
             ),
         ),
     )
-    is_moving_down = jnp.logical_or(
-        is_moving_down,
-        jnp.logical_and(env_params.god_mode, action == Action.DESCEND.value),
+    is_moving_down = jnp.logical_and(
+        is_moving_down, state.player_level < static_params.num_levels - 1
     )
 
     moving_down_position = state.up_ladders[state.player_level + 1]
@@ -2453,13 +2452,18 @@ def change_floor(
         == ItemType.LADDER_UP.value
     )
     is_moving_up = jnp.logical_and(
-        on_up_ladder,
-        jnp.logical_and(action == Action.ASCEND.value, state.player_level > 0),
+        action == Action.ASCEND.value,
+        jnp.logical_or(
+            env_params.god_mode,
+            jnp.logical_and(
+                on_up_ladder,
+                state.monsters_killed[state.player_level]
+                >= MONSTERS_KILLED_TO_CLEAR_LEVEL,
+            ),
+        ),
     )
-    is_moving_up = jnp.logical_or(
-        is_moving_up,
-        jnp.logical_and(env_params.god_mode, action == Action.ASCEND.value),
-    )
+    is_moving_up = jnp.logical_and(is_moving_up, state.player_level > 0)
+
     moving_up_position = state.down_ladders[state.player_level - 1]
 
     is_not_moving = jnp.logical_not(jnp.logical_or(is_moving_up, is_moving_down))
