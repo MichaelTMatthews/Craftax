@@ -13,10 +13,10 @@ TECH_TREE_LENGTH = 5
 GRID_WORLD_DIRECTIONS = jnp.array(
     [[0, -1], [1, 0], [0, 1], [-1, 0]] + [[0, 0] for _ in range(TECH_TREE_LENGTH)]
 )
-REWARD_EVERY_N_TECHS = 1
+REWARD_EVERY_N_TECHS = 5
 
 FULLY_OBSERVABLE = False
-TECH_TREE_OBS_REPEAT = 1
+TECH_TREE_OBS_REPEAT = 30
 
 
 @struct.dataclass

@@ -28,11 +28,15 @@ def create_log_dict(info, config):
     elif "Tech-Tree" in config["ENV_NAME"]:
         to_log["completed_techs"] = info["completed_techs"]
 
-    if config.get("TRAIN_ICM"):
-        to_log["icm_inverse_loss"] = info["icm_inverse_loss"]
-        to_log["icm_forward_loss"] = info["icm_forward_loss"]
+    if config.get("TRAIN_ICM") or config.get("USE_RND"):
         to_log["intrinsic_reward"] = info["reward_i"]
         to_log["extrinsic_reward"] = info["reward_e"]
+
+        if config.get("TRAIN_ICM"):
+            to_log["icm_inverse_loss"] = info["icm_inverse_loss"]
+            to_log["icm_forward_loss"] = info["icm_forward_loss"]
+        elif config.get("USE_RND"):
+            to_log["rnd_loss"] = info["rnd_loss"]
 
     return to_log
 
