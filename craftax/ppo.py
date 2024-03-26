@@ -18,13 +18,13 @@ from orbax.checkpoint import (
     CheckpointManager,
 )
 
-from logz.batch_logging import batch_log, create_log_dict
-from models.actor_critic import (
+from craftax.logz.batch_logging import batch_log, create_log_dict
+from craftax.models.actor_critic import (
     ActorCritic,
     ActorCriticConv,
 )
-from models.icm import ICMEncoder, ICMForward, ICMInverse
-from environment_base.wrappers import (
+from craftax.models.icm import ICMEncoder, ICMForward, ICMInverse
+from craftax.environment_base.wrappers import (
     LogWrapper,
     OptimisticResetVecEnvWrapper,
     AutoResetEnvWrapper,
@@ -54,22 +54,26 @@ def make_train(config):
     )
 
     if config["ENV_NAME"] == "Craftax-Classic-Symbolic-v1":
-        from craftax_classic.envs.craftax_symbolic_env import CraftaxClassicSymbolicEnv
+        from craftax.craftax_classic.envs.craftax_symbolic_env import (
+            CraftaxClassicSymbolicEnv,
+        )
 
         env = CraftaxClassicSymbolicEnv()
         is_symbolic = True
     elif config["ENV_NAME"] == "Craftax-Classic-Pixels-v1":
-        from craftax_classic.envs.craftax_pixels_env import CraftaxClassicPixelsEnv
+        from craftax.craftax_classic.envs.craftax_pixels_env import (
+            CraftaxClassicPixelsEnv,
+        )
 
         env = CraftaxClassicPixelsEnv()
         is_symbolic = False
     elif config["ENV_NAME"] == "Craftax-Symbolic-v1":
-        from craftax.envs.craftax_symbolic_env import CraftaxSymbolicEnv
+        from craftax.craftax.envs.craftax_symbolic_env import CraftaxSymbolicEnv
 
         env = CraftaxSymbolicEnv()
         is_symbolic = True
     elif config["ENV_NAME"] == "Craftax-Pixels-v1":
-        from craftax.envs.craftax_pixels_env import CraftaxPixelsEnv
+        from craftax.craftax.envs.craftax_pixels_env import CraftaxPixelsEnv
 
         env = CraftaxPixelsEnv()
         is_symbolic = False
