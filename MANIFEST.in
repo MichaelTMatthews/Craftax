@@ -1,2 +1,2 @@
-include src/craftax/assets/*
-include src/craftax_classic/assets/*
+include craftax/craftax/assets/*
+include craftax/craftax_classic/assets/*
