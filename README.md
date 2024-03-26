@@ -136,7 +136,7 @@ We report reward as a % of the maximum (226).
 | E3B       |            2.2 |            <a href="https://arxiv.org/abs/2210.05805">E3B</a>             |
 
 
-# See Also
+# 🔎 See Also
 - ⛏️ [Crafter](https://github.com/danijar/crafter) The original Crafter benchmark.
 - ⚔️ [NLE](https://github.com/facebookresearch/nle) NetHack as an RL environment.
 - ⚡ [PureJaxRL](https://github.com/luchris429/purejaxrl) End-to-end RL implementations in Jax.
@@ -145,7 +145,7 @@ We report reward as a % of the maximum (226).
 - 🏋️ [Gymnax](https://github.com/RobertTLange/gymnax): Standard Jax RL interface with classic environments.
 - 🧑‍🤝‍🧑 [JaxMARL](https://github.com/FLAIROx/JaxMARL): Multi-agent RL in Jax.
 
-# Citation
+# 📚 Citation
 If you use Craftax in your work please cite it as follows:
 ```
 @article{matthews2024craftax,
