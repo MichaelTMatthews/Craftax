@@ -43,4 +43,4 @@ Homepage = "https://github.com/MichaelTMatthews/Craftax"
 Issues = "https://github.com/MichaelTMatthews/Craftax/issues"
 
 [tool.setuptools.packages.find]
-where=["src"]
+include=["craftax"]
