@@ -23,13 +23,13 @@ from flax.training.train_state import TrainState
 import distrax
 import functools
 
-from environment_base.wrappers import (
+from craftax.environment_base.wrappers import (
     LogWrapper,
     OptimisticResetVecEnvWrapper,
     AutoResetEnvWrapper,
     BatchEnvWrapper,
 )
-from logz.batch_logging import create_log_dict, batch_log
+from craftax.logz.batch_logging import create_log_dict, batch_log
 
 
 class ScannedRNN(nn.Module):
@@ -133,22 +133,26 @@ def make_train(config):
     )
 
     if config["ENV_NAME"] == "Craftax-Classic-Symbolic-v1":
-        from craftax_classic.envs.craftax_symbolic_env import CraftaxClassicSymbolicEnv
+        from craftax.craftax_classic.envs.craftax_symbolic_env import (
+            CraftaxClassicSymbolicEnv,
+        )
 
         env = CraftaxClassicSymbolicEnv()
         is_symbolic = True
     elif config["ENV_NAME"] == "Craftax-Classic-Pixels-v1":
-        from craftax_classic.envs.craftax_pixels_env import CraftaxClassicPixelsEnv
+        from craftax.craftax_classic.envs.craftax_pixels_env import (
+            CraftaxClassicPixelsEnv,
+        )
 
         env = CraftaxClassicPixelsEnv()
         is_symbolic = False
     elif config["ENV_NAME"] == "Craftax-Symbolic-v1":
-        from craftax.envs.craftax_symbolic_env import CraftaxSymbolicEnv
+        from craftax.craftax.envs.craftax_symbolic_env import CraftaxSymbolicEnv
 
         env = CraftaxSymbolicEnv()
         is_symbolic = True
     elif config["ENV_NAME"] == "Craftax-Pixels-v1":
-        from craftax.envs.craftax_pixels_env import CraftaxPixelsEnv
+        from craftax.craftax.envs.craftax_pixels_env import CraftaxPixelsEnv
 
         env = CraftaxPixelsEnv()
         is_symbolic = False
