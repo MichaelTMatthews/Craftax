@@ -35,8 +35,8 @@ dependencies = [
 ]
 
 [project.scripts]
-play_craftax = "craftax.play_craftax:entry_point"
-play_craftax_classic = "craftax_classic.play_craftax_classic:main"
+play_craftax = "craftax.craftax.play_craftax:entry_point"
+play_craftax_classic = "craftax.craftax_classic.play_craftax_classic:main"
 
 [project.urls]
 Homepage = "https://github.com/MichaelTMatthews/Craftax"
