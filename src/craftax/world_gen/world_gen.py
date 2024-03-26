@@ -489,7 +489,7 @@ def generate_smoothworld(rng, static_params, player_position, config, params=Non
 
     item_map = item_map.at[ladder_down[0], ladder_down[1]].set(
         ItemType.LADDER_DOWN.value * config.ladder_down
-        + map[ladder_down[0], ladder_down[1]] * (1 - config.ladder_down)
+        + item_map[ladder_down[0], ladder_down[1]] * (1 - config.ladder_down)
     )
 
     valid_ladder_up = map.flatten() == config.valid_ladder
@@ -522,7 +522,7 @@ def generate_smoothworld(rng, static_params, player_position, config, params=Non
 
     item_map = item_map.at[ladder_up[0], ladder_up[1]].set(
         ItemType.LADDER_UP.value * config.ladder_up
-        + map[ladder_up[0], ladder_up[1]] * (1 - config.ladder_up)
+        + item_map[ladder_up[0], ladder_up[1]] * (1 - config.ladder_up)
     )
 
     return map, item_map, light_map, ladder_down, ladder_up
