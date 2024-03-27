@@ -134,7 +134,6 @@ def make_train(config):
             "icm_forward": None,
             "icm_inverse": None,
             "e3b_matrix": None,
-            "rnd_model": None,
         }
 
         if config["TRAIN_ICM"]:
