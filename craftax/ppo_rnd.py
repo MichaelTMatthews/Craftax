@@ -23,19 +23,20 @@ from craftax.models.actor_critic import (
     ActorCritic,
     ActorCriticConv,
 )
-from craftax.models.icm import ICMEncoder, ICMForward, ICMInverse
 from craftax.environment_base.wrappers import (
     LogWrapper,
     OptimisticResetVecEnvWrapper,
     AutoResetEnvWrapper,
     BatchEnvWrapper,
 )
+from models.rnd import RNDNetwork, ActorCriticRND
 
 
 class Transition(NamedTuple):
     done: jnp.ndarray
     action: jnp.ndarray
-    value: jnp.ndarray
+    value_e: jnp.ndarray
+    value_i: jnp.ndarray
     reward_e: jnp.ndarray
     reward_i: jnp.ndarray
     reward: jnp.ndarray
@@ -103,11 +104,14 @@ def make_train(config):
     def train(rng):
         # INIT NETWORK
         if is_symbolic:
-            network = ActorCritic(env.action_space(env_params).n, config["LAYER_SIZE"])
-        else:
-            network = ActorCriticConv(
+            network = ActorCriticRND(
                 env.action_space(env_params).n, config["LAYER_SIZE"]
             )
+        else:
+            raise ValueError
+            # network = ActorCriticConv(
+            #     env.action_space(env_params).n, config["LAYER_SIZE"]
+            # )
 
         rng, _rng = jax.random.split(rng)
         init_x = jnp.zeros((1, *env.observation_space(env_params).shape))
@@ -130,91 +134,44 @@ def make_train(config):
 
         # Exploration state
         ex_state = {
-            "icm_encoder": None,
-            "icm_forward": None,
-            "icm_inverse": None,
-            "e3b_matrix": None,
+            "rnd_model": None,
         }
 
-        if config["TRAIN_ICM"]:
+        if config["USE_RND"]:
             obs_shape = env.observation_space(env_params).shape
             assert len(obs_shape) == 1, "Only configured for 1D observations"
             obs_shape = obs_shape[0]
 
-            # Encoder
-            icm_encoder_network = ICMEncoder(
+            # Random network
+            rnd_random_network = RNDNetwork(
                 num_layers=3,
-                output_dim=config["ICM_LATENT_SIZE"],
-                layer_size=config["ICM_LAYER_SIZE"],
+                output_dim=config["RND_OUTPUT_SIZE"],
+                layer_size=config["RND_LAYER_SIZE"],
             )
             rng, _rng = jax.random.split(rng)
-            icm_encoder_network_params = icm_encoder_network.init(
+            rnd_random_network_params = rnd_random_network.init(
+                _rng, jnp.zeros((1, obs_shape))
+            )
+
+            # Distillation Network
+            rnd_distillation_network = RNDNetwork(
+                num_layers=3,
+                output_dim=config["RND_OUTPUT_SIZE"],
+                layer_size=config["RND_LAYER_SIZE"],
+            )
+            rng, _rng = jax.random.split(rng)
+            rnd_distillation_network_params = rnd_distillation_network.init(
                 _rng, jnp.zeros((1, obs_shape))
             )
             tx = optax.chain(
                 optax.clip_by_global_norm(config["MAX_GRAD_NORM"]),
-                optax.adam(config["ICM_LR"], eps=1e-5),
+                optax.adam(config["RND_LR"], eps=1e-5),
             )
-            ex_state["icm_encoder"] = TrainState.create(
-                apply_fn=icm_encoder_network.apply,
-                params=icm_encoder_network_params,
+            ex_state["rnd_distillation_network"] = TrainState.create(
+                apply_fn=rnd_distillation_network.apply,
+                params=rnd_distillation_network_params,
                 tx=tx,
             )
-
-            # Forward
-            icm_forward_network = ICMForward(
-                num_layers=3,
-                output_dim=config["ICM_LATENT_SIZE"],
-                layer_size=config["ICM_LAYER_SIZE"],
-                num_actions=env.num_actions,
-            )
-            rng, _rng = jax.random.split(rng)
-            icm_forward_network_params = icm_forward_network.init(
-                _rng, jnp.zeros((1, config["ICM_LATENT_SIZE"])), jnp.zeros((1,))
-            )
-            tx = optax.chain(
-                optax.clip_by_global_norm(config["MAX_GRAD_NORM"]),
-                optax.adam(config["ICM_LR"], eps=1e-5),
-            )
-            ex_state["icm_forward"] = TrainState.create(
-                apply_fn=icm_forward_network.apply,
-                params=icm_forward_network_params,
-                tx=tx,
-            )
-
-            # Inverse
-            icm_inverse_network = ICMInverse(
-                num_layers=3,
-                output_dim=env.num_actions,
-                layer_size=config["ICM_LAYER_SIZE"],
-            )
-            rng, _rng = jax.random.split(rng)
-            icm_inverse_network_params = icm_inverse_network.init(
-                _rng,
-                jnp.zeros((1, config["ICM_LATENT_SIZE"])),
-                jnp.zeros((1, config["ICM_LATENT_SIZE"])),
-            )
-            tx = optax.chain(
-                optax.clip_by_global_norm(config["MAX_GRAD_NORM"]),
-                optax.adam(config["ICM_LR"], eps=1e-5),
-            )
-            ex_state["icm_inverse"] = TrainState.create(
-                apply_fn=icm_inverse_network.apply,
-                params=icm_inverse_network_params,
-                tx=tx,
-            )
-
-            if config["USE_E3B"]:
-                ex_state["e3b_matrix"] = (
-                    jnp.repeat(
-                        jnp.expand_dims(
-                            jnp.identity(config["ICM_LATENT_SIZE"]), axis=0
-                        ),
-                        config["NUM_ENVS"],
-                        axis=0,
-                    )
-                    / config["E3B_LAMBDA"]
-                )
 
         # INIT ENV
         rng, _rng = jax.random.split(rng)
@@ -235,7 +192,7 @@ def make_train(config):
 
                 # SELECT ACTION
                 rng, _rng = jax.random.split(rng)
-                pi, value = network.apply(train_state.params, last_obs)
+                pi, value_e, value_i = network.apply(train_state.params, last_obs)
                 action = pi.sample(seed=_rng)
                 log_prob = pi.log_prob(action)
 
@@ -247,58 +204,26 @@ def make_train(config):
 
                 reward_i = jnp.zeros(config["NUM_ENVS"])
 
-                if config["TRAIN_ICM"]:
-                    latent_obs = ex_state["icm_encoder"].apply_fn(
-                        ex_state["icm_encoder"].params, last_obs
-                    )
-                    latent_next_obs = ex_state["icm_encoder"].apply_fn(
-                        ex_state["icm_encoder"].params, obsv
+                if config["USE_RND"]:
+                    random_pred = rnd_random_network.apply(
+                        rnd_random_network_params, obsv
                     )
 
-                    latent_next_obs_pred = ex_state["icm_forward"].apply_fn(
-                        ex_state["icm_forward"].params, latent_obs, action
+                    distill_pred = ex_state["rnd_distillation_network"].apply_fn(
+                        ex_state["rnd_distillation_network"].params, obsv
                     )
-                    error = (latent_next_obs - latent_next_obs_pred) * done[:, None]
+                    error = (random_pred - distill_pred) * (1 - done[:, None])
                     mse = jnp.square(error).mean(axis=-1)
 
-                    reward_i = mse * config["ICM_REWARD_COEFF"]
-
-                    if config["USE_E3B"]:
-                        # Embedding is (NUM_ENVS, 128)
-                        # e3b_matrix is (NUM_ENVS, 128, 128)
-                        us = jax.vmap(jnp.matmul)(ex_state["e3b_matrix"], latent_obs)
-                        bs = jax.vmap(jnp.dot)(latent_obs, us)
-
-                        def update_c(c, b, u):
-                            return c - (1.0 / (1 + b)) * jnp.outer(u, u)
-
-                        updated_cs = jax.vmap(update_c)(ex_state["e3b_matrix"], bs, us)
-                        new_cs = (
-                            jnp.repeat(
-                                jnp.expand_dims(
-                                    jnp.identity(config["ICM_LATENT_SIZE"]), axis=0
-                                ),
-                                config["NUM_ENVS"],
-                                axis=0,
-                            )
-                            / config["E3B_LAMBDA"]
-                        )
-                        ex_state["e3b_matrix"] = jnp.where(
-                            done[:, None, None], new_cs, updated_cs
-                        )
-
-                        e3b_bonus = jnp.where(
-                            done, jnp.zeros((config["NUM_ENVS"],)), bs
-                        )
-
-                        reward_i = e3b_bonus * config["E3B_REWARD_COEFF"]
+                    reward_i = mse * config["RND_REWARD_COEFF"]
 
                 reward = reward_e + reward_i
 
                 transition = Transition(
                     done=done,
                     action=action,
-                    value=value,
+                    value_e=value_e,
+                    value_i=value_i,
                     reward=reward,
                     reward_i=reward_i,
                     reward_e=reward_e,
@@ -330,56 +255,90 @@ def make_train(config):
                 rng,
                 update_step,
             ) = runner_state
-            _, last_val = network.apply(train_state.params, last_obs)
+            _, last_val_e, last_val_i = network.apply(train_state.params, last_obs)
 
-            def _calculate_gae(traj_batch, last_val):
+            def _calculate_gae(traj_batch, last_val, is_extrinsic):
                 def _get_advantages(gae_and_next_value, transition):
-                    gae, next_value = gae_and_next_value
+                    gae, next_value, is_extrinsic = gae_and_next_value
                     done, value, reward = (
                         transition.done,
-                        transition.value,
+                        jax.lax.select(
+                            is_extrinsic, transition.value_e, transition.value_i
+                        ),
                         transition.reward,
                     )
+                    done = jnp.logical_and(
+                        done, jnp.logical_or(config["RND_IS_EPISODIC"], is_extrinsic)
+                    )
+
                     delta = reward + config["GAMMA"] * next_value * (1 - done) - value
                     gae = (
                         delta
                         + config["GAMMA"] * config["GAE_LAMBDA"] * (1 - done) * gae
                     )
-                    return (gae, value), gae
+                    return (gae, value, is_extrinsic), gae
 
                 _, advantages = jax.lax.scan(
                     _get_advantages,
-                    (jnp.zeros_like(last_val), last_val),
+                    (jnp.zeros_like(last_val), last_val, is_extrinsic),
                     traj_batch,
                     reverse=True,
                     unroll=16,
                 )
-                return advantages, advantages + traj_batch.value
+                return advantages, advantages + jax.lax.select(
+                    is_extrinsic, traj_batch.value_e, traj_batch.value_i
+                )
 
-            advantages, targets = _calculate_gae(traj_batch, last_val)
+            advantages_e, targets_e = _calculate_gae(traj_batch, last_val_e, True)
+            advantages_i, targets_i = _calculate_gae(traj_batch, last_val_e, False)
 
             # UPDATE NETWORK
             def _update_epoch(update_state, unused):
                 def _update_minbatch(train_state, batch_info):
-                    traj_batch, advantages, targets = batch_info
+                    (
+                        traj_batch,
+                        advantages_e,
+                        targets_e,
+                        advantages_i,
+                        targets_i,
+                    ) = batch_info
 
                     # Policy/value network
-                    def _loss_fn(params, traj_batch, gae, targets):
+                    def _loss_fn(
+                        params, traj_batch, gae_e, targets_e, gae_i, targets_i
+                    ):
                         # RERUN NETWORK
-                        pi, value = network.apply(params, traj_batch.obs)
+                        pi, value_e, value_i = network.apply(params, traj_batch.obs)
                         log_prob = pi.log_prob(traj_batch.action)
 
-                        # CALCULATE VALUE LOSS
-                        value_pred_clipped = traj_batch.value + (
-                            value - traj_batch.value
+                        # CALCULATE EXTRINSIC VALUE LOSS
+                        value_pred_clipped_e = traj_batch.value_e + (
+                            value_e - traj_batch.value_e
                         ).clip(-config["CLIP_EPS"], config["CLIP_EPS"])
-                        value_losses = jnp.square(value - targets)
-                        value_losses_clipped = jnp.square(value_pred_clipped - targets)
-                        value_loss = (
-                            0.5 * jnp.maximum(value_losses, value_losses_clipped).mean()
+                        value_losses_e = jnp.square(value_e - targets_e)
+                        value_losses_clipped_e = jnp.square(
+                            value_pred_clipped_e - targets_e
+                        )
+                        value_loss_e = (
+                            0.5
+                            * jnp.maximum(value_losses_e, value_losses_clipped_e).mean()
+                        )
+
+                        # CALCULATE INTRINSIC VALUE LOSS
+                        value_pred_clipped_i = traj_batch.value_i + (
+                            value_i - traj_batch.value_i
+                        ).clip(-config["CLIP_EPS"], config["CLIP_EPS"])
+                        value_losses_i = jnp.square(value_i - targets_i)
+                        value_losses_clipped_i = jnp.square(
+                            value_pred_clipped_i - targets_i
+                        )
+                        value_loss_i = (
+                            0.5
+                            * jnp.maximum(value_losses_i, value_losses_clipped_i).mean()
                         )
 
                         # CALCULATE ACTOR LOSS
+                        gae = gae_e + gae_i
                         ratio = jnp.exp(log_prob - traj_batch.log_prob)
                         gae = (gae - gae.mean()) / (gae.std() + 1e-8)
                         loss_actor1 = ratio * gae
@@ -397,14 +356,24 @@ def make_train(config):
 
                         total_loss = (
                             loss_actor
-                            + config["VF_COEF"] * value_loss
+                            + config["VF_COEF"] * (value_loss_e + value_loss_i)
                             - config["ENT_COEF"] * entropy
                         )
-                        return total_loss, (value_loss, loss_actor, entropy)
+                        return total_loss, (
+                            value_loss_e,
+                            value_loss_i,
+                            loss_actor,
+                            entropy,
+                        )
 
                     grad_fn = jax.value_and_grad(_loss_fn, has_aux=True)
                     total_loss, grads = grad_fn(
-                        train_state.params, traj_batch, advantages, targets
+                        train_state.params,
+                        traj_batch,
+                        advantages_e,
+                        targets_e,
+                        advantages_i,
+                        targets_i,
                     )
                     train_state = train_state.apply_gradients(grads=grads)
 
@@ -414,8 +383,10 @@ def make_train(config):
                 (
                     train_state,
                     traj_batch,
-                    advantages,
-                    targets,
+                    advantages_e,
+                    targets_e,
+                    advantages_i,
+                    targets_i,
                     rng,
                 ) = update_state
                 rng, _rng = jax.random.split(rng)
@@ -424,7 +395,13 @@ def make_train(config):
                     batch_size == config["NUM_STEPS"] * config["NUM_ENVS"]
                 ), "batch size must be equal to number of steps * number of envs"
                 permutation = jax.random.permutation(_rng, batch_size)
-                batch = (traj_batch, advantages, targets)
+                batch = (
+                    traj_batch,
+                    advantages_e,
+                    targets_e,
+                    advantages_i,
+                    targets_i,
+                )
                 batch = jax.tree_util.tree_map(
                     lambda x: x.reshape((batch_size,) + x.shape[2:]), batch
                 )
@@ -443,8 +420,10 @@ def make_train(config):
                 update_state = (
                     train_state,
                     traj_batch,
-                    advantages,
-                    targets,
+                    advantages_e,
+                    targets_e,
+                    advantages_i,
+                    targets_i,
                     rng,
                 )
                 return update_state, losses
@@ -452,8 +431,10 @@ def make_train(config):
             update_state = (
                 train_state,
                 traj_batch,
-                advantages,
-                targets,
+                advantages_e,
+                targets_e,
+                advantages_i,
+                targets_i,
                 rng,
             )
             update_state, loss_info = jax.lax.scan(
@@ -472,85 +453,33 @@ def make_train(config):
             # UPDATE EXPLORATION STATE
             def _update_ex_epoch(update_state, unused):
                 def _update_ex_minbatch(ex_state, traj_batch):
-                    def _inverse_loss_fn(
-                        icm_encoder_params, icm_inverse_params, traj_batch
-                    ):
-                        latent_obs = ex_state["icm_encoder"].apply_fn(
-                            icm_encoder_params, traj_batch.obs
-                        )
-                        latent_next_obs = ex_state["icm_encoder"].apply_fn(
-                            icm_encoder_params, traj_batch.next_obs
-                        )
+                    rnd_loss = 0
 
-                        action_pred_logits = ex_state["icm_inverse"].apply_fn(
-                            icm_inverse_params, latent_obs, latent_next_obs
-                        )
-                        true_action = jax.nn.one_hot(
-                            traj_batch.action, num_classes=action_pred_logits.shape[-1]
-                        )
+                    if config["USE_RND"]:
 
-                        bce = -jnp.mean(
-                            jnp.sum(
-                                action_pred_logits
-                                * true_action
-                                * traj_batch.done[:, None],
-                                axis=1,
+                        def _rnd_loss_fn(rnd_distillation_params, traj_batch):
+                            random_network_out = rnd_random_network.apply(
+                                rnd_random_network_params, traj_batch.next_obs
                             )
+
+                            distillation_network_out = ex_state[
+                                "rnd_distillation_network"
+                            ].apply_fn(rnd_distillation_params, traj_batch.next_obs)
+
+                            error = (random_network_out - distillation_network_out) * (
+                                1 - traj_batch.done[:, None]
+                            )
+                            return jnp.square(error).mean() * config["RND_LOSS_COEFF"]
+
+                        rnd_grad_fn = jax.value_and_grad(_rnd_loss_fn, has_aux=False)
+                        rnd_loss, rnd_grad = rnd_grad_fn(
+                            ex_state["rnd_distillation_network"].params, traj_batch
                         )
+                        ex_state["rnd_distillation_network"] = ex_state[
+                            "rnd_distillation_network"
+                        ].apply_gradients(grads=rnd_grad)
 
-                        return bce * config["ICM_INVERSE_LOSS_COEF"]
-
-                    inverse_grad_fn = jax.value_and_grad(
-                        _inverse_loss_fn,
-                        has_aux=False,
-                        argnums=(
-                            0,
-                            1,
-                        ),
-                    )
-                    inverse_loss, grads = inverse_grad_fn(
-                        ex_state["icm_encoder"].params,
-                        ex_state["icm_inverse"].params,
-                        traj_batch,
-                    )
-                    icm_encoder_grad, icm_inverse_grad = grads
-                    ex_state["icm_encoder"] = ex_state["icm_encoder"].apply_gradients(
-                        grads=icm_encoder_grad
-                    )
-                    ex_state["icm_inverse"] = ex_state["icm_inverse"].apply_gradients(
-                        grads=icm_inverse_grad
-                    )
-
-                    def _forward_loss_fn(icm_forward_params, traj_batch):
-                        latent_obs = ex_state["icm_encoder"].apply_fn(
-                            ex_state["icm_encoder"].params, traj_batch.obs
-                        )
-                        latent_next_obs = ex_state["icm_encoder"].apply_fn(
-                            ex_state["icm_encoder"].params, traj_batch.next_obs
-                        )
-
-                        latent_next_obs_pred = ex_state["icm_forward"].apply_fn(
-                            icm_forward_params, latent_obs, traj_batch.action
-                        )
-
-                        error = (
-                            latent_next_obs - latent_next_obs_pred
-                        ) * traj_batch.done[:, None]
-                        return (
-                            jnp.square(error).mean() * config["ICM_FORWARD_LOSS_COEF"]
-                        )
-
-                    forward_grad_fn = jax.value_and_grad(
-                        _forward_loss_fn, has_aux=False
-                    )
-                    forward_loss, icm_forward_grad = forward_grad_fn(
-                        ex_state["icm_forward"].params, traj_batch
-                    )
-                    ex_state["icm_forward"] = ex_state["icm_forward"].apply_gradients(
-                        grads=icm_forward_grad
-                    )
-
-                    losses = (inverse_loss, forward_loss)
+                    losses = (rnd_loss,)
                     return ex_state, losses
 
                 (ex_state, traj_batch, rng) = update_state
@@ -578,7 +507,7 @@ def make_train(config):
                 update_state = (ex_state, traj_batch, rng)
                 return update_state, losses
 
-            if config["TRAIN_ICM"]:
+            if config["USE_RND"]:
                 ex_update_state = (ex_state, traj_batch, rng)
                 ex_update_state, ex_loss = jax.lax.scan(
                     _update_ex_epoch,
@@ -586,8 +515,7 @@ def make_train(config):
                     None,
                     config["EXPLORATION_UPDATE_EPOCHS"],
                 )
-                metric["icm_inverse_loss"] = ex_loss[0].mean()
-                metric["icm_forward_loss"] = ex_loss[1].mean()
+                metric["rnd_loss"] = ex_loss[0].mean()
                 metric["reward_i"] = traj_batch.reward_i.mean()
                 metric["reward_e"] = traj_batch.reward_e.mean()
 
@@ -703,7 +631,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--num_envs",
         type=int,
-        default=1024,
+        default=512,
     )
     parser.add_argument(
         "--total_timesteps", type=lambda x: int(float(x)), default=1e9
@@ -739,27 +667,24 @@ if __name__ == "__main__":
     parser.add_argument("--optimistic_reset_ratio", type=int, default=16)
 
     # EXPLORATION
-    parser.add_argument("--exploration_update_epochs", type=int, default=4)
-    # ICM
-    parser.add_argument("--icm_reward_coeff", type=float, default=1.0)
-    parser.add_argument("--train_icm", action="store_true")
-    parser.add_argument("--icm_lr", type=float, default=3e-4)
-    parser.add_argument("--icm_forward_loss_coef", type=float, default=1.0)
-    parser.add_argument("--icm_inverse_loss_coef", type=float, default=1.0)
-    parser.add_argument("--icm_layer_size", type=int, default=256)
-    parser.add_argument("--icm_latent_size", type=int, default=32)
-    # E3B
-    parser.add_argument("--e3b_reward_coeff", type=float, default=1.0)
-    parser.add_argument("--use_e3b", action="store_true")
-    parser.add_argument("--e3b_lambda", type=float, default=0.1)
+    parser.add_argument("--exploration_update_epochs", type=int, default=1)
+    # RND
+    parser.add_argument(
+        "--use_rnd", action=argparse.BooleanOptionalAction, default=True
+    )
+    parser.add_argument("--rnd_layer_size", type=int, default=256)
+    parser.add_argument("--rnd_output_size", type=int, default=512)
+    parser.add_argument("--rnd_lr", type=float, default=3e-4)
+    parser.add_argument("--rnd_reward_coeff", type=float, default=0.1)
+    parser.add_argument("--rnd_loss_coeff", type=float, default=0.001)
+    parser.add_argument(
+        "--rnd_is_episodic", action=argparse.BooleanOptionalAction, default=False
+    )
 
     args, rest_args = parser.parse_known_args(sys.argv[1:])
     if rest_args:
         raise ValueError(f"Unknown args {rest_args}")
 
-    if args.use_e3b:
-        assert args.train_icm
-        assert args.icm_reward_coeff == 0
     if args.seed is None:
         args.seed = np.random.randint(2**31)
 
