@@ -30,7 +30,6 @@ from craftax.environment_base.wrappers import (
     AutoResetEnvWrapper,
     BatchEnvWrapper,
 )
-from models.rnd import RNDNetwork
 
 
 class Transition(NamedTuple):
@@ -78,11 +77,6 @@ def make_train(config):
 
         env = CraftaxPixelsEnv()
         is_symbolic = False
-    elif config["ENV_NAME"] == "Tech-Tree-Gridworld-v1":
-        from craftax.tech_tree_gridworld.gridworld_tech_tree import Gridworld
-
-        env = Gridworld()
-        is_symbolic = True
     else:
         raise ValueError(f"Unknown env: {config['ENV_NAME']}")
     env_params = env.default_params
@@ -142,42 +136,6 @@ def make_train(config):
             "e3b_matrix": None,
             "rnd_model": None,
         }
-
-        if config["USE_RND"]:
-            obs_shape = env.observation_space(env_params).shape
-            assert len(obs_shape) == 1, "Only configured for 1D observations"
-            obs_shape = obs_shape[0]
-
-            # Random network
-            rnd_random_network = RNDNetwork(
-                num_layers=3,
-                output_dim=config["RND_OUTPUT_SIZE"],
-                layer_size=config["RND_LAYER_SIZE"],
-            )
-            rng, _rng = jax.random.split(rng)
-            rnd_random_network_params = rnd_random_network.init(
-                _rng, jnp.zeros((1, obs_shape))
-            )
-
-            # Distillation Network
-            rnd_distillation_network = RNDNetwork(
-                num_layers=3,
-                output_dim=config["RND_OUTPUT_SIZE"],
-                layer_size=config["RND_LAYER_SIZE"],
-            )
-            rng, _rng = jax.random.split(rng)
-            rnd_distillation_network_params = rnd_distillation_network.init(
-                _rng, jnp.zeros((1, obs_shape))
-            )
-            tx = optax.chain(
-                optax.clip_by_global_norm(config["MAX_GRAD_NORM"]),
-                optax.adam(config["RND_LR"], eps=1e-5),
-            )
-            ex_state["rnd_distillation_network"] = TrainState.create(
-                apply_fn=rnd_distillation_network.apply,
-                params=rnd_distillation_network_params,
-                tx=tx,
-            )
 
         if config["TRAIN_ICM"]:
             obs_shape = env.observation_space(env_params).shape
@@ -335,19 +293,6 @@ def make_train(config):
                         )
 
                         reward_i = e3b_bonus * config["E3B_REWARD_COEFF"]
-
-                elif config["USE_RND"]:
-                    random_pred = rnd_random_network.apply(
-                        rnd_random_network_params, obsv
-                    )
-
-                    distill_pred = ex_state["rnd_distillation_network"].apply_fn(
-                        ex_state["rnd_distillation_network"].params, obsv
-                    )
-                    error = (random_pred - distill_pred) * done[:, None]
-                    mse = jnp.square(error).mean(axis=-1)
-
-                    reward_i = mse * config["RND_REWARD_COEFF"]
 
                 reward = reward_e + reward_i
 
@@ -556,85 +501,57 @@ def make_train(config):
 
                         return bce * config["ICM_INVERSE_LOSS_COEF"]
 
-                    inverse_loss, forward_loss, rnd_loss = 0, 0, 0
+                    inverse_grad_fn = jax.value_and_grad(
+                        _inverse_loss_fn,
+                        has_aux=False,
+                        argnums=(
+                            0,
+                            1,
+                        ),
+                    )
+                    inverse_loss, grads = inverse_grad_fn(
+                        ex_state["icm_encoder"].params,
+                        ex_state["icm_inverse"].params,
+                        traj_batch,
+                    )
+                    icm_encoder_grad, icm_inverse_grad = grads
+                    ex_state["icm_encoder"] = ex_state["icm_encoder"].apply_gradients(
+                        grads=icm_encoder_grad
+                    )
+                    ex_state["icm_inverse"] = ex_state["icm_inverse"].apply_gradients(
+                        grads=icm_inverse_grad
+                    )
 
-                    if config["TRAIN_ICM"]:
-                        inverse_grad_fn = jax.value_and_grad(
-                            _inverse_loss_fn,
-                            has_aux=False,
-                            argnums=(
-                                0,
-                                1,
-                            ),
+                    def _forward_loss_fn(icm_forward_params, traj_batch):
+                        latent_obs = ex_state["icm_encoder"].apply_fn(
+                            ex_state["icm_encoder"].params, traj_batch.obs
                         )
-                        inverse_loss, grads = inverse_grad_fn(
-                            ex_state["icm_encoder"].params,
-                            ex_state["icm_inverse"].params,
-                            traj_batch,
+                        latent_next_obs = ex_state["icm_encoder"].apply_fn(
+                            ex_state["icm_encoder"].params, traj_batch.next_obs
                         )
-                        icm_encoder_grad, icm_inverse_grad = grads
-                        ex_state["icm_encoder"] = ex_state[
-                            "icm_encoder"
-                        ].apply_gradients(grads=icm_encoder_grad)
-                        ex_state["icm_inverse"] = ex_state[
-                            "icm_inverse"
-                        ].apply_gradients(grads=icm_inverse_grad)
 
-                        def _forward_loss_fn(icm_forward_params, traj_batch):
-                            latent_obs = ex_state["icm_encoder"].apply_fn(
-                                ex_state["icm_encoder"].params, traj_batch.obs
-                            )
-                            latent_next_obs = ex_state["icm_encoder"].apply_fn(
-                                ex_state["icm_encoder"].params, traj_batch.next_obs
-                            )
-
-                            latent_next_obs_pred = ex_state["icm_forward"].apply_fn(
-                                icm_forward_params, latent_obs, traj_batch.action
-                            )
-
-                            error = (
-                                latent_next_obs - latent_next_obs_pred
-                            ) * traj_batch.done[:, None]
-                            return (
-                                jnp.square(error).mean()
-                                * config["ICM_FORWARD_LOSS_COEF"]
-                            )
-
-                        forward_grad_fn = jax.value_and_grad(
-                            _forward_loss_fn, has_aux=False
+                        latent_next_obs_pred = ex_state["icm_forward"].apply_fn(
+                            icm_forward_params, latent_obs, traj_batch.action
                         )
-                        forward_loss, icm_forward_grad = forward_grad_fn(
-                            ex_state["icm_forward"].params, traj_batch
+
+                        error = (
+                            latent_next_obs - latent_next_obs_pred
+                        ) * traj_batch.done[:, None]
+                        return (
+                            jnp.square(error).mean() * config["ICM_FORWARD_LOSS_COEF"]
                         )
-                        ex_state["icm_forward"] = ex_state[
-                            "icm_forward"
-                        ].apply_gradients(grads=icm_forward_grad)
 
-                    elif config["USE_RND"]:
+                    forward_grad_fn = jax.value_and_grad(
+                        _forward_loss_fn, has_aux=False
+                    )
+                    forward_loss, icm_forward_grad = forward_grad_fn(
+                        ex_state["icm_forward"].params, traj_batch
+                    )
+                    ex_state["icm_forward"] = ex_state["icm_forward"].apply_gradients(
+                        grads=icm_forward_grad
+                    )
 
-                        def _rnd_loss_fn(rnd_distillation_params, traj_batch):
-                            random_network_out = rnd_random_network.apply(
-                                rnd_random_network_params, traj_batch.next_obs
-                            )
-
-                            distillation_network_out = ex_state[
-                                "rnd_distillation_network"
-                            ].apply_fn(rnd_distillation_params, traj_batch.next_obs)
-
-                            error = (
-                                random_network_out - distillation_network_out
-                            ) * traj_batch.done[:, None]
-                            return jnp.square(error).mean() * config["RND_LOSS_COEFF"]
-
-                        rnd_grad_fn = jax.value_and_grad(_rnd_loss_fn, has_aux=False)
-                        rnd_loss, rnd_grad = rnd_grad_fn(
-                            ex_state["rnd_distillation_network"].params, traj_batch
-                        )
-                        ex_state["rnd_distillation_network"] = ex_state[
-                            "rnd_distillation_network"
-                        ].apply_gradients(grads=rnd_grad)
-
-                    losses = (inverse_loss, forward_loss, rnd_loss)
+                    losses = (inverse_loss, forward_loss)
                     return ex_state, losses
 
                 (ex_state, traj_batch, rng) = update_state
@@ -662,7 +579,7 @@ def make_train(config):
                 update_state = (ex_state, traj_batch, rng)
                 return update_state, losses
 
-            if config["TRAIN_ICM"] or config["USE_RND"]:
+            if config["TRAIN_ICM"]:
                 ex_update_state = (ex_state, traj_batch, rng)
                 ex_update_state, ex_loss = jax.lax.scan(
                     _update_ex_epoch,
@@ -670,11 +587,8 @@ def make_train(config):
                     None,
                     config["EXPLORATION_UPDATE_EPOCHS"],
                 )
-                if config["TRAIN_ICM"]:
-                    metric["icm_inverse_loss"] = ex_loss[0].mean()
-                    metric["icm_forward_loss"] = ex_loss[1].mean()
-                elif config["USE_RND"]:
-                    metric["rnd_loss"] = ex_loss[2].mean()
+                metric["icm_inverse_loss"] = ex_loss[0].mean()
+                metric["icm_forward_loss"] = ex_loss[1].mean()
                 metric["reward_i"] = traj_batch.reward_i.mean()
                 metric["reward_e"] = traj_batch.reward_e.mean()
 
@@ -790,7 +704,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--num_envs",
         type=int,
-        default=256,
+        default=1024,
     )
     parser.add_argument(
         "--total_timesteps", type=lambda x: int(float(x)), default=1e9
@@ -836,16 +750,9 @@ if __name__ == "__main__":
     parser.add_argument("--icm_layer_size", type=int, default=256)
     parser.add_argument("--icm_latent_size", type=int, default=32)
     # E3B
-    parser.add_argument("--e3b_reward_coeff", type=float, default=0.01)
+    parser.add_argument("--e3b_reward_coeff", type=float, default=1.0)
     parser.add_argument("--use_e3b", action="store_true")
     parser.add_argument("--e3b_lambda", type=float, default=0.1)
-    # RND
-    parser.add_argument("--use_rnd", action="store_true")
-    parser.add_argument("--rnd_layer_size", type=int, default=256)
-    parser.add_argument("--rnd_output_size", type=int, default=32)
-    parser.add_argument("--rnd_lr", type=float, default=3e-6)
-    parser.add_argument("--rnd_reward_coeff", type=float, default=1.0)
-    parser.add_argument("--rnd_loss_coeff", type=float, default=0.1)
 
     args, rest_args = parser.parse_known_args(sys.argv[1:])
     if rest_args:
@@ -854,8 +761,6 @@ if __name__ == "__main__":
     if args.use_e3b:
         assert args.train_icm
         assert args.icm_reward_coeff == 0
-    assert not (args.train_icm and args.use_rnd)
-
     if args.seed is None:
         args.seed = np.random.randint(2**31)
 
