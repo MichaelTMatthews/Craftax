@@ -29,13 +29,14 @@ from craftax.environment_base.wrappers import (
     AutoResetEnvWrapper,
     BatchEnvWrapper,
 )
-from models.rnd import RNDNetwork
+from models.rnd import RNDNetwork, ActorCriticRND
 
 
 class Transition(NamedTuple):
     done: jnp.ndarray
     action: jnp.ndarray
-    value: jnp.ndarray
+    value_e: jnp.ndarray
+    value_i: jnp.ndarray
     reward_e: jnp.ndarray
     reward_i: jnp.ndarray
     reward: jnp.ndarray
@@ -108,11 +109,14 @@ def make_train(config):
     def train(rng):
         # INIT NETWORK
         if is_symbolic:
-            network = ActorCritic(env.action_space(env_params).n, config["LAYER_SIZE"])
-        else:
-            network = ActorCriticConv(
+            network = ActorCriticRND(
                 env.action_space(env_params).n, config["LAYER_SIZE"]
             )
+        else:
+            raise ValueError
+            # network = ActorCriticConv(
+            #     env.action_space(env_params).n, config["LAYER_SIZE"]
+            # )
 
         rng, _rng = jax.random.split(rng)
         init_x = jnp.zeros((1, *env.observation_space(env_params).shape))
@@ -193,7 +197,7 @@ def make_train(config):
 
                 # SELECT ACTION
                 rng, _rng = jax.random.split(rng)
-                pi, value = network.apply(train_state.params, last_obs)
+                pi, value_e, value_i = network.apply(train_state.params, last_obs)
                 action = pi.sample(seed=_rng)
                 log_prob = pi.log_prob(action)
 
@@ -223,7 +227,8 @@ def make_train(config):
                 transition = Transition(
                     done=done,
                     action=action,
-                    value=value,
+                    value_e=value_e,
+                    value_i=value_i,
                     reward=reward,
                     reward_i=reward_i,
                     reward_e=reward_e,
@@ -255,14 +260,16 @@ def make_train(config):
                 rng,
                 update_step,
             ) = runner_state
-            _, last_val = network.apply(train_state.params, last_obs)
+            _, last_val_e, last_val_i = network.apply(train_state.params, last_obs)
 
-            def _calculate_gae(traj_batch, last_val):
+            def _calculate_gae(traj_batch, last_val, is_extrinsic):
                 def _get_advantages(gae_and_next_value, transition):
-                    gae, next_value = gae_and_next_value
+                    gae, next_value, is_extrinsic = gae_and_next_value
                     done, value, reward = (
                         transition.done,
-                        transition.value,
+                        jax.lax.select(
+                            is_extrinsic, transition.value_e, transition.value_i
+                        ),
                         transition.reward,
                     )
                     delta = reward + config["GAMMA"] * next_value * (1 - done) - value
@@ -270,41 +277,69 @@ def make_train(config):
                         delta
                         + config["GAMMA"] * config["GAE_LAMBDA"] * (1 - done) * gae
                     )
-                    return (gae, value), gae
+                    return (gae, value, is_extrinsic), gae
 
                 _, advantages = jax.lax.scan(
                     _get_advantages,
-                    (jnp.zeros_like(last_val), last_val),
+                    (jnp.zeros_like(last_val), last_val, is_extrinsic),
                     traj_batch,
                     reverse=True,
                     unroll=16,
                 )
-                return advantages, advantages + traj_batch.value
+                return advantages, advantages + jax.lax.select(
+                    is_extrinsic, traj_batch.value_e, traj_batch.value_i
+                )
 
-            advantages, targets = _calculate_gae(traj_batch, last_val)
+            advantages_e, targets_e = _calculate_gae(traj_batch, last_val_e, True)
+            advantages_i, targets_i = _calculate_gae(traj_batch, last_val_e, False)
 
             # UPDATE NETWORK
             def _update_epoch(update_state, unused):
                 def _update_minbatch(train_state, batch_info):
-                    traj_batch, advantages, targets = batch_info
+                    (
+                        traj_batch,
+                        advantages_e,
+                        targets_e,
+                        advantages_i,
+                        targets_i,
+                    ) = batch_info
 
                     # Policy/value network
-                    def _loss_fn(params, traj_batch, gae, targets):
+                    def _loss_fn(
+                        params, traj_batch, gae_e, targets_e, gae_i, targets_i
+                    ):
                         # RERUN NETWORK
-                        pi, value = network.apply(params, traj_batch.obs)
+                        pi, value_e, value_i = network.apply(params, traj_batch.obs)
                         log_prob = pi.log_prob(traj_batch.action)
 
-                        # CALCULATE VALUE LOSS
-                        value_pred_clipped = traj_batch.value + (
-                            value - traj_batch.value
+                        # CALCULATE EXTRINSIC VALUE LOSS
+                        value_pred_clipped_e = traj_batch.value_e + (
+                            value_e - traj_batch.value_e
                         ).clip(-config["CLIP_EPS"], config["CLIP_EPS"])
-                        value_losses = jnp.square(value - targets)
-                        value_losses_clipped = jnp.square(value_pred_clipped - targets)
-                        value_loss = (
-                            0.5 * jnp.maximum(value_losses, value_losses_clipped).mean()
+                        value_losses_e = jnp.square(value_e - targets_e)
+                        value_losses_clipped_e = jnp.square(
+                            value_pred_clipped_e - targets_e
+                        )
+                        value_loss_e = (
+                            0.5
+                            * jnp.maximum(value_losses_e, value_losses_clipped_e).mean()
+                        )
+
+                        # CALCULATE INTRINSIC VALUE LOSS
+                        value_pred_clipped_i = traj_batch.value_i + (
+                            value_i - traj_batch.value_i
+                        ).clip(-config["CLIP_EPS"], config["CLIP_EPS"])
+                        value_losses_i = jnp.square(value_i - targets_i)
+                        value_losses_clipped_i = jnp.square(
+                            value_pred_clipped_i - targets_i
+                        )
+                        value_loss_i = (
+                            0.5
+                            * jnp.maximum(value_losses_i, value_losses_clipped_i).mean()
                         )
 
                         # CALCULATE ACTOR LOSS
+                        gae = gae_e + config["RND_REWARD_COEFF"] * gae_i
                         ratio = jnp.exp(log_prob - traj_batch.log_prob)
                         gae = (gae - gae.mean()) / (gae.std() + 1e-8)
                         loss_actor1 = ratio * gae
@@ -322,14 +357,25 @@ def make_train(config):
 
                         total_loss = (
                             loss_actor
-                            + config["VF_COEF"] * value_loss
+                            + config["VF_COEF"]
+                            * (value_loss_e + config["RND_REWARD_COEFF"] * value_loss_i)
                             - config["ENT_COEF"] * entropy
                         )
-                        return total_loss, (value_loss, loss_actor, entropy)
+                        return total_loss, (
+                            value_loss_e,
+                            value_loss_i,
+                            loss_actor,
+                            entropy,
+                        )
 
                     grad_fn = jax.value_and_grad(_loss_fn, has_aux=True)
                     total_loss, grads = grad_fn(
-                        train_state.params, traj_batch, advantages, targets
+                        train_state.params,
+                        traj_batch,
+                        advantages_e,
+                        targets_e,
+                        advantages_i,
+                        targets_i,
                     )
                     train_state = train_state.apply_gradients(grads=grads)
 
@@ -339,8 +385,10 @@ def make_train(config):
                 (
                     train_state,
                     traj_batch,
-                    advantages,
-                    targets,
+                    advantages_e,
+                    targets_e,
+                    advantages_i,
+                    targets_i,
                     rng,
                 ) = update_state
                 rng, _rng = jax.random.split(rng)
@@ -349,7 +397,13 @@ def make_train(config):
                     batch_size == config["NUM_STEPS"] * config["NUM_ENVS"]
                 ), "batch size must be equal to number of steps * number of envs"
                 permutation = jax.random.permutation(_rng, batch_size)
-                batch = (traj_batch, advantages, targets)
+                batch = (
+                    traj_batch,
+                    advantages_e,
+                    targets_e,
+                    advantages_i,
+                    targets_i,
+                )
                 batch = jax.tree_util.tree_map(
                     lambda x: x.reshape((batch_size,) + x.shape[2:]), batch
                 )
@@ -368,8 +422,10 @@ def make_train(config):
                 update_state = (
                     train_state,
                     traj_batch,
-                    advantages,
-                    targets,
+                    advantages_e,
+                    targets_e,
+                    advantages_i,
+                    targets_i,
                     rng,
                 )
                 return update_state, losses
@@ -377,8 +433,10 @@ def make_train(config):
             update_state = (
                 train_state,
                 traj_batch,
-                advantages,
-                targets,
+                advantages_e,
+                targets_e,
+                advantages_i,
+                targets_i,
                 rng,
             )
             update_state, loss_info = jax.lax.scan(
@@ -575,10 +633,10 @@ if __name__ == "__main__":
     parser.add_argument(
         "--num_envs",
         type=int,
-        default=256,
+        default=8,
     )
     parser.add_argument(
-        "--total_timesteps", type=lambda x: int(float(x)), default=1e9
+        "--total_timesteps", type=lambda x: int(float(x)), default=1e6
     )  # Allow scientific notation
     parser.add_argument("--lr", type=float, default=2e-4)
     parser.add_argument("--num_steps", type=int, default=64)
