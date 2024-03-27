@@ -78,11 +78,6 @@ def make_train(config):
 
         env = CraftaxPixelsEnv()
         is_symbolic = False
-    elif config["ENV_NAME"] == "Tech-Tree-Gridworld-v1":
-        from craftax.tech_tree_gridworld.gridworld_tech_tree import Gridworld
-
-        env = Gridworld()
-        is_symbolic = True
     else:
         raise ValueError(f"Unknown env: {config['ENV_NAME']}")
     env_params = env.default_params
@@ -217,7 +212,7 @@ def make_train(config):
                     distill_pred = ex_state["rnd_distillation_network"].apply_fn(
                         ex_state["rnd_distillation_network"].params, obsv
                     )
-                    error = (random_pred - distill_pred) * done[:, None]
+                    error = (random_pred - distill_pred) * (1 - done[:, None])
                     mse = jnp.square(error).mean(axis=-1)
 
                     reward_i = mse * config["RND_REWARD_COEFF"]
@@ -343,7 +338,7 @@ def make_train(config):
                         )
 
                         # CALCULATE ACTOR LOSS
-                        gae = gae_e + config["RND_REWARD_COEFF"] * gae_i
+                        gae = gae_e + gae_i
                         ratio = jnp.exp(log_prob - traj_batch.log_prob)
                         gae = (gae - gae.mean()) / (gae.std() + 1e-8)
                         loss_actor1 = ratio * gae
@@ -361,8 +356,7 @@ def make_train(config):
 
                         total_loss = (
                             loss_actor
-                            + config["VF_COEF"]
-                            * (value_loss_e + config["RND_REWARD_COEFF"] * value_loss_i)
+                            + config["VF_COEF"] * (value_loss_e + value_loss_i)
                             - config["ENT_COEF"] * entropy
                         )
                         return total_loss, (
@@ -472,9 +466,9 @@ def make_train(config):
                                 "rnd_distillation_network"
                             ].apply_fn(rnd_distillation_params, traj_batch.next_obs)
 
-                            error = (
-                                random_network_out - distillation_network_out
-                            ) * traj_batch.done[:, None]
+                            error = (random_network_out - distillation_network_out) * (
+                                1 - traj_batch.done[:, None]
+                            )
                             return jnp.square(error).mean() * config["RND_LOSS_COEFF"]
 
                         rnd_grad_fn = jax.value_and_grad(_rnd_loss_fn, has_aux=False)
@@ -637,10 +631,10 @@ if __name__ == "__main__":
     parser.add_argument(
         "--num_envs",
         type=int,
-        default=8,
+        default=512,
     )
     parser.add_argument(
-        "--total_timesteps", type=lambda x: int(float(x)), default=1e6
+        "--total_timesteps", type=lambda x: int(float(x)), default=1e9
     )  # Allow scientific notation
     parser.add_argument("--lr", type=float, default=2e-4)
     parser.add_argument("--num_steps", type=int, default=64)
@@ -663,7 +657,7 @@ if __name__ == "__main__":
         "--use_wandb", action=argparse.BooleanOptionalAction, default=True
     )
     parser.add_argument("--save_policy", action="store_true")
-    parser.add_argument("--num_repeats", type=int, default=1)
+    parser.add_argument("--num_repeats", type=int, default=8)
     parser.add_argument("--layer_size", type=int, default=512)
     parser.add_argument("--wandb_project", type=str)
     parser.add_argument("--wandb_entity", type=str)
@@ -673,16 +667,16 @@ if __name__ == "__main__":
     parser.add_argument("--optimistic_reset_ratio", type=int, default=16)
 
     # EXPLORATION
-    parser.add_argument("--exploration_update_epochs", type=int, default=4)
+    parser.add_argument("--exploration_update_epochs", type=int, default=1)
     # RND
     parser.add_argument(
         "--use_rnd", action=argparse.BooleanOptionalAction, default=True
     )
     parser.add_argument("--rnd_layer_size", type=int, default=256)
-    parser.add_argument("--rnd_output_size", type=int, default=32)
-    parser.add_argument("--rnd_lr", type=float, default=3e-6)
-    parser.add_argument("--rnd_reward_coeff", type=float, default=1.0)
-    parser.add_argument("--rnd_loss_coeff", type=float, default=0.1)
+    parser.add_argument("--rnd_output_size", type=int, default=512)
+    parser.add_argument("--rnd_lr", type=float, default=3e-4)
+    parser.add_argument("--rnd_reward_coeff", type=float, default=0.1)
+    parser.add_argument("--rnd_loss_coeff", type=float, default=0.001)
     parser.add_argument(
         "--rnd_is_episodic", action=argparse.BooleanOptionalAction, default=False
     )

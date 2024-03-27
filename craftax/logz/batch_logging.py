@@ -63,12 +63,14 @@ def batch_log(update_step, log, config):
             if len(agg) > 0:
                 if key in [
                     "episode_length",
+                    "episode_return",
                     "wm_loss",
                     "exploration_bonus",
                     "e_mean",
                     "e_std",
                     "goal_x",
                     "goal_y",
+                    "rnd_loss",
                 ]:
                     agg_logs[key] = np.mean(agg)
                 elif key in ["goal_heatmap"]:
