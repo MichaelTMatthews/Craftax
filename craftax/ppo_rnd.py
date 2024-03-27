@@ -272,6 +272,10 @@ def make_train(config):
                         ),
                         transition.reward,
                     )
+                    done = jnp.logical_and(
+                        done, jnp.logical_or(config["RND_IS_EPISODIC"], is_extrinsic)
+                    )
+
                     delta = reward + config["GAMMA"] * next_value * (1 - done) - value
                     gae = (
                         delta
@@ -679,6 +683,9 @@ if __name__ == "__main__":
     parser.add_argument("--rnd_lr", type=float, default=3e-6)
     parser.add_argument("--rnd_reward_coeff", type=float, default=1.0)
     parser.add_argument("--rnd_loss_coeff", type=float, default=0.1)
+    parser.add_argument(
+        "--rnd_is_episodic", action=argparse.BooleanOptionalAction, default=False
+    )
 
     args, rest_args = parser.parse_known_args(sys.argv[1:])
     if rest_args:
