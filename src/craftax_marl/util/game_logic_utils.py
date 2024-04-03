@@ -401,3 +401,45 @@ def clip_inventory_and_intrinsics(state, params):
     )
 
     return state
+
+
+def find_valid_ladder_areas(valid_ladder_map, player_count):
+    d = player_count*2 - 1
+    s = jnp.ones((d,))
+
+    valid_areas = jax.vmap(jnp.convolve, in_axes=(0,None,None))(
+        valid_ladder_map, s, 'valid'
+    )
+    valid_areas = valid_areas == d
+    valid_areas = jnp.pad(
+        valid_areas,
+        (
+            (0,0),
+            (0, valid_ladder_map.shape[1] - valid_areas.shape[1])
+        )
+    )
+    return valid_areas
+
+
+def get_ladder_positions(rng, static_params, config, map):
+    valid_ladder_down = (map == config.valid_ladder).astype(jnp.float32)
+    valid_ladder_down = find_valid_ladder_areas(
+        valid_ladder_down, 
+        static_params.player_count
+    ).flatten()
+    ladder_index = jax.random.choice(
+        rng,
+        jnp.arange(static_params.map_size[0] * static_params.map_size[1]),
+        p=valid_ladder_down / valid_ladder_down.sum(),
+    )
+    ladder_positions_corner = jnp.array(
+        [
+            ladder_index // static_params.map_size[0],
+            ladder_index % static_params.map_size[0],
+        ]
+    )
+    ladder_positions = jnp.array([
+        ladder_positions_corner[0].repeat(static_params.player_count),
+        ladder_positions_corner[1] + jnp.arange(static_params.player_count)*2
+    ]).T
+    return ladder_positions

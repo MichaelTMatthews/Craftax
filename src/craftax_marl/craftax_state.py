@@ -8,22 +8,22 @@ import jax.numpy as jnp
 
 @struct.dataclass
 class Inventory:
-    wood: int
-    stone: int
-    coal: int
-    iron: int
-    diamond: int
-    sapling: int
-    pickaxe: int
-    sword: int
-    bow: int
-    arrows: int
+    wood: jnp.ndarray
+    stone: jnp.ndarray
+    coal: jnp.ndarray
+    iron: jnp.ndarray
+    diamond: jnp.ndarray
+    sapling: jnp.ndarray
+    pickaxe: jnp.ndarray
+    sword: jnp.ndarray
+    bow: jnp.ndarray
+    arrows: jnp.ndarray
     armour: jnp.ndarray
-    torches: int
-    ruby: int
-    sapphire: int
+    torches: jnp.ndarray
+    ruby: jnp.ndarray
+    sapphire: jnp.ndarray
     potions: jnp.ndarray
-    books: int
+    books: jnp.ndarray
 
 
 @struct.dataclass
@@ -54,29 +54,29 @@ class EnvState:
 
     player_position: jnp.ndarray
     player_level: int
-    player_direction: int
+    player_direction: jnp.ndarray
 
     # Intrinsics
-    player_health: float
-    player_food: int
-    player_drink: int
-    player_energy: int
-    player_mana: int
-    is_sleeping: bool
-    is_resting: bool
+    player_health: jnp.ndarray
+    player_food: jnp.ndarray
+    player_drink: jnp.ndarray
+    player_energy: jnp.ndarray
+    player_mana: jnp.ndarray
+    is_sleeping: jnp.ndarray
+    is_resting: jnp.ndarray
 
     # Second order intrinsics
-    player_recover: float
-    player_hunger: float
-    player_thirst: float
-    player_fatigue: float
-    player_recover_mana: float
+    player_recover: jnp.ndarray
+    player_hunger: jnp.ndarray
+    player_thirst: jnp.ndarray
+    player_fatigue: jnp.ndarray
+    player_recover_mana: jnp.ndarray
 
     # Attributes
-    player_xp: int
-    player_dexterity: int
-    player_strength: int
-    player_intelligence: int
+    player_xp: jnp.ndarray
+    player_dexterity: jnp.ndarray
+    player_strength: jnp.ndarray
+    player_intelligence: jnp.ndarray
 
     inventory: Inventory
 
@@ -96,8 +96,8 @@ class EnvState:
     potion_mapping: jnp.ndarray
     learned_spells: jnp.ndarray
 
-    sword_enchantment: int
-    bow_enchantment: int
+    sword_enchantment: jnp.ndarray
+    bow_enchantment: jnp.ndarray
     armour_enchantments: jnp.ndarray
 
     boss_progress: int
@@ -135,6 +135,7 @@ class EnvParams:
 class StaticEnvParams:
     map_size: Tuple[int, int] = (48, 48)
     num_levels: int = 9
+    player_count: int = 2
 
     # Mobs
     max_melee_mobs: int = 3

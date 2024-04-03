@@ -4,6 +4,7 @@ import jax.scipy as jsp
 from craftax_marl.constants import *
 from craftax_marl.game_logic import calculate_light_level, get_distance_map
 from craftax_marl.craftax_state import EnvState, Inventory, Mobs
+from craftax_marl.util.game_logic_utils import get_ladder_positions
 from craftax_marl.util.noise import generate_fractal_noise_2d
 from craftax_marl.world_gen.world_gen_configs import (
     ALL_DUNGEON_CONFIGS,
@@ -11,65 +12,45 @@ from craftax_marl.world_gen.world_gen_configs import (
 )
 
 
-def get_new_empty_inventory():
+def get_new_empty_inventory(player_count):
     return Inventory(
-        wood=jnp.asarray(0, dtype=jnp.int32),
-        stone=jnp.asarray(0, dtype=jnp.int32),
-        coal=jnp.asarray(0, dtype=jnp.int32),
-        iron=jnp.asarray(0, dtype=jnp.int32),
-        diamond=jnp.asarray(0, dtype=jnp.int32),
-        sapling=jnp.asarray(0, dtype=jnp.int32),
-        pickaxe=jnp.asarray(0, dtype=jnp.int32),
-        sword=jnp.asarray(0, dtype=jnp.int32),
-        bow=jnp.asarray(0, dtype=jnp.int32),
-        arrows=jnp.asarray(0, dtype=jnp.int32),
-        torches=jnp.asarray(0, dtype=jnp.int32),
-        ruby=jnp.asarray(0, dtype=jnp.int32),
-        sapphire=jnp.asarray(0, dtype=jnp.int32),
-        books=jnp.asarray(0, dtype=jnp.int32),
-        potions=jnp.array(
-            [
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-            ],
-            dtype=jnp.int32,
-        ),
-        armour=jnp.array([0, 0, 0, 0], dtype=jnp.int32),
+        wood=jnp.full((player_count,), 0, dtype=jnp.int32),
+        stone=jnp.full((player_count,), 0, dtype=jnp.int32),
+        coal=jnp.full((player_count,), 0, dtype=jnp.int32),
+        iron=jnp.full((player_count,), 0, dtype=jnp.int32),
+        diamond=jnp.full((player_count,), 0, dtype=jnp.int32),
+        sapling=jnp.full((player_count,), 0, dtype=jnp.int32),
+        pickaxe=jnp.full((player_count,), 0, dtype=jnp.int32),
+        sword=jnp.full((player_count,), 0, dtype=jnp.int32),
+        bow=jnp.full((player_count,), 0, dtype=jnp.int32),
+        arrows=jnp.full((player_count,), 0, dtype=jnp.int32),
+        torches=jnp.full((player_count,), 0, dtype=jnp.int32),
+        ruby=jnp.full((player_count,), 0, dtype=jnp.int32),
+        sapphire=jnp.full((player_count,), 0, dtype=jnp.int32),
+        books=jnp.full((player_count,), 0, dtype=jnp.int32),
+        potions=jnp.full((player_count,6), 0, dtype=jnp.int32),
+        armour=jnp.full((player_count,4), 0, dtype=jnp.int32),
     )
 
 
-def get_new_full_inventory():
+def get_new_full_inventory(player_count):
     return Inventory(
-        wood=jnp.asarray(99, dtype=jnp.int32),
-        stone=jnp.asarray(99, dtype=jnp.int32),
-        coal=jnp.asarray(99, dtype=jnp.int32),
-        iron=jnp.asarray(99, dtype=jnp.int32),
-        diamond=jnp.asarray(99, dtype=jnp.int32),
-        sapling=jnp.asarray(99, dtype=jnp.int32),
-        pickaxe=jnp.asarray(4, dtype=jnp.int32),
-        sword=jnp.asarray(4, dtype=jnp.int32),
-        bow=jnp.asarray(1, dtype=jnp.int32),
-        arrows=jnp.asarray(99, dtype=jnp.int32),
-        torches=jnp.asarray(99, dtype=jnp.int32),
-        ruby=jnp.asarray(99, dtype=jnp.int32),
-        sapphire=jnp.asarray(99, dtype=jnp.int32),
-        books=jnp.asarray(99, dtype=jnp.int32),
-        potions=jnp.array(
-            [
-                99,
-                99,
-                99,
-                99,
-                99,
-                99,
-            ],
-            dtype=jnp.int32,
-        ),
-        armour=jnp.array([2, 2, 2, 2], dtype=jnp.int32),
+        wood=jnp.full((player_count,), 99, dtype=jnp.int32),
+        stone=jnp.full((player_count,), 99, dtype=jnp.int32),
+        coal=jnp.full((player_count,), 99, dtype=jnp.int32),
+        iron=jnp.full((player_count,), 99, dtype=jnp.int32),
+        diamond=jnp.full((player_count,), 99, dtype=jnp.int32),
+        sapling=jnp.full((player_count,), 99, dtype=jnp.int32),
+        pickaxe=jnp.full((player_count,), 4, dtype=jnp.int32),
+        sword=jnp.full((player_count,), 4, dtype=jnp.int32),
+        bow=jnp.full((player_count,), 1, dtype=jnp.int32),
+        arrows=jnp.full((player_count,), 99, dtype=jnp.int32),
+        torches=jnp.full((player_count,), 99, dtype=jnp.int32),
+        ruby=jnp.full((player_count,), 99, dtype=jnp.int32),
+        sapphire=jnp.full((player_count,), 99, dtype=jnp.int32),
+        books=jnp.full((player_count,), 99, dtype=jnp.int32),
+        potions=jnp.full((player_count,6), 99, dtype=jnp.int32),
+        armour=jnp.full((player_count,4), 2, dtype=jnp.int32),
     )
 
 
@@ -316,42 +297,19 @@ def generate_dungeon(rng, static_params, config):
     light_map = jnp.ones(static_params.map_size, dtype=jnp.float32)
 
     # Ladders
-    valid_ladder_down = (map.flatten() == BlockType.PATH.value).astype(jnp.float32)
     rng, _rng = jax.random.split(rng)
-    ladder_index = jax.random.choice(
-        _rng,
-        jnp.arange(static_params.map_size[0] * static_params.map_size[1]),
-        p=valid_ladder_down / valid_ladder_down.sum(),
-    )
-    ladder_down_position = jnp.array(
-        [
-            ladder_index // static_params.map_size[0],
-            ladder_index % static_params.map_size[0],
-        ]
-    )
-
-    item_map = item_map.at[ladder_down_position[0], ladder_down_position[1]].set(
+    ladders_down = get_ladder_positions(_rng, static_params, config, map)
+    item_map = item_map.at[ladders_down[:, 0], ladders_down[:, 1]].set(
         ItemType.LADDER_DOWN.value
     )
 
-    valid_ladder_up = map.flatten() == BlockType.PATH.value
     rng, _rng = jax.random.split(rng)
-    ladder_index = jax.random.choice(
-        _rng,
-        jnp.arange(static_params.map_size[0] * static_params.map_size[1]),
-        p=valid_ladder_up,
-    )
-    ladder_up_position = jnp.array(
-        [
-            ladder_index // static_params.map_size[0],
-            ladder_index % static_params.map_size[0],
-        ]
-    )
-    item_map = item_map.at[ladder_up_position[0], ladder_up_position[1]].set(
+    ladders_up = get_ladder_positions(_rng, static_params, config, map)
+    item_map = item_map.at[ladders_up[:, 0], ladders_up[:, 1]].set(
         ItemType.LADDER_UP.value
     )
 
-    return map, item_map, light_map, ladder_down_position, ladder_up_position
+    return map, item_map, light_map, ladders_down, ladders_up
 
 
 def generate_smoothworld(rng, static_params, player_position, config, params=None):
@@ -360,9 +318,10 @@ def generate_smoothworld(rng, static_params, player_position, config, params=Non
     else:
         fractal_noise_angles = (None, None, None, None, None)
 
-    player_proximity_map = get_distance_map(
+    player_proximity_map = jax.vmap(get_distance_map, in_axes=(0, None))(
         player_position, static_params.map_size
-    ).astype(jnp.float32)
+    )
+    player_proximity_map = jnp.min(player_proximity_map, axis=0).astype(jnp.float32)
     player_proximity_map_water = (
         player_proximity_map / config.player_proximity_map_water_strength
     )
@@ -469,49 +428,33 @@ def generate_smoothworld(rng, static_params, player_position, config, params=Non
     )
 
     # Make sure player spawns on grass
-    map = map.at[player_position[0], player_position[1]].set(config.player_spawn)
+    map = map.at[player_position[:,0], player_position[:,1]].set(config.player_spawn)
 
     item_map = jnp.zeros(static_params.map_size, dtype=jnp.int32)
 
-    valid_ladder_down = map.flatten() == config.valid_ladder
     rng, _rng = jax.random.split(rng)
-    ladder_index = jax.random.choice(
-        _rng,
-        jnp.arange(static_params.map_size[0] * static_params.map_size[1]),
-        p=valid_ladder_down,
-    )
-    ladder_down = jnp.array(
-        [
-            ladder_index // static_params.map_size[0],
-            ladder_index % static_params.map_size[0],
-        ]
-    )
+    ladders_down = get_ladder_positions(_rng, static_params, config, map)
 
-    item_map = item_map.at[ladder_down[0], ladder_down[1]].set(
+    item_map = item_map.at[ladders_down[:, 0], ladders_down[:, 1]].set(
         ItemType.LADDER_DOWN.value * config.ladder_down
-        + map[ladder_down[0], ladder_down[1]] * (1 - config.ladder_down)
+        + map[ladders_down[:, 0], ladders_down[:, 1]] * (1 - config.ladder_down)
     )
 
-    valid_ladder_up = map.flatten() == config.valid_ladder
     rng, _rng = jax.random.split(rng)
-    ladder_index = jax.random.choice(
-        _rng,
-        jnp.arange(static_params.map_size[0] * static_params.map_size[1]),
-        p=valid_ladder_up,
-    )
-    ladder_up = jnp.array(
-        [
-            ladder_index // static_params.map_size[0],
-            ladder_index % static_params.map_size[0],
-        ]
-    )
+    ladders_up = get_ladder_positions(_rng, static_params, config, map)
 
     LIGHT_MAP_AROUND_LADDER = TORCH_LIGHT_MAP * (
         1 - config.default_light
     ) + config.default_light * jnp.ones((9, 9))
 
-    light_map = jax.lax.dynamic_update_slice(
-        light_map, LIGHT_MAP_AROUND_LADDER, ladder_up - jnp.array([4, 4])
+    def _set_ladder_light(light_map, ladder_position):
+        out = jax.lax.dynamic_update_slice(
+            light_map, LIGHT_MAP_AROUND_LADDER, ladder_position - jnp.array([4, 4])
+        )
+        return out, None
+    light_map, _ = jax.lax.scan(
+        _set_ladder_light,
+        light_map, ladders_up
     )
 
     z = jnp.array([[0.2, 0.7, 0.2], [0.7, 1, 0.7], [0.2, 0.7, 0.2]]) * (
@@ -520,31 +463,32 @@ def generate_smoothworld(rng, static_params, player_position, config, params=Non
     light_map += jsp.signal.convolve(lava_map, z, mode="same")
     light_map = jnp.clip(light_map, 0.0, 1.0)
 
-    item_map = item_map.at[ladder_up[0], ladder_up[1]].set(
+    item_map = item_map.at[ladders_up[:, 0], ladders_up[:, 1]].set(
         ItemType.LADDER_UP.value * config.ladder_up
-        + map[ladder_up[0], ladder_up[1]] * (1 - config.ladder_up)
+        + map[ladders_up[:, 0], ladders_up[:, 1]] * (1 - config.ladder_up)
     )
 
-    return map, item_map, light_map, ladder_down, ladder_up
+    return map, item_map, light_map, ladders_down, ladders_up
 
 
 def generate_world(rng, params, static_params):
-    player_position = jnp.array(
-        [static_params.map_size[0] // 2, static_params.map_size[1] // 2]
-    )
+    # Start players in the middle of the map
+    def get_player_spawn(idx):
+        width = jnp.ceil(jnp.sqrt(static_params.player_count)).astype(jnp.int32)
+        return jnp.array(
+            [
+                (static_params.map_size[0] // 2) + (idx // width),
+                (static_params.map_size[1] // 2) + (idx % width)
+            ]
+        )
+    player_position = jax.vmap(get_player_spawn)(jnp.arange(0,static_params.player_count))
 
     # Generate smoothgens (overworld, caves, elemental levels, boss level)
     rngs = jax.random.split(rng, 7)
     rng, _rng = rngs[0], rngs[1:]
-    
-    overworld = generate_smoothworld(_rng[0], static_params, player_position, jax.tree_map(lambda x: x[0], ALL_SMOOTHGEN_CONFIGS), params=params)
-
     smoothgens = jax.vmap(generate_smoothworld, in_axes=(0, None, None, 0))(
-        _rng[1:], static_params, player_position, jax.tree_map(lambda x: x[1:], ALL_SMOOTHGEN_CONFIGS)
+        _rng, static_params, player_position, ALL_SMOOTHGEN_CONFIGS
     )
-
-    smoothgens = jax.tree_map(lambda over, others: jnp.concatenate([jnp.array([over]), others], axis=0), overworld, smoothgens)
-
 
     # Generate dungeons
     rngs = jax.random.split(rng, 4)
@@ -553,6 +497,8 @@ def generate_world(rng, params, static_params):
         _rng, static_params, ALL_DUNGEON_CONFIGS
     )
 
+    # Returns stacked versions of the map, item_map, light_map and ladders
+    # 9 elements in each of these stacks representing each of the levels.
     # Splice smoothgens and dungeons in order of levels
     map, item_map, light_map, ladders_down, ladders_up = jax.tree_map(
         lambda x, y: jnp.stack(
@@ -576,9 +522,9 @@ def generate_world(rng, params, static_params):
             type_id=jnp.zeros((static_params.num_levels, max_mobs), dtype=jnp.int32),
         )
 
-    melee_mobs = generate_empty_mobs(static_params.max_melee_mobs)
-    ranged_mobs = generate_empty_mobs(static_params.max_ranged_mobs)
-    passive_mobs = generate_empty_mobs(static_params.max_passive_mobs)
+    melee_mobs = generate_empty_mobs(static_params.max_melee_mobs*static_params.player_count)
+    ranged_mobs = generate_empty_mobs(static_params.max_ranged_mobs*static_params.player_count)
+    passive_mobs = generate_empty_mobs(static_params.max_passive_mobs*static_params.player_count)
 
     # Projectiles
     def _create_projectiles(max_num):
@@ -591,10 +537,10 @@ def generate_world(rng, params, static_params):
         return projectiles, projectile_directions
 
     mob_projectiles, mob_projectile_directions = _create_projectiles(
-        static_params.max_mob_projectiles
+        static_params.max_mob_projectiles*static_params.player_count
     )
     player_projectiles, player_projectile_directions = _create_projectiles(
-        static_params.max_player_projectiles
+        static_params.max_player_projectiles*static_params.player_count
     )
 
     # Plants
@@ -611,8 +557,8 @@ def generate_world(rng, params, static_params):
     # Inventory
     inventory = jax.tree_map(
         lambda x, y: jax.lax.select(params.god_mode, x, y),
-        get_new_full_inventory(),
-        get_new_empty_inventory(),
+        get_new_full_inventory(static_params.player_count),
+        get_new_empty_inventory(static_params.player_count),
     )
 
     rng, _rng = jax.random.split(rng)
@@ -631,28 +577,28 @@ def generate_world(rng, params, static_params):
         .at[0]
         .set(10),  # First ladder starts open
         player_position=player_position,
-        player_direction=jnp.asarray(Action.UP.value, dtype=jnp.int32),
+        player_direction=jnp.full((static_params.player_count,), Action.UP.value, dtype=jnp.int32),
         player_level=jnp.asarray(0, dtype=jnp.int32),
-        player_health=jnp.asarray(9.0, dtype=jnp.float32),
-        player_food=jnp.asarray(9, dtype=jnp.int32),
-        player_drink=jnp.asarray(9, dtype=jnp.int32),
-        player_energy=jnp.asarray(9, dtype=jnp.int32),
-        player_mana=jnp.asarray(9, dtype=jnp.int32),
-        player_recover=jnp.asarray(0.0, dtype=jnp.float32),
-        player_hunger=jnp.asarray(0.0, dtype=jnp.float32),
-        player_thirst=jnp.asarray(0.0, dtype=jnp.float32),
-        player_fatigue=jnp.asarray(0.0, dtype=jnp.float32),
-        player_recover_mana=jnp.asarray(0.0, dtype=jnp.float32),
-        is_sleeping=False,
-        is_resting=False,
-        player_xp=jnp.asarray(0, dtype=jnp.int32),
-        player_dexterity=jnp.asarray(1, dtype=jnp.int32),
-        player_strength=jnp.asarray(1, dtype=jnp.int32),
-        player_intelligence=jnp.asarray(1, dtype=jnp.int32),
+        player_health=jnp.full((static_params.player_count,), 9.0, dtype=jnp.float32),
+        player_food=jnp.full((static_params.player_count,), 9, dtype=jnp.int32),
+        player_drink=jnp.full((static_params.player_count,), 9, dtype=jnp.int32),
+        player_energy=jnp.full((static_params.player_count,), 9, dtype=jnp.int32),
+        player_mana=jnp.full((static_params.player_count,), 9, dtype=jnp.int32),
+        player_recover=jnp.full((static_params.player_count,), 0.0, dtype=jnp.float32),
+        player_hunger=jnp.full((static_params.player_count,), 0.0, dtype=jnp.float32),
+        player_thirst=jnp.full((static_params.player_count,), 0.0, dtype=jnp.float32),
+        player_fatigue=jnp.full((static_params.player_count,), 0.0, dtype=jnp.float32),
+        player_recover_mana=jnp.full((static_params.player_count,), 0.0, dtype=jnp.float32),
+        is_sleeping=jnp.full((static_params.player_count,), False, dtype=jnp.bool),
+        is_resting=jnp.full((static_params.player_count,), False, dtype=jnp.bool),
+        player_xp=jnp.full((static_params.player_count,), 0, dtype=jnp.int32),
+        player_dexterity=jnp.full((static_params.player_count,), 1, dtype=jnp.int32),
+        player_strength=jnp.full((static_params.player_count,), 1, dtype=jnp.int32),
+        player_intelligence=jnp.full((static_params.player_count,), 1, dtype=jnp.int32),
         inventory=inventory,
-        sword_enchantment=jnp.asarray(0, dtype=jnp.int32),
-        bow_enchantment=jnp.asarray(0, dtype=jnp.int32),
-        armour_enchantments=jnp.array([0, 0, 0, 0], dtype=jnp.int32),
+        sword_enchantment=jnp.full((static_params.player_count,), 0, dtype=jnp.int32),
+        bow_enchantment=jnp.full((static_params.player_count,), 0, dtype=jnp.int32),
+        armour_enchantments=jnp.full((static_params.player_count,4), 0, dtype=jnp.int32),
         melee_mobs=melee_mobs,
         ranged_mobs=ranged_mobs,
         passive_mobs=passive_mobs,
@@ -664,12 +610,12 @@ def generate_world(rng, params, static_params):
         growing_plants_age=growing_plants_age,
         growing_plants_mask=growing_plants_mask,
         potion_mapping=potion_mapping,
-        learned_spells=jnp.array([False, False], dtype=bool),
+        learned_spells=jnp.full((static_params.player_count,2), False, dtype=jnp.bool),
         boss_progress=jnp.asarray(0, dtype=jnp.int32),
         boss_timesteps_to_spawn_this_round=jnp.asarray(
             BOSS_FIGHT_SPAWN_TURNS, dtype=jnp.int32
         ),
-        achievements=jnp.zeros((len(Achievement),), dtype=bool),
+        achievements=jnp.zeros((static_params.player_count, len(Achievement)), dtype=bool),
         light_level=jnp.asarray(calculate_light_level(0, params), dtype=jnp.float32),
         state_rng=_rng,
         timestep=jnp.asarray(0, dtype=jnp.int32),
