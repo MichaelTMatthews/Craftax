@@ -2,11 +2,13 @@ import jax
 from functools import partial
 
 from craftax_marl.constants import *
-from craftax_marl.craftax_state import EnvState
+from craftax_marl.craftax_state import EnvState, StaticEnvParams
 from craftax_marl.util.game_logic_utils import is_boss_vulnerable
 
 
-def render_craftax_symbolic(state: EnvState):
+def render_craftax_symbolic(state: EnvState, static_params: StaticEnvParams):
+    # TODO: ADD OTHER PLAYERS ONTO THE SAME MAP
+
     map = state.map[state.player_level]
 
     obs_dim_array = jnp.array([OBS_DIM[0], OBS_DIM[1]], dtype=jnp.int32)
@@ -20,7 +22,9 @@ def render_craftax_symbolic(state: EnvState):
 
     tl_corner = state.player_position - obs_dim_array // 2 + MAX_OBS_DIM + 2
 
-    map_view = jax.lax.dynamic_slice(padded_grid, tl_corner, OBS_DIM)
+    map_view = jax.vmap(jax.lax.dynamic_slice, in_axes=(None,0,None))(
+        padded_grid, tl_corner, OBS_DIM
+    )
     map_view_one_hot = jax.nn.one_hot(map_view, num_classes=len(BlockType))
 
     # Items
@@ -30,31 +34,36 @@ def render_craftax_symbolic(state: EnvState):
         constant_values=ItemType.NONE.value,
     )
 
-    item_map_view = jax.lax.dynamic_slice(padded_items_map, tl_corner, OBS_DIM)
+    # Create item map view for each player
+    item_map_view = jax.vmap(jax.lax.dynamic_slice, in_axes=(None,0,None))(
+        padded_items_map, tl_corner, OBS_DIM
+    )
     item_map_view_one_hot = jax.nn.one_hot(item_map_view, num_classes=len(ItemType))
 
     # Mobs
     mob_types_per_class = 8
     mob_map = jnp.zeros(
-        (*OBS_DIM, 5 * mob_types_per_class), dtype=jnp.int32
+        (static_params.player_count, *OBS_DIM, 5 * mob_types_per_class), dtype=jnp.int32
     )  # 5 classes * 8 types
 
     def _add_mob_to_map(carry, mob_index):
         mob_map, mobs, mob_class_index = carry
 
-        local_position = (
-            mobs.position[mob_index]
-            - state.player_position
-            + jnp.array([OBS_DIM[0], OBS_DIM[1]]) // 2
-        )
+        local_position = -1 * state.player_position + mobs.position[mob_index] + jnp.array([OBS_DIM[0], OBS_DIM[1]]) // 2
+
         on_screen = jnp.logical_and(
             local_position >= 0, local_position < jnp.array([OBS_DIM[0], OBS_DIM[1]])
-        ).all()
+        ).all(axis=-1)
         on_screen *= mobs.mask[mob_index]
 
         mob_identifier = mob_class_index * mob_types_per_class + mobs.type_id[mob_index]
-        mob_map = mob_map.at[local_position[0], local_position[1], mob_identifier].set(
-            on_screen.astype(jnp.int32)
+        
+        def _set_mobs_on_map(mob_map, local_position, on_screen):
+            return mob_map.at[local_position[0], local_position[1], mob_identifier].set(
+                on_screen.astype(jnp.int32)
+            )
+        mob_map = jax.vmap(_set_mobs_on_map, in_axes=(0, 0, 0))(
+            mob_map, local_position, on_screen
         )
 
         return (mob_map, mobs, mob_class_index), None
@@ -103,17 +112,22 @@ def render_craftax_symbolic(state: EnvState):
         (MAX_OBS_DIM + 2, MAX_OBS_DIM + 2),
         constant_values=0.0,
     )
-    light_map_view = jax.lax.dynamic_slice(padded_light_map, tl_corner, OBS_DIM) > 0.05
+
+    # create light map for each player
+    light_map_view = jax.vmap(jax.lax.dynamic_slice, in_axes=(None,0,None))(
+        padded_light_map, tl_corner, OBS_DIM
+    )
+    light_map_view =  light_map_view > 0.05
 
     # Mask out tiles and mobs in darkness
-    all_map = all_map * light_map_view[:, :, None]
+    all_map = all_map * light_map_view[:, :, :, None]
     all_map = jnp.concatenate(
         (all_map, jnp.expand_dims(light_map_view, axis=-1)), axis=-1
     )
 
     # Inventory
-    inventory = jnp.array(
-        [
+    inventory = jnp.stack(
+        (
             jnp.sqrt(state.inventory.wood) / 10.0,
             jnp.sqrt(state.inventory.stone) / 10.0,
             jnp.sqrt(state.inventory.coal) / 10.0,
@@ -130,15 +144,17 @@ def render_craftax_symbolic(state: EnvState):
             state.sword_enchantment,
             state.bow_enchantment,
             state.inventory.bow,
-        ]
-    ).astype(jnp.float32)
+        ),
+        axis=1,
+        dtype=jnp.float32
+    )
 
     potions = jnp.sqrt(state.inventory.potions) / 10.0
     armour = state.inventory.armour / 2.0
     armour_enchantments = state.armour_enchantments
 
-    intrinsics = jnp.array(
-        [
+    intrinsics = jnp.stack(
+        (
             state.player_health / 10.0,
             state.player_food / 10.0,
             state.player_drink / 10.0,
@@ -148,35 +164,44 @@ def render_craftax_symbolic(state: EnvState):
             state.player_dexterity / 10.0,
             state.player_strength / 10.0,
             state.player_intelligence / 10.0,
-        ]
-    ).astype(jnp.float32)
+        ),
+        axis=1,
+        dtype=jnp.float32
+    )
 
     direction = jax.nn.one_hot(state.player_direction - 1, num_classes=4)
 
-    special_values = jnp.array(
-        [
-            state.light_level,
+    special_values_per_player = jnp.stack(
+        (
             state.is_sleeping,
             state.is_resting,
-            state.learned_spells[0],
-            state.learned_spells[1],
-            state.player_level / 10.0,
+            state.learned_spells[:, 0],
+            state.learned_spells[:, 1]
+        ),
+        axis=1
+    )
+    special_values_level = jnp.array(
+        [
             state.monsters_killed[state.player_level] >= MONSTERS_KILLED_TO_CLEAR_LEVEL,
+            state.player_level / 10.0,
+            state.light_level,
             is_boss_vulnerable(state),
         ]
     )
 
     all_flattened = jnp.concatenate(
         [
-            all_map.flatten(),
+            all_map.reshape(all_map.shape[0], -1),
             inventory,
             potions,
             intrinsics,
             direction,
             armour,
             armour_enchantments,
-            special_values,
-        ]
+            special_values_per_player,
+            special_values_level[None, :].repeat(static_params.player_count, axis=0)
+        ],
+        axis=1
     )
 
     return all_flattened
