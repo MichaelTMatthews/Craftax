@@ -340,12 +340,12 @@ def is_near_block(state, block_type):
     def _is_given_block(unused, loc_add):
         pos = state.player_position + loc_add
         is_in_bounds = in_bounds(state, pos)
-        is_correct_block = state.map[state.player_level][pos[0], pos[1]] == block_type
+        is_correct_block = state.map[state.player_level, pos[:, 0], pos[:, 1]] == block_type
         return None, jnp.logical_and(is_in_bounds, is_correct_block)
 
     _, is_block = jax.lax.scan(_is_given_block, None, CLOSE_BLOCKS)
 
-    return is_block.sum() > 0
+    return is_block.sum(axis=0) > 0
 
 
 def calculate_light_level(timestep, params):
