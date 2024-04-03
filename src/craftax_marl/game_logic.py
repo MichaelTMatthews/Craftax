@@ -2422,67 +2422,79 @@ def spawn_mobs(state, rng, params, static_params):
 def change_floor(
     state: EnvState, action, env_params: EnvParams, static_params: StaticEnvParams
 ):
-    on_down_ladder = (
-        state.item_map[
-            state.player_level, state.player_position[0], state.player_position[1]
-        ]
-        == ItemType.LADDER_DOWN.value
-    )
-    is_moving_down = jnp.logical_and(
-        on_down_ladder,
-        jnp.logical_and(
+    def _moving_down_check(player_position, action):
+        is_moving_down = jnp.logical_and(
             action == Action.DESCEND.value,
-            jnp.logical_and(
-                state.player_level < static_params.num_levels - 1,
-                state.monsters_killed[state.player_level]
-                >= MONSTERS_KILLED_TO_CLEAR_LEVEL,
-            ),
-        ),
-    )
-    is_moving_down = jnp.logical_or(
+            jnp.logical_or(
+                env_params.god_mode,
+                jnp.logical_and(
+                    state.item_map[
+                        state.player_level, player_position[0], player_position[1]
+                    ]
+                    == ItemType.LADDER_DOWN.value,
+                    state.monsters_killed[state.player_level]
+                    >= MONSTERS_KILLED_TO_CLEAR_LEVEL
+                )
+            )
+        )
+        return is_moving_down
+    
+    # Check if any of the players ask to move down
+    is_moving_down = jax.vmap(_moving_down_check, in_axes=(0,0))(
+        state.player_position, action
+    ).any()
+    is_moving_down = jnp.logical_and(
         is_moving_down,
-        jnp.logical_and(env_params.god_mode, action == Action.DESCEND.value),
+        state.player_level < static_params.num_levels - 1
     )
 
     moving_down_position = state.up_ladders[state.player_level + 1]
 
-    on_up_ladder = (
-        state.item_map[
-            state.player_level, state.player_position[0], state.player_position[1]
-        ]
-        == ItemType.LADDER_UP.value
-    )
+    def _moving_up_check(player_position, action):
+        is_moving_up = jnp.logical_and(
+            action == Action.ASCEND.value,
+            jnp.logical_or(
+                env_params.god_mode,
+                jnp.logical_and(
+                    state.item_map[
+                        state.player_level, player_position[0], player_position[1]
+                    ]
+                    == ItemType.LADDER_UP.value,
+                    state.monsters_killed[state.player_level]
+                    >= MONSTERS_KILLED_TO_CLEAR_LEVEL
+                )
+            )
+        )
+        return is_moving_up
+    
+    # Check if any of the players ask to move up
+    is_moving_up = jax.vmap(_moving_up_check, in_axes=(0,0))(
+        state.player_position, action
+    ).any()
     is_moving_up = jnp.logical_and(
-        on_up_ladder,
-        jnp.logical_and(action == Action.ASCEND.value, state.player_level > 0),
-    )
-    is_moving_up = jnp.logical_or(
         is_moving_up,
-        jnp.logical_and(env_params.god_mode, action == Action.ASCEND.value),
+        state.player_level > 0
     )
+
     moving_up_position = state.down_ladders[state.player_level - 1]
-
-    is_not_moving = jnp.logical_not(jnp.logical_or(is_moving_up, is_moving_down))
-
-    delta_floor = 1 * is_moving_down - 1 * is_moving_up
-    position = (
-        (state.player_position * is_not_moving)
-        + (is_moving_down * moving_down_position)
-        + (is_moving_up * moving_up_position)
-    )
+    
+    position = jax.lax.select(is_moving_down, moving_down_position,
+                              jax.lax.select(is_moving_up, moving_up_position, state.player_position))
+    delta_floor = jax.lax.select(is_moving_down, 1,
+                              jax.lax.select(is_moving_up, -1, 0))
 
     move_down_achievement = LEVEL_ACHIEVEMENT_MAP[state.player_level + delta_floor]
 
-    new_achievements = state.achievements.at[move_down_achievement].set(
+    new_achievements = state.achievements.at[:, move_down_achievement].set(
         jnp.logical_or(
             (state.player_level + delta_floor) != 0,
-            state.achievements[move_down_achievement],
+            state.achievements[:, move_down_achievement],
         )
     )
 
     new_floor = jnp.logical_and(
         (state.player_level + delta_floor) != 0,
-        jnp.logical_not(state.achievements[move_down_achievement]),
+        jnp.logical_not(state.achievements[:, move_down_achievement]),
     )
 
     state = state.replace(
@@ -3003,52 +3015,57 @@ def level_up_attributes(state, action, params):
     )
 
 
-def craftax_step(rng, state, action, params, static_params):
+def craftax_step(
+        rng: chex.PRNGKey, state: EnvState, actions: jnp.array, params: EnvParams, static_params: StaticEnvParams
+    ) -> Tuple[EnvState, chex.Array]:
     init_achievements = state.achievements
     init_health = state.player_health
 
-    # Interrupt action if sleeping or resting
-    action = jax.lax.select(state.is_sleeping, Action.NOOP.value, action)
-    action = jax.lax.select(state.is_resting, Action.NOOP.value, action)
+    # Interrupt action if sleeping or resting or dead
+    actions = jax.vmap(jax.lax.select, in_axes=(0, None, 0))(
+        (state.player_health <= 0 | state.is_sleeping | state.is_resting),
+        Action.NOOP.value, 
+        actions
+    )
 
     # Change floor
-    state = change_floor(state, action, params, static_params)
+    state = change_floor(state, actions, params, static_params)
 
     # Crafting
-    state = do_crafting(state, action)
+    state = do_crafting(state, actions)
 
     # Interact (mining, melee attacking, eating plants, drinking water)
     rng, _rng = jax.random.split(rng)
-    state = do_action(_rng, state, action, static_params)
+    state = do_action(_rng, state, actions, static_params)
 
     # Placing
-    state = place_block(state, action, static_params)
+    state = place_block(state, actions, static_params)
 
     # Shooting
-    state = shoot_projectile(state, action, static_params)
+    state = shoot_projectile(state, actions, static_params)
 
     # Casting
-    state = cast_spell(state, action, static_params)
+    state = cast_spell(state, actions, static_params)
 
     # Potions
-    state = drink_potion(state, action)
+    state = drink_potion(state, actions)
 
     # Read
     rng, _rng = jax.random.split(rng)
-    state = read_book(_rng, state, action)
+    state = read_book(_rng, state, actions)
 
     # Enchant
     rng, _rng = jax.random.split(rng)
-    state = enchant(_rng, state, action)
+    state = enchant(_rng, state, actions)
 
     # Boss
     state = boss_logic(state, static_params)
 
     # Attributes
-    state = level_up_attributes(state, action, params)
+    state = level_up_attributes(state, actions, params)
 
     # Movement
-    state = move_player(state, action, params)
+    state = move_player(state, actions, params)
 
     # Mobs
     rng, _rng = jax.random.split(rng)
@@ -3061,7 +3078,7 @@ def craftax_step(rng, state, action, params, static_params):
     state = update_plants(state, static_params)
 
     # Intrinsics
-    state = update_player_intrinsics(state, action, static_params)
+    state = update_player_intrinsics(state, actions, static_params)
 
     # Cap inv
     state = clip_inventory_and_intrinsics(state, params)
