@@ -53,8 +53,7 @@ class CraftaxSymbolicEnv(EnvironmentNoAutoReset):
     def reset_env(
         self, rng: chex.PRNGKey, params: EnvParams
     ) -> Tuple[chex.Array, EnvState]:
-        rng, _rng = jax.random.split(rng)
-        state = generate_world(_rng, params, self.static_env_params)
+        state = generate_world(rng, params, self.static_env_params)
 
         return self.get_obs(state), state
 
