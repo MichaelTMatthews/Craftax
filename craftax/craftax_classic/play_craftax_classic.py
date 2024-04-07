@@ -1,3 +1,6 @@
+import argparse
+import sys
+
 import pygame
 
 import jax
@@ -60,10 +63,15 @@ class CraftaxRenderer:
 
         self._render = jax.jit(render_craftax_pixels, static_argnums=(1,))
 
-    def render(self, env_state):
+    def update(self):
         # Update pygame events
         self.pygame_events = list(pygame.event.get())
 
+        # Update screen
+        pygame.display.flip()
+        # time.sleep(0.01)
+
+    def render(self, env_state):
         # Clear
         self.screen_surface.fill((0, 0, 0))
 
@@ -73,10 +81,6 @@ class CraftaxRenderer:
 
         surface = pygame.surfarray.make_surface(np.array(pixels).transpose((1, 0, 2)))
         self.screen_surface.blit(surface, (0, 0))
-
-        # Update screen
-        pygame.display.flip()
-        # time.sleep(0.01)
 
     def is_quit_requested(self):
         for event in self.pygame_events:
@@ -101,7 +105,7 @@ def print_new_achievements(old_achievements, new_achievements):
             print(f"{Achievement(i).name} ({new_achievements.sum()}/{22})")
 
 
-def main():
+def main(args):
     env = CraftaxEnv(CraftaxEnv.default_static_params())
     env = AutoResetEnvWrapper(env)
     env_params = env.default_params
@@ -117,8 +121,11 @@ def main():
     pixel_render_size = 64 // BLOCK_PIXEL_SIZE_HUMAN
 
     renderer = CraftaxRenderer(env, env_params, pixel_render_size=pixel_render_size)
+    renderer.render(env_state)
 
     step_fn = jax.jit(env.step)
+
+    clock = pygame.time.Clock()
 
     while not renderer.is_quit_requested():
         action = renderer.get_action_from_keypress(env_state)
@@ -135,13 +142,27 @@ def main():
             if reward > 0.01 or reward < -0.01:
                 print(f"Reward: {reward}\n")
 
-        renderer.render(env_state)
+            renderer.render(env_state)
+
+        renderer.update()
+        clock.tick(args.fps)
+
+
+def entry_point():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--debug", action="store_true")
+    parser.add_argument("--fps", type=int, default=60)
+
+    args, rest_args = parser.parse_known_args(sys.argv[1:])
+    if rest_args:
+        raise ValueError(f"Unknown args {rest_args}")
+
+    if args.debug:
+        with jax.disable_jit():
+            main(args)
+    else:
+        main(args)
 
 
 if __name__ == "__main__":
-    debug = False
-    if debug:
-        with jax.disable_jit():
-            main()
-    else:
-        main()
+    entry_point()

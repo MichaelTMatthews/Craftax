@@ -98,10 +98,14 @@ class CraftaxRenderer:
 
         self._render = jax.jit(render_craftax_pixels, static_argnums=(1,))
 
-    def render(self, env_state):
+    def update(self):
         # Update pygame events
         self.pygame_events = list(pygame.event.get())
 
+        # Update screen
+        pygame.display.flip()
+
+    def render(self, env_state):
         # Clear
         self.screen_surface.fill((0, 0, 0))
 
@@ -111,10 +115,6 @@ class CraftaxRenderer:
 
         surface = pygame.surfarray.make_surface(np.array(pixels).transpose((1, 0, 2)))
         self.screen_surface.blit(surface, (0, 0))
-
-        # Update screen
-        pygame.display.flip()
-        # time.sleep(0.01)
 
     def is_quit_requested(self):
         for event in self.pygame_events:
@@ -161,10 +161,13 @@ def main(args):
     pixel_render_size = 64 // BLOCK_PIXEL_SIZE_HUMAN
 
     renderer = CraftaxRenderer(env, env_params, pixel_render_size=pixel_render_size)
+    renderer.render(env_state)
 
     step_fn = jax.jit(env.step)
 
     traj_history = {"state": [env_state], "action": [], "reward": [], "done": []}
+
+    clock = pygame.time.Clock()
 
     while not renderer.is_quit_requested():
         action = renderer.get_action_from_keypress(env_state)
@@ -186,7 +189,10 @@ def main(args):
             traj_history["reward"].append(reward)
             traj_history["done"].append(done)
 
-        renderer.render(env_state)
+            renderer.render(env_state)
+
+        renderer.update()
+        clock.tick(args.fps)
 
     if args.save_trajectories:
         save_name = f"play_data/trajectories_{int(time.time())}"
@@ -202,6 +208,7 @@ def entry_point():
     parser.add_argument("--god_mode", action="store_true")
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("--save_trajectories", action="store_true")
+    parser.add_argument("--fps", type=int, default=60)
 
     args, rest_args = parser.parse_known_args(sys.argv[1:])
     if rest_args:
