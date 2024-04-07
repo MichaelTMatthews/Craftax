@@ -178,9 +178,6 @@ def main(args):
             new_achievements = env_state.achievements
             print_new_achievements(old_achievements, new_achievements)
 
-            if done:
-                obs, env_state = env.reset(_rng, env_params)
-
             if reward > 0.8:
                 print(f"Reward: {reward}\n")
 
