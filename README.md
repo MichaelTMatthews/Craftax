@@ -92,16 +92,7 @@ play_craftax_classic
 Since Craftax runs entirely in JAX, it will take some time to compile the rendering and step functions - it might take around 30s to render the first frame and then another 20s to take the first action.  After this it should be very quick.  A tutorial for how to beat the game is present in `tutorial.md`.  The controls are printed out at the beginning of play.
 
 # 📈 Experiment
-To run PPO with default hyperparameters run:
-```
-python -m craftax.ppo
-```
-or to run PPO with memory call:
-```
-python -m craftax.ppo_rnn
-```
-To use ICM or E3B with the default parameters use the `--train_icm` and `--use_e3b` flags.
-Use the `env_name` parameter to control which environment is used.  It can be set to  `"Craftax-Symbolic-v1"`, `"Craftax-Pixels-v1"`, `"Craftax-Classic-Symbolic-v1"` or `"Craftax-Classic-Pixels-v1"`
+To run experiments see the [Craftax Baselines](https://github.com/MichaelTMatthews/Craftax_Baselines) repository.
 
 # 🔪 Gotchas
 ### Optimistic Resets
