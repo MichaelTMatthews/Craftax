@@ -20,6 +20,9 @@ class CraftaxPixelsEnv(EnvironmentNoAutoReset):
         if static_env_params is None:
             static_env_params = CraftaxPixelsEnv.default_static_params()
         self.static_env_params = static_env_params
+        self.player_names = [
+            f"agent_{i}" for i in range(self.static_env_params.player_count)
+        ]
 
     @property
     def default_params(self) -> EnvParams:
@@ -33,6 +36,7 @@ class CraftaxPixelsEnv(EnvironmentNoAutoReset):
         self, key: chex.PRNGKey, state: EnvState, action: int, params: EnvParams
     ) -> Tuple[chex.Array, EnvState, float, bool, dict]:
 
+        actions = jnp.array(list(actions.values()))
         state, reward = craftax_step(key, state, action, params, self.static_env_params)
 
         done = self.is_terminal(state, params)
@@ -55,12 +59,13 @@ class CraftaxPixelsEnv(EnvironmentNoAutoReset):
         return self.get_obs(state), state
 
     def get_obs(self, state: EnvState) -> chex.Array:
-        pixels = render_craftax_pixels(state, BLOCK_PIXEL_SIZE_AGENT) / 255.0
-        return pixels
+        pixels = render_craftax_pixels(state, BLOCK_PIXEL_SIZE_HUMAN) / 255.0
+        obs = {player: pixels[i] for i, player in enumerate(self.player_names)}
+        return obs
 
     def is_terminal(self, state: EnvState, params: EnvParams) -> bool:
         done_steps = state.timestep >= params.max_timesteps
-        is_dead = state.player_health <= 0
+        is_dead = (state.player_health <= 0).all()
         defeated_boss = has_beaten_boss(state, self.static_env_params)
 
         is_terminal = jnp.logical_or(is_dead, done_steps)

@@ -13,10 +13,12 @@ OBS_DIM = (9, 11)
 assert OBS_DIM[0] % 2 == 1 and OBS_DIM[1] % 2 == 1
 MAX_OBS_DIM = max(OBS_DIM)
 BLOCK_PIXEL_SIZE_HUMAN = 64
-BLOCK_PIXEL_SIZE_IMG   = 16
+BLOCK_PIXEL_SIZE_IMG = 16
 BLOCK_PIXEL_SIZE_AGENT = 7
 INVENTORY_OBS_HEIGHT = 4
-TEXTURE_CACHE_FILE = os.path.join(pathlib.Path(__file__).parent.resolve(), "assets", "texture_cache.pbz2")
+TEXTURE_CACHE_FILE = os.path.join(
+    pathlib.Path(__file__).parent.resolve(), "assets", "texture_cache.pbz2"
+)
 
 # ENUMS
 class BlockType(Enum):
@@ -730,13 +732,15 @@ def load_all_textures(block_pixel_size):
         (OBS_DIM[1] // 2) * block_pixel_size,
     )
 
-    player_textures = [
-        load_texture("player-left.png", block_pixel_size),
-        load_texture("player-right.png", block_pixel_size),
-        load_texture("player-up.png", block_pixel_size),
-        load_texture("player-down.png", block_pixel_size),
-        load_texture("player-sleep.png", block_pixel_size),
-    ]
+    player_textures = jnp.array(
+        [
+            load_texture("player-left.png", block_pixel_size),
+            load_texture("player-right.png", block_pixel_size),
+            load_texture("player-up.png", block_pixel_size),
+            load_texture("player-down.png", block_pixel_size),
+            load_texture("player-sleep.png", block_pixel_size),
+        ]
+    )
 
     full_map_player_textures_rgba = [
         jnp.pad(
@@ -1109,14 +1113,16 @@ def load_all_textures(block_pixel_size):
     }
 
 
-if os.path.exists(TEXTURE_CACHE_FILE) and not os.environ.get("CRAFTAX_RELOAD_TEXTURES", False):
+if os.path.exists(TEXTURE_CACHE_FILE) and not os.environ.get(
+    "CRAFTAX_RELOAD_TEXTURES", False
+):
     print("Loading textures from cache")
     TEXTURES = load_compressed_pickle(TEXTURE_CACHE_FILE)
 else:
     print("Processing textures")
     TEXTURES = {
         BLOCK_PIXEL_SIZE_AGENT: load_all_textures(BLOCK_PIXEL_SIZE_AGENT),
-        BLOCK_PIXEL_SIZE_IMG:   load_all_textures(BLOCK_PIXEL_SIZE_IMG),
+        BLOCK_PIXEL_SIZE_IMG: load_all_textures(BLOCK_PIXEL_SIZE_IMG),
         BLOCK_PIXEL_SIZE_HUMAN: load_all_textures(BLOCK_PIXEL_SIZE_HUMAN),
     }
     save_compressed_pickle(TEXTURE_CACHE_FILE, TEXTURES)
