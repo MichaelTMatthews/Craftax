@@ -354,11 +354,11 @@ def generate_dungeon(rng, static_params, config):
     return map, item_map, light_map, ladder_down_position, ladder_up_position
 
 
-def generate_smoothworld(rng, static_params, player_position, config, params=None):
-    if params is not None:
-        fractal_noise_angles = params.fractal_noise_angles
-    else:
-        fractal_noise_angles = (None, None, None, None, None)
+def generate_smoothworld(rng, static_params, player_position, config, params):
+    # if params is not None:
+    fractal_noise_angles = params.fractal_noise_angles
+    # else:
+    #     fractal_noise_angles = (None, None, None, None, None)
 
     player_proximity_map = get_distance_map(
         player_position, static_params.map_size
@@ -482,6 +482,29 @@ def generate_smoothworld(rng, static_params, player_position, config, params=Non
     )
     map = jnp.where(lava_map, config.lava, map)
 
+    # Add diamond if always_diamond flag is set
+    adding_diamond = jnp.logical_and(
+        config.default_block == BlockType.GRASS.value,  # Hacky check for overworld
+        params.always_diamond,
+    )
+    valid_diamond = (map.flatten() == BlockType.STONE.value).astype(jnp.float32)
+    rng, _rng = jax.random.split(rng)
+    diamond_index = jax.random.choice(
+        _rng,
+        jnp.arange(static_params.map_size[0] * static_params.map_size[1]),
+        p=valid_diamond / valid_diamond.sum(),
+    )
+    diamond_position = jnp.array(
+        [
+            diamond_index // static_params.map_size[0],
+            diamond_index % static_params.map_size[0],
+        ]
+    )
+    diamond_replace_block = jax.lax.select(
+        adding_diamond, BlockType.DIAMOND.value, BlockType.STONE.value
+    )
+    map = map.at[diamond_position[0], diamond_position[1]].set(diamond_replace_block)
+
     # Light map
     light_map = (
         jnp.ones(static_params.map_size, dtype=jnp.float32) * config.default_light
@@ -556,25 +579,8 @@ def generate_world(rng, params, static_params):
     rngs = jax.random.split(rng, 7)
     rng, _rng = rngs[0], rngs[1:]
 
-    overworld = generate_smoothworld(
-        _rng[0],
-        static_params,
-        player_position,
-        jax.tree_map(lambda x: x[0], ALL_SMOOTHGEN_CONFIGS),
-        params=params,
-    )
-
-    smoothgens = jax.vmap(generate_smoothworld, in_axes=(0, None, None, 0))(
-        _rng[1:],
-        static_params,
-        player_position,
-        jax.tree_map(lambda x: x[1:], ALL_SMOOTHGEN_CONFIGS),
-    )
-
-    smoothgens = jax.tree_map(
-        lambda over, others: jnp.concatenate([jnp.array([over]), others], axis=0),
-        overworld,
-        smoothgens,
+    smoothgens = jax.vmap(generate_smoothworld, in_axes=(0, None, None, 0, None))(
+        _rng, static_params, player_position, ALL_SMOOTHGEN_CONFIGS, params
     )
 
     # Generate dungeons

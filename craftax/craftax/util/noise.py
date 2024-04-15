@@ -2,7 +2,7 @@ import jax
 import jax.numpy as jnp
 import matplotlib.pyplot as plt
 
-# Code adapted original numpy implementation made by Pierre Vigier
+# Code adapted for JAX from the original numpy implementation made by Pierre Vigier
 # Original code located at https://github.com/pvigier/perlin-numpy
 
 

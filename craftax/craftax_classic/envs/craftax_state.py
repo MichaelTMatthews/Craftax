@@ -79,6 +79,8 @@ class EnvParams:
     max_timesteps: int = 10000
     day_length: int = 300
 
+    always_diamond: bool = True
+
     zombie_health: int = 5
     cow_health: int = 3
     skeleton_health: int = 3
