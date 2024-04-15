@@ -119,9 +119,7 @@ class EnvParams:
     max_timesteps: int = 100000
     day_length: int = 300
 
-    melee_mob_health: int = 5
-    passive_mob_health: int = 3
-    ranged_mob_health: int = 3
+    always_diamond: bool = False
 
     mob_despawn_distance: int = 14
     max_attribute: int = 5

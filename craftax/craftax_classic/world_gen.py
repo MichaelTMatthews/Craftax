@@ -147,6 +147,25 @@ def generate_world(rng, params, static_params):
     # Make sure player spawns on grass
     map = map.at[player_position[0], player_position[1]].set(BlockType.GRASS.value)
 
+    # Add diamond if always_diamond flag is set
+    valid_diamond = (map.flatten() == BlockType.STONE.value).astype(jnp.float32)
+    rng, _rng = jax.random.split(rng)
+    diamond_index = jax.random.choice(
+        _rng,
+        jnp.arange(static_params.map_size[0] * static_params.map_size[1]),
+        p=valid_diamond / valid_diamond.sum(),
+    )
+    diamond_position = jnp.array(
+        [
+            diamond_index // static_params.map_size[0],
+            diamond_index % static_params.map_size[0],
+        ]
+    )
+    diamond_replace_block = jax.lax.select(
+        params.always_diamond, BlockType.DIAMOND.value, BlockType.STONE.value
+    )
+    map = map.at[diamond_position[0], diamond_position[1]].set(diamond_replace_block)
+
     # Zombies
 
     z_pos = jnp.zeros((static_params.max_zombies, 2), dtype=jnp.int32)
