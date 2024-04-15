@@ -355,11 +355,6 @@ def generate_dungeon(rng, static_params, config):
 
 
 def generate_smoothworld(rng, static_params, player_position, config, params):
-    # if params is not None:
-    fractal_noise_angles = params.fractal_noise_angles
-    # else:
-    #     fractal_noise_angles = (None, None, None, None, None)
-
     player_proximity_map = get_distance_map(
         player_position, static_params.map_size
     ).astype(jnp.float32)
@@ -389,7 +384,7 @@ def generate_smoothworld(rng, static_params, player_position, config, params):
         static_params.map_size,
         small_res,
         octaves=1,
-        override_angles=fractal_noise_angles[0],
+        override_angles=params.fractal_noise_angles[0],
     )
     water = water + player_proximity_map_water - 1.0
 
@@ -416,7 +411,7 @@ def generate_smoothworld(rng, static_params, player_position, config, params):
             static_params.map_size,
             small_res,
             octaves=1,
-            override_angles=fractal_noise_angles[1],
+            override_angles=params.fractal_noise_angles[1],
         )
         + 0.05
     )
@@ -430,7 +425,7 @@ def generate_smoothworld(rng, static_params, player_position, config, params):
         static_params.map_size,
         x_res,
         octaves=1,
-        override_angles=fractal_noise_angles[2],
+        override_angles=params.fractal_noise_angles[2],
     )
     path = jnp.logical_and(mountain > mountain_threshold, path_x > 0.8)
     map = jnp.where(path > 0.5, config.path_block, map)
@@ -451,7 +446,7 @@ def generate_smoothworld(rng, static_params, player_position, config, params):
         static_params.map_size,
         larger_res,
         octaves=1,
-        override_angles=fractal_noise_angles[3],
+        override_angles=params.fractal_noise_angles[3],
     )
     tree = (tree_noise > config.tree_threshold_perlin) * jax.random.uniform(
         rng, shape=static_params.map_size
