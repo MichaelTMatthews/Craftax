@@ -3,7 +3,7 @@ from gymnax.environments import spaces
 from typing import Tuple, Optional
 import chex
 
-from craftax.environment_base.environment_no_auto_reset import EnvironmentNoAutoReset
+from craftax.environment_base.environment_bases import EnvironmentNoAutoReset
 from craftax.craftax_classic.envs.common import compute_score
 from craftax.craftax_classic.constants import *
 from craftax.craftax_classic.game_logic import craftax_step

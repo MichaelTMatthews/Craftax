@@ -10,7 +10,7 @@ from craftax.craftax.craftax_state import EnvState, EnvParams, StaticEnvParams
 from craftax.craftax.renderer import render_craftax_pixels
 from craftax.craftax.util.game_logic_utils import has_beaten_boss
 from craftax.craftax.world_gen.world_gen import generate_world
-from craftax.environment_base.environment_no_auto_reset import EnvironmentNoAutoReset
+from craftax.environment_base.environment_bases import EnvironmentNoAutoReset
 
 
 class CraftaxPixelsEnv(EnvironmentNoAutoReset):
