@@ -18,7 +18,7 @@ from craftax.craftax_classic.envs.craftax_symbolic_env import (
     CraftaxClassicSymbolicEnv as CraftaxEnv,
 )
 from craftax.craftax_classic.renderer import render_craftax_pixels
-from craftax.environment_base.wrappers import AutoResetEnvWrapper
+from craftax.craftax_env import make_craftax_env_from_name
 
 KEY_MAPPING = {
     pygame.K_q: Action.NOOP,
@@ -106,8 +106,7 @@ def print_new_achievements(old_achievements, new_achievements):
 
 
 def main(args):
-    env = CraftaxEnv(CraftaxEnv.default_static_params())
-    env = AutoResetEnvWrapper(env)
+    env = make_craftax_env_from_name("Craftax-Classic-Symbolic-v1", auto_reset=True)
     env_params = env.default_params
 
     print("Controls")
