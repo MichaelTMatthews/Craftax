@@ -6,7 +6,7 @@
         <a href= "https://pypi.org/project/craftax/">
         <img src="https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-blue" /></a>
         <a href= "https://pypi.org/project/craftax/">
-        <img src="https://img.shields.io/badge/pypi-1.3.0-green" /></a>
+        <img src="https://img.shields.io/badge/pypi-1.4.0-green" /></a>
        <a href= "https://github.com/MichaelTMatthews/Craftax/blob/main/LICENSE">
         <img src="https://img.shields.io/badge/License-MIT-yellow" /></a>
        <a href= "https://craftaxenv.github.io/">
@@ -96,11 +96,14 @@ To run experiments see the [Craftax Baselines](https://github.com/MichaelTMatthe
 
 # 🔪 Gotchas
 ### Optimistic Resets
-Craftax provides the option to use optimistic resets to improve performance, which means that (unlike regular gymnax environments) it **does not auto-reset** by default.
-This means that the environment should always be wrapped either in `OptimisticResetVecEnvWrapper` (for efficient resets) or `AutoResetEnvWrapper` (to recover the default gymnax auto-reset behaviour).  See `ppo.py` for correct usage of both wrappers.
+Craftax provides the option to use optimistic resets to improve performance, which means that we provide access to environments that **do not auto-reset**.
+Environments obtained from `make_craftax_env_from_name` or `make_craftax_env_from_args` with `auto_reset=False` will not automatically reset and if not properly handled will continue episodes into invalid states.
+These environments should always be wrapped either in `OptimisticResetVecEnvWrapper`(for efficient resets) or `AutoResetEnvWrapper` (to recover the default gymnax auto-reset behaviour).
+See `ppo.py` in [Craftax Baselines](https://github.com/MichaelTMatthews/Craftax_Baselines) for correct usage.
+Using `auto_reset=True` will return a regular auto-reset environment, which can be treated like any other gymnax environment.
 
 ### Texture Caching
-We use a texture cache to avoid recreating the texture atlas every time Craftax is imported. If you are just running Craftax as a benchmark this will not affect you.  However, if you are editing the game (e.g. adding new blocks, entities etc.) then a stale cache could cause errors. You can export the following environment variable to force textures to be created from scratch.
+We use a texture cache to avoid recreating the texture atlas every time Craftax is imported. If you are just running Craftax as a benchmark this will not affect you.  However, if you are editing the game (e.g. adding new blocks, entities etc.) then a stale cache could cause errors. You can export the following environment variable to force textures to be created from scratch every run.
 ```
 export CRAFTAX_RELOAD_TEXTURES=true
 ```
