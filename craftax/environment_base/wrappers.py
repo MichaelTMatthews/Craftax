@@ -136,7 +136,7 @@ class OptimisticResetVecEnvWrapper(GymnaxWrapper):
             p=done,
             replace=False,
         )
-        reset_indexes.at[being_reset].set(jnp.arange(self.num_resets))
+        reset_indexes = reset_indexes.at[being_reset].set(jnp.arange(self.num_resets))
 
         obs_re = obs_re[reset_indexes]
         state_re = jax.tree_map(lambda x: x[reset_indexes], state_re)
