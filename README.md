@@ -42,7 +42,7 @@ rng, _rng = jax.random.split(rng)
 rngs = jax.random.split(_rng, 3)
 
 # Create environment
-env = AutoResetEnvWrapper(CraftaxSymbolicEnv())
+env = make_craftax_env_from_name("Craftax-Symbolic-v1", auto_reset=True)
 env_params = env.default_params
 
 # Get an initial state and observation

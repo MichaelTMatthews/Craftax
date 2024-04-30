@@ -35,12 +35,6 @@ class Mobs:
     type_id: jnp.ndarray
 
 
-# @struct.dataclass
-# class Projectiles(Mobs):
-#     directions: jnp.ndarray
-#     lifetimes: jnp.ndarray
-
-
 @struct.dataclass
 class EnvState:
     map: jnp.ndarray

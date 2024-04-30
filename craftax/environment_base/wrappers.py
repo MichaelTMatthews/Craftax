@@ -5,7 +5,6 @@ import numpy as np
 from flax import struct
 from functools import partial
 from typing import Optional, Tuple, Union, Any
-from gymnax.environments import environment, spaces
 
 
 class GymnaxWrapper(object):
@@ -22,7 +21,7 @@ class GymnaxWrapper(object):
 class BatchEnvWrapper(GymnaxWrapper):
     """Batches reset and step functions"""
 
-    def __init__(self, env: environment.Environment, num_envs: int):
+    def __init__(self, env, num_envs: int):
         super().__init__(env)
 
         self.num_envs = num_envs
@@ -31,9 +30,7 @@ class BatchEnvWrapper(GymnaxWrapper):
         self.step_fn = jax.vmap(self._env.step, in_axes=(0, 0, 0, None))
 
     @partial(jax.jit, static_argnums=(0, 2))
-    def reset(
-        self, rng, params: Optional[environment.EnvParams] = None
-    ) -> Tuple[chex.Array, environment.EnvState]:
+    def reset(self, rng, params=None):
         rng, _rng = jax.random.split(rng)
         rngs = jax.random.split(_rng, self.num_envs)
         obs, env_state = self.reset_fn(rngs, params)
@@ -51,13 +48,11 @@ class BatchEnvWrapper(GymnaxWrapper):
 class AutoResetEnvWrapper(GymnaxWrapper):
     """Provides standard auto-reset functionality, providing the same behaviour as Gymnax-default."""
 
-    def __init__(self, env: environment.Environment):
+    def __init__(self, env):
         super().__init__(env)
 
     @partial(jax.jit, static_argnums=(0, 2))
-    def reset(
-        self, key, params: Optional[environment.EnvParams] = None
-    ) -> Tuple[chex.Array, environment.EnvState]:
+    def reset(self, key, params=None):
         return self._env.reset(key, params)
 
     @partial(jax.jit, static_argnums=(0, 4))
@@ -93,7 +88,7 @@ class OptimisticResetVecEnvWrapper(GymnaxWrapper):
     chance of duplicate resets.
     """
 
-    def __init__(self, env: environment.Environment, num_envs: int, reset_ratio: int):
+    def __init__(self, env, num_envs: int, reset_ratio: int):
         super().__init__(env)
 
         self.num_envs = num_envs
@@ -107,9 +102,7 @@ class OptimisticResetVecEnvWrapper(GymnaxWrapper):
         self.step_fn = jax.vmap(self._env.step, in_axes=(0, 0, 0, None))
 
     @partial(jax.jit, static_argnums=(0, 2))
-    def reset(
-        self, rng, params: Optional[environment.EnvParams] = None
-    ) -> Tuple[chex.Array, environment.EnvState]:
+    def reset(self, rng, params=None):
         rng, _rng = jax.random.split(rng)
         rngs = jax.random.split(_rng, self.num_envs)
         obs, env_state = self.reset_fn(rngs, params)
@@ -157,7 +150,7 @@ class OptimisticResetVecEnvWrapper(GymnaxWrapper):
 
 @struct.dataclass
 class LogEnvState:
-    env_state: environment.EnvState
+    env_state: Any
     episode_returns: float
     episode_lengths: int
     returned_episode_returns: float
@@ -168,13 +161,11 @@ class LogEnvState:
 class LogWrapper(GymnaxWrapper):
     """Log the episode returns and lengths."""
 
-    def __init__(self, env: environment.Environment):
+    def __init__(self, env):
         super().__init__(env)
 
     @partial(jax.jit, static_argnums=(0, 2))
-    def reset(
-        self, key: chex.PRNGKey, params: Optional[environment.EnvParams] = None
-    ) -> Tuple[chex.Array, environment.EnvState]:
+    def reset(self, key: chex.PRNGKey, params=None):
         obs, env_state = self._env.reset(key, params)
         state = LogEnvState(env_state, 0.0, 0, 0.0, 0, 0)
         return obs, state
@@ -183,10 +174,10 @@ class LogWrapper(GymnaxWrapper):
     def step(
         self,
         key: chex.PRNGKey,
-        state: environment.EnvState,
+        state,
         action: Union[int, float],
-        params: Optional[environment.EnvParams] = None,
-    ) -> Tuple[chex.Array, environment.EnvState, float, bool, dict]:
+        params=None,
+    ):
         obs, env_state, reward, done, info = self._env.step(
             key, state.env_state, action, params
         )

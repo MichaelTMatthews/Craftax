@@ -1,9 +1,6 @@
 import jax
 import jax.numpy as jnp
 
-# For utility functions - functions called more than once in meaningfully different parts of the codebase
-# With the additional constraint that the functions make no reference (i.e. don't import from) any Craftax code
-
 
 def get_distance_map(position, map_size):
     dist_x = jnp.abs(jnp.arange(0, map_size[0]) - position[0])
