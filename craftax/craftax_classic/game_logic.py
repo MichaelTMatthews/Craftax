@@ -4,6 +4,17 @@ from craftax.craftax_classic.constants import *
 from craftax.craftax_classic.envs.craftax_state import *
 
 
+def is_game_over(state, params):
+    done_steps = state.timestep >= params.max_timesteps
+    in_lava = (
+        state.map[state.player_position[0], state.player_position[1]]
+        == BlockType.LAVA.value
+    )
+    is_dead = state.player_health <= 0
+
+    return done_steps | in_lava | is_dead
+
+
 def in_bounds(state, position):
     in_bounds_x = jnp.logical_and(0 <= position[0], position[0] < state.map.shape[0])
     in_bounds_y = jnp.logical_and(0 <= position[1], position[1] < state.map.shape[1])

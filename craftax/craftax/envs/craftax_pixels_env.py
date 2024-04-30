@@ -7,7 +7,6 @@ from craftax.craftax.constants import *
 from craftax.craftax.game_logic import craftax_step, is_game_over
 from craftax.craftax.craftax_state import EnvState, EnvParams, StaticEnvParams
 from craftax.craftax.renderer import render_craftax_pixels
-from craftax.craftax.util.game_logic_utils import has_beaten_boss
 from craftax.craftax.world_gen.world_gen import generate_world
 from craftax.environment_base.environment_bases import EnvironmentNoAutoReset
 
@@ -17,7 +16,7 @@ class CraftaxPixelsEnvNoAutoReset(EnvironmentNoAutoReset):
         super().__init__()
 
         if static_env_params is None:
-            static_env_params = CraftaxPixelsEnv.default_static_params()
+            static_env_params = self.default_static_params()
         self.static_env_params = static_env_params
 
     @property
@@ -88,7 +87,7 @@ class CraftaxPixelsEnv(environment.Environment):
         super().__init__()
 
         if static_env_params is None:
-            static_env_params = CraftaxPixelsEnv.default_static_params()
+            static_env_params = self.default_static_params()
         self.static_env_params = static_env_params
 
     @property
