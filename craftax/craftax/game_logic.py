@@ -2463,11 +2463,7 @@ def change_floor(
         action == Action.ASCEND.value,
         jnp.logical_or(
             env_params.god_mode,
-            jnp.logical_and(
-                on_up_ladder,
-                state.monsters_killed[state.player_level]
-                >= MONSTERS_KILLED_TO_CLEAR_LEVEL,
-            ),
+            on_up_ladder,
         ),
     )
     is_moving_up = jnp.logical_and(is_moving_up, state.player_level > 0)
