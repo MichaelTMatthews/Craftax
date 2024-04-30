@@ -113,21 +113,23 @@ If you would like to add an algorithm please open a PR and provide a reference t
 We report reward as a % of the maximum (226).
 
 ## Craftax-1B
-| Algorithm | Reward (% max) |                                  Source                                   |
-|:----------|---------------:|:-------------------------------------------------------------------------:|
-| PPO-RNN   |           15.3 | <a href="https://github.com/luchris429/purejaxrl/tree/main">PureJaxRL</a> |
-| PPO       |           11.9 | <a href="https://github.com/luchris429/purejaxrl/tree/main">PureJaxRL</a> |
-| ICM       |           11.9 |           <a href="https://arxiv.org/abs/1705.05363">ICM</a>              |
-| E3B       |           11.0 |            <a href="https://arxiv.org/abs/2210.05805">E3B</a>             |
+| Algorithm | Reward (% max) |                                              Code                                               |                  Paper                  |
+|:----------|---------------:|:-----------------------------------------------------------------------------------------------:|:---------------------------------------:|
+| PPO-RNN   |           15.3 | [Craftax_Baselines](https://github.com/MichaelTMatthews/Craftax_Baselines/blob/main/ppo_rnn.py) | [PPO](https://arxiv.org/abs/1707.06347) |
+| RND       |           12.0 | [Craftax_Baselines](https://github.com/MichaelTMatthews/Craftax_Baselines/blob/main/ppo_rnd.py) | [RND](https://arxiv.org/abs/1810.12894) |
+| PPO       |           11.9 |   [Craftax_Baselines](https://github.com/MichaelTMatthews/Craftax_Baselines/blob/main/ppo.py)   | [PPO](https://arxiv.org/abs/1707.06347) |
+| ICM       |           11.9 |   [Craftax_Baselines](https://github.com/MichaelTMatthews/Craftax_Baselines/blob/main/ppo.py)   | [ICM](https://arxiv.org/pdf/1705.05363) |
+| E3B       |           11.0 |   [Craftax_Baselines](https://github.com/MichaelTMatthews/Craftax_Baselines/blob/main/ppo.py)   | [E3B](https://arxiv.org/abs/2210.05805) |
 
 
 ## Craftax-1M
-| Algorithm | Reward (% max) |                                  Source                                   |
-|:----------|---------------:|:-------------------------------------------------------------------------:|
-| PPO-RNN   |            2.3 | <a href="https://github.com/luchris429/purejaxrl/tree/main">PureJaxRL</a> |
-| PPO       |            2.2 | <a href="https://github.com/luchris429/purejaxrl/tree/main">PureJaxRL</a> |
-| ICM       |            2.2 |           <a href="https://arxiv.org/abs/1705.05363">ICM</a>              |
-| E3B       |            2.2 |            <a href="https://arxiv.org/abs/2210.05805">E3B</a>             |
+| Algorithm | Reward (% max) |                                  Source                                   |                  Paper                  |
+|:----------|---------------:|:-------------------------------------------------------------------------:|:---------------------------------------:|
+| PPO-RNN   |            2.3 | [Craftax_Baselines](https://github.com/MichaelTMatthews/Craftax_Baselines/blob/main/ppo_rnn.py) | [PPO](https://arxiv.org/abs/1707.06347) |
+| RND       |            2.2 | [Craftax_Baselines](https://github.com/MichaelTMatthews/Craftax_Baselines/blob/main/ppo_rnd.py) | [RND](https://arxiv.org/abs/1810.12894) |
+| PPO       |            2.2 |   [Craftax_Baselines](https://github.com/MichaelTMatthews/Craftax_Baselines/blob/main/ppo.py)   | [PPO](https://arxiv.org/abs/1707.06347) |
+| ICM       |            2.2 |   [Craftax_Baselines](https://github.com/MichaelTMatthews/Craftax_Baselines/blob/main/ppo.py)   | [ICM](https://arxiv.org/pdf/1705.05363) |
+| E3B       |            2.2 |   [Craftax_Baselines](https://github.com/MichaelTMatthews/Craftax_Baselines/blob/main/ppo.py)   | [E3B](https://arxiv.org/abs/2210.05805) |
 
 
 # 🔎 See Also
