@@ -1,6 +1,14 @@
 from craftax.craftax.util.game_logic_utils import *
 
 
+def is_game_over(state, params, static_env_params):
+    done_steps = state.timestep >= params.max_timesteps
+    is_dead = state.player_health <= 0
+    defeated_boss = has_beaten_boss(state, static_env_params)
+
+    return done_steps | is_dead | defeated_boss
+
+
 def update_plants_with_eat(state, plant_position, static_params):
     def _is_plant(unused, index):
         return None, (state.growing_plants_positions[index] == plant_position).all()

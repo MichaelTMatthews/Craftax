@@ -6,7 +6,7 @@ import chex
 
 from craftax.environment_base.environment_bases import EnvironmentNoAutoReset
 from craftax.craftax.constants import *
-from craftax.craftax.game_logic import craftax_step
+from craftax.craftax.game_logic import craftax_step, is_game_over
 from craftax.craftax.craftax_state import EnvState, EnvParams, StaticEnvParams
 from craftax.craftax.renderer import render_craftax_symbolic
 from craftax.craftax.util.game_logic_utils import has_beaten_boss
@@ -80,14 +80,7 @@ class CraftaxSymbolicEnvNoAutoReset(EnvironmentNoAutoReset):
         return pixels
 
     def is_terminal(self, state: EnvState, params: EnvParams) -> bool:
-        done_steps = state.timestep >= params.max_timesteps
-        is_dead = state.player_health <= 0
-        defeated_boss = has_beaten_boss(state, self.static_env_params)
-
-        is_terminal = jnp.logical_or(is_dead, done_steps)
-        is_terminal = jnp.logical_or(is_terminal, defeated_boss)
-
-        return is_terminal
+        return is_game_over(state, params, self.static_env_params)
 
     @property
     def name(self) -> str:
@@ -170,7 +163,7 @@ class CraftaxSymbolicEnv(environment.Environment):
 
     @property
     def name(self) -> str:
-        return "Craftax-Symbolic-AutoReset-v1"
+        return "Craftax-Symbolic-v1"
 
     @property
     def num_actions(self) -> int:
