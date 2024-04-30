@@ -123,8 +123,8 @@ We report reward as a % of the maximum (226).
 
 
 ## Craftax-1M
-| Algorithm | Reward (% max) |                                  Source                                   |                  Paper                  |
-|:----------|---------------:|:-------------------------------------------------------------------------:|:---------------------------------------:|
+| Algorithm | Reward (% max) |                                              Code                                               |                  Paper                  |
+|:----------|---------------:|:-----------------------------------------------------------------------------------------------:|:---------------------------------------:|
 | PPO-RNN   |            2.3 | [Craftax_Baselines](https://github.com/MichaelTMatthews/Craftax_Baselines/blob/main/ppo_rnn.py) | [PPO](https://arxiv.org/abs/1707.06347) |
 | RND       |            2.2 | [Craftax_Baselines](https://github.com/MichaelTMatthews/Craftax_Baselines/blob/main/ppo_rnd.py) | [RND](https://arxiv.org/abs/1810.12894) |
 | PPO       |            2.2 |   [Craftax_Baselines](https://github.com/MichaelTMatthews/Craftax_Baselines/blob/main/ppo.py)   | [PPO](https://arxiv.org/abs/1707.06347) |
