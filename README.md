@@ -134,7 +134,7 @@ We report reward as a % of the maximum (226).
 
 # 💾 Offline Dataset
 
-A small dataset of trajectories is available [here](https://drive.google.com/file/d/1wCMdUIsGOWYkNW55Rs0rHkYKUZhaQdtq/view?usp=sharing).
+A small dataset of mixed-skill human trajectories is available [here](https://drive.google.com/file/d/1wCMdUIsGOWYkNW55Rs0rHkYKUZhaQdtq/view?usp=sharing).
 Once the zip file has been extracted, the trajectories can be loaded with the `load_compressed_pickle` function.  These were gathered on an earlier version of Craftax and it is recommended you use [v1.1.0](https://github.com/MichaelTMatthews/Craftax/releases/tag/v1.1.0) or earlier to investigate them.
 `run1` is the only trajectory to complete the game.
 
