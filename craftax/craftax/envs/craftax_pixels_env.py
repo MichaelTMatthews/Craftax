@@ -4,6 +4,7 @@ from typing import Tuple, Optional
 import chex
 
 from craftax.craftax.constants import *
+from craftax.craftax.envs.common import log_achievements_to_info
 from craftax.craftax.game_logic import craftax_step, is_game_over
 from craftax.craftax.craftax_state import EnvState, EnvParams, StaticEnvParams
 from craftax.craftax.renderer import render_craftax_pixels
@@ -34,7 +35,8 @@ class CraftaxPixelsEnvNoAutoReset(EnvironmentNoAutoReset):
         state, reward = craftax_step(key, state, action, params, self.static_env_params)
 
         done = self.is_terminal(state, params)
-        info = {"discount": self.discount(state, params)}
+        info = log_achievements_to_info(state, done)
+        info["discount"] = self.discount(state, params)
 
         return (
             lax.stop_gradient(self.get_obs(state)),
@@ -105,7 +107,8 @@ class CraftaxPixelsEnv(environment.Environment):
         state, reward = craftax_step(key, state, action, params, self.static_env_params)
 
         done = self.is_terminal(state, params)
-        info = {"discount": self.discount(state, params)}
+        info = log_achievements_to_info(state, done)
+        info["discount"] = self.discount(state, params)
 
         return (
             lax.stop_gradient(self.get_obs(state)),

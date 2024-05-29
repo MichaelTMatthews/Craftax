@@ -4,6 +4,7 @@ from gymnax.environments import spaces, environment
 from typing import Tuple, Optional
 import chex
 
+from craftax.craftax.envs.common import log_achievements_to_info
 from craftax.environment_base.environment_bases import EnvironmentNoAutoReset
 from craftax.craftax.constants import *
 from craftax.craftax.game_logic import craftax_step, is_game_over
@@ -56,7 +57,8 @@ class CraftaxSymbolicEnvNoAutoReset(EnvironmentNoAutoReset):
         state, reward = craftax_step(rng, state, action, params, self.static_env_params)
 
         done = self.is_terminal(state, params)
-        info = {"discount": self.discount(state, params)}
+        info = log_achievements_to_info(state, done)
+        info["discount"] = self.discount(state, params)
 
         return (
             lax.stop_gradient(self.get_obs(state)),
@@ -128,7 +130,8 @@ class CraftaxSymbolicEnv(environment.Environment):
         state, reward = craftax_step(rng, state, action, params, self.static_env_params)
 
         done = self.is_terminal(state, params)
-        info = {"discount": self.discount(state, params)}
+        info = log_achievements_to_info(state, done)
+        info["discount"] = self.discount(state, params)
 
         return (
             lax.stop_gradient(self.get_obs(state)),
