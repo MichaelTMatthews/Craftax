@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "craftax"
-version = "1.4.1"
+version = "1.4.2"
 authors = [
   { name="Michael Matthews", email="michael.matthews@eng.ox.ac.uk" },
 ]
