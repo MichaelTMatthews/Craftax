@@ -106,7 +106,7 @@ class CraftaxClassicSymbolicEnvNoAutoReset(EnvironmentNoAutoReset):
             0.0,
             1.0,
             (obs_shape,),
-            dtype=jnp.int32,
+            dtype=jnp.float32,
         )
 
 
@@ -178,5 +178,5 @@ class CraftaxClassicSymbolicEnv(environment.Environment):
             0.0,
             1.0,
             (obs_shape,),
-            dtype=jnp.int32,
+            dtype=jnp.float32,
         )
