@@ -84,7 +84,7 @@ class CraftaxClassicPixelsEnvNoAutoReset(EnvironmentNoAutoReset):
                 (OBS_DIM[0] + INVENTORY_OBS_HEIGHT) * BLOCK_PIXEL_SIZE_AGENT,
                 3,
             ),
-            dtype=jnp.int32,
+            dtype=jnp.float32,
         )
 
 
@@ -156,5 +156,5 @@ class CraftaxClassicPixelsEnv(environment.Environment):
                 (OBS_DIM[0] + INVENTORY_OBS_HEIGHT) * BLOCK_PIXEL_SIZE_AGENT,
                 3,
             ),
-            dtype=jnp.int32,
+            dtype=jnp.float32,
         )
