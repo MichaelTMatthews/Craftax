@@ -11,7 +11,7 @@
         <img src="https://img.shields.io/badge/License-MIT-yellow" /></a>
        <a href= "https://craftaxenv.github.io/">
         <img src="https://img.shields.io/badge/blog-link-purple" /></a>
-       <a href= "https://arxiv.org/pdf/2402.16801.pdf">
+       <a href= "https://arxiv.org/abs/2402.16801">
         <img src="https://img.shields.io/badge/arxiv-2402.16801-b31b1b" /></a>
        <a href= "https://github.com/psf/black">
         <img src="https://img.shields.io/badge/code%20style-black-000000.svg" /></a>
@@ -20,8 +20,8 @@
 
 
 # ⛏️ Craftax
-Craftax is an RL environment written entirely in <a href="https://github.com/google/jax">JAX</a>.  Craftax reimplements and significantly extends the game mechanics of <a href="https://danijar.com/project/crafter/">Crafter</a>, taking inspiration from roguelike games such as <a href="https://github.com/facebookresearch/nle">NetHack</a>.
-Craftax conforms to the <a href="https://github.com/RobertTLange/gymnax">gymnax</a> interface, allowing easy integration with existing JAX-based frameworks like <a href="https://chrislu.page/blog/meta-disco/">PureJaxRL</a> and [JaxUED](https://github.com/DramaCow/jaxued).
+Craftax is an RL environment written entirely in <a href="https://github.com/google/jax">JAX</a>.  Craftax reimplements and significantly extends the game mechanics of <a href="https://github.com/danijar/crafter">Crafter</a>, taking inspiration from roguelike games such as <a href="https://github.com/facebookresearch/nle">NetHack</a>.
+Craftax conforms to the <a href="https://github.com/RobertTLange/gymnax">gymnax</a> interface, allowing easy integration with existing JAX-based frameworks like <a href="https://github.com/luchris429/purejaxrl">PureJaxRL</a> and [JaxUED](https://github.com/DramaCow/jaxued).
 
 <p align="middle">
   <img src="https://raw.githubusercontent.com/MichaelTMatthews/Craftax/main/images/archery.gif" width="200" />
@@ -115,7 +115,7 @@ We report reward as a % of the maximum (226).
 ## Craftax-1B
 | Algorithm | Reward (% max) |                                              Code                                               |                  Paper                  |
 |:----------|---------------:|:-----------------------------------------------------------------------------------------------:|:---------------------------------------:|
-| PPO-GTrXL |           18.3 | [TransformerXL_PPO_JAX](https://github.com/Reytuag/transformerXL_PPO_JAX)                       | [PPO](https://arxiv.org/abs/1707.06347), [GTrXL](https://arxiv.org/abs/1910.06764)| 
+| PPO-GTrXL |           18.3 | [TransformerXL_PPO_JAX](https://github.com/Reytuag/transformerXL_PPO_JAX)                       | [GTrXL](https://arxiv.org/abs/1910.06764)| 
 | PPO-RNN   |           15.3 | [Craftax_Baselines](https://github.com/MichaelTMatthews/Craftax_Baselines/blob/main/ppo_rnn.py) | [PPO](https://arxiv.org/abs/1707.06347) |
 | RND       |           12.0 | [Craftax_Baselines](https://github.com/MichaelTMatthews/Craftax_Baselines/blob/main/ppo_rnd.py) | [RND](https://arxiv.org/abs/1810.12894) |
 | PPO       |           11.9 |   [Craftax_Baselines](https://github.com/MichaelTMatthews/Craftax_Baselines/blob/main/ppo.py)   | [PPO](https://arxiv.org/abs/1707.06347) |
