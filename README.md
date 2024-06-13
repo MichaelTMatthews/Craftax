@@ -18,6 +18,7 @@
 </p>
 
 
+### <b>Update: Craftax was accepted at ICML 2024 as a spotlight!</b>
 
 # ⛏️ Craftax
 Craftax is an RL environment written entirely in <a href="https://github.com/google/jax">JAX</a>.  Craftax reimplements and significantly extends the game mechanics of <a href="https://github.com/danijar/crafter">Crafter</a>, taking inspiration from roguelike games such as <a href="https://github.com/facebookresearch/nle">NetHack</a>.
@@ -151,10 +152,10 @@ Once the zip file has been extracted, the trajectories can be loaded with the `l
 # 📚 Citation
 If you use Craftax in your work please cite it as follows:
 ```
-@article{matthews2024craftax,
-  title={Craftax: A Lightning-Fast Benchmark for Open-Ended Reinforcement Learning},
-  author={Michael Matthews and Michael Beukman and Benjamin Ellis and Mikayel Samvelyan and Matthew Jackson and Samuel Coward and Jakob Foerster},
-  journal={arXiv preprint},
-  year={2024},
+@inproceedings{matthews2024craftax,
+    author={Michael Matthews and Michael Beukman and Benjamin Ellis and Mikayel Samvelyan and Matthew Jackson and Samuel Coward and Jakob Foerster},
+    title = {Craftax: A Lightning-Fast Benchmark for Open-Ended Reinforcement Learning},
+    booktitle = {International Conference on Machine Learning ({ICML})},
+    year = {2024}
 }
 ```
