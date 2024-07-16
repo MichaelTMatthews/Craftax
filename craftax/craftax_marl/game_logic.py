@@ -3009,10 +3009,10 @@ def craftax_step(
     init_achievements = state.achievements
     init_health = state.player_health
 
-    # Interrupt action if sleeping or resting or dead
-    actions = jax.vmap(jax.lax.select, in_axes=(0, None, 0))(
-        (state.player_health <= 0 | state.is_sleeping | state.is_resting),
-        Action.NOOP.value, 
+    # Interrupt action if sleeping or resting
+    actions = jnp.where(
+        jnp.logical_or(state.is_sleeping, state.is_resting),
+        Action.NOOP.value,
         actions
     )
 
