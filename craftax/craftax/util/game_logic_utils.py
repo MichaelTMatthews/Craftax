@@ -381,7 +381,7 @@ def get_max_mana(state):
 
 
 def clip_inventory_and_intrinsics(state, params):
-    capped_inv = jax.tree.map(lambda x: jnp.minimum(x, 99), state.inventory)
+    capped_inv = jax.tree_util.tree_map(lambda x: jnp.minimum(x, 99), state.inventory)
 
     min_health = jax.lax.select(params.god_mode, 9, 0)
 
