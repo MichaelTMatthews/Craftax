@@ -187,9 +187,9 @@ def render_craftax_symbolic(state: EnvState, static_params: StaticEnvParams):
     )
     special_values_level = jnp.array(
         [
-            state.monsters_killed[state.player_level] >= MONSTERS_KILLED_TO_CLEAR_LEVEL,
-            state.player_level / 10.0,
             state.light_level,
+            state.player_level / 10.0,
+            state.monsters_killed[state.player_level] >= MONSTERS_KILLED_TO_CLEAR_LEVEL,
             is_boss_vulnerable(state),
         ]
     )
@@ -212,13 +212,7 @@ def render_craftax_symbolic(state: EnvState, static_params: StaticEnvParams):
     return all_flattened
 
 
-@partial(
-    jax.jit,
-    static_argnums=(
-        1,
-        2,
-    ),
-)
+@partial(jax.jit, static_argnums=(1,2,))
 def render_craftax_pixels(state, block_pixel_size, do_night_noise=True):
     textures = TEXTURES[block_pixel_size]
     obs_dim_array = jnp.array([OBS_DIM[0], OBS_DIM[1]], dtype=jnp.int32)
