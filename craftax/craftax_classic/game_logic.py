@@ -4,6 +4,17 @@ from craftax.craftax_classic.constants import *
 from craftax.craftax_classic.envs.craftax_state import *
 
 
+def is_game_over(state, params):
+    done_steps = state.timestep >= params.max_timesteps
+    in_lava = (
+        state.map[state.player_position[0], state.player_position[1]]
+        == BlockType.LAVA.value
+    )
+    is_dead = state.player_health <= 0
+
+    return done_steps | in_lava | is_dead
+
+
 def in_bounds(state, position):
     in_bounds_x = jnp.logical_and(0 <= position[0], position[0] < state.map.shape[0])
     in_bounds_y = jnp.logical_and(0 <= position[1], position[1] < state.map.shape[1])
@@ -332,7 +343,7 @@ def do_action(rng, state, action, static_params):
         action_block_in_bounds, jnp.logical_not(did_attack_mob)
     )
     new_map = jax.lax.select(action_block_in_bounds, new_map, state.map)
-    new_inventory = jax.tree_map(
+    new_inventory = jax.tree.map(
         lambda x, y: jax.lax.select(action_block_in_bounds, x, y),
         new_inventory,
         state.inventory,
@@ -362,7 +373,7 @@ def do_action(rng, state, action, static_params):
 
     # Do?
     doing_mining = action == Action.DO.value
-    state = jax.tree_map(
+    state = jax.tree.map(
         lambda x, y: jax.lax.select(doing_mining, x, y),
         state,
         old_state,
@@ -700,12 +711,12 @@ def place_block(state, action, static_params):
     )
 
     new_map = jax.lax.select(action_block_in_bounds, new_map, state.map)
-    new_inventory = jax.tree_map(
+    new_inventory = jax.tree.map(
         lambda x, y: jax.lax.select(action_block_in_bounds, x, y),
         new_inventory,
         state.inventory,
     )
-    new_achievements = jax.tree_map(
+    new_achievements = jax.tree.map(
         lambda x, y: jax.lax.select(action_block_in_bounds, x, y),
         new_achievements,
         state.achievements,
@@ -1619,7 +1630,7 @@ def spawn_mobs(state, rng, params, static_params):
 
 
 def cap_inventory(state):
-    capped_inv = jax.tree_map(lambda x: jnp.minimum(x, 9), state.inventory)
+    capped_inv = jax.tree.map(lambda x: jnp.minimum(x, 9), state.inventory)
 
     state = state.replace(inventory=capped_inv)
 

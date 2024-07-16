@@ -1,6 +1,14 @@
 from craftax.craftax.util.game_logic_utils import *
 
 
+def is_game_over(state, params, static_env_params):
+    done_steps = state.timestep >= params.max_timesteps
+    is_dead = state.player_health <= 0
+    defeated_boss = has_beaten_boss(state, static_env_params)
+
+    return done_steps | is_dead | defeated_boss
+
+
 def update_plants_with_eat(state, plant_position, static_params):
     def _is_plant(unused, index):
         return None, (state.growing_plants_positions[index] == plant_position).all()
@@ -471,7 +479,7 @@ def do_action(rng, state, action, static_params):
     new_map = jax.lax.select(
         action_block_in_bounds, new_map, state.map[state.player_level]
     )
-    new_inventory = jax.tree_map(
+    new_inventory = jax.tree.map(
         lambda x, y: jax.lax.select(action_block_in_bounds, x, y),
         new_inventory,
         state.inventory,
@@ -506,7 +514,7 @@ def do_action(rng, state, action, static_params):
 
     # Do?
     doing_mining = action == Action.DO.value
-    state = jax.tree_map(
+    state = jax.tree.map(
         lambda x, y: jax.lax.select(doing_mining, x, y),
         state,
         old_state,
@@ -1044,12 +1052,12 @@ def place_block(state, action, static_params):
     new_item_map = jax.lax.select(
         action_block_in_bounds, new_item_map, state.item_map[state.player_level]
     )
-    new_inventory = jax.tree_map(
+    new_inventory = jax.tree.map(
         lambda x, y: jax.lax.select(action_block_in_bounds, x, y),
         new_inventory,
         state.inventory,
     )
-    new_achievements = jax.tree_map(
+    new_achievements = jax.tree.map(
         lambda x, y: jax.lax.select(action_block_in_bounds, x, y),
         new_achievements,
         state.achievements,
@@ -2455,11 +2463,7 @@ def change_floor(
         action == Action.ASCEND.value,
         jnp.logical_or(
             env_params.god_mode,
-            jnp.logical_and(
-                on_up_ladder,
-                state.monsters_killed[state.player_level]
-                >= MONSTERS_KILLED_TO_CLEAR_LEVEL,
-            ),
+            on_up_ladder,
         ),
     )
     is_moving_up = jnp.logical_and(is_moving_up, state.player_level > 0)

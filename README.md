@@ -6,22 +6,23 @@
         <a href= "https://pypi.org/project/craftax/">
         <img src="https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-blue" /></a>
         <a href= "https://pypi.org/project/craftax/">
-        <img src="https://img.shields.io/badge/pypi-1.3.0-green" /></a>
+        <img src="https://img.shields.io/badge/pypi-1.4.3-green" /></a>
        <a href= "https://github.com/MichaelTMatthews/Craftax/blob/main/LICENSE">
         <img src="https://img.shields.io/badge/License-MIT-yellow" /></a>
        <a href= "https://craftaxenv.github.io/">
         <img src="https://img.shields.io/badge/blog-link-purple" /></a>
-       <a href= "https://arxiv.org/pdf/2402.16801.pdf">
+       <a href= "https://arxiv.org/abs/2402.16801">
         <img src="https://img.shields.io/badge/arxiv-2402.16801-b31b1b" /></a>
        <a href= "https://github.com/psf/black">
         <img src="https://img.shields.io/badge/code%20style-black-000000.svg" /></a>
 </p>
 
 
+### <b>Update: Craftax was accepted at ICML 2024 as a spotlight!</b>
 
 # ⛏️ Craftax
-Craftax is an RL environment written entirely in <a href="https://github.com/google/jax">JAX</a>.  Craftax reimplements and significantly extends the game mechanics of <a href="https://danijar.com/project/crafter/">Crafter</a>, taking inspiration from roguelike games such as <a href="https://github.com/facebookresearch/nle">NetHack</a>.
-Craftax conforms to the <a href="https://github.com/RobertTLange/gymnax">gymnax</a> interface, allowing easy integration with existing JAX-based frameworks like <a href="https://chrislu.page/blog/meta-disco/">PureJaxRL</a> and [JaxUED](https://github.com/DramaCow/jaxued).
+Craftax is an RL environment written entirely in <a href="https://github.com/google/jax">JAX</a>.  Craftax reimplements and significantly extends the game mechanics of <a href="https://github.com/danijar/crafter">Crafter</a>, taking inspiration from roguelike games such as <a href="https://github.com/facebookresearch/nle">NetHack</a>.
+Craftax conforms to the <a href="https://github.com/RobertTLange/gymnax">gymnax</a> interface, allowing easy integration with existing JAX-based frameworks like <a href="https://github.com/luchris429/purejaxrl">PureJaxRL</a> and [JaxUED](https://github.com/DramaCow/jaxued).
 
 <p align="middle">
   <img src="https://raw.githubusercontent.com/MichaelTMatthews/Craftax/main/images/archery.gif" width="200" />
@@ -42,7 +43,7 @@ rng, _rng = jax.random.split(rng)
 rngs = jax.random.split(_rng, 3)
 
 # Create environment
-env = AutoResetEnvWrapper(CraftaxSymbolicEnv())
+env = make_craftax_env_from_name("Craftax-Symbolic-v1", auto_reset=True)
 env_params = env.default_params
 
 # Get an initial state and observation
@@ -96,11 +97,14 @@ To run experiments see the [Craftax Baselines](https://github.com/MichaelTMatthe
 
 # 🔪 Gotchas
 ### Optimistic Resets
-Craftax provides the option to use optimistic resets to improve performance, which means that (unlike regular gymnax environments) it **does not auto-reset** by default.
-This means that the environment should always be wrapped either in `OptimisticResetVecEnvWrapper` (for efficient resets) or `AutoResetEnvWrapper` (to recover the default gymnax auto-reset behaviour).  See `ppo.py` for correct usage of both wrappers.
+Craftax provides the option to use optimistic resets to improve performance, which means that we provide access to environments that **do not auto-reset**.
+Environments obtained from `make_craftax_env_from_name` or `make_craftax_env_from_args` with `auto_reset=False` will not automatically reset and if not properly handled will continue episodes into invalid states.
+These environments should always be wrapped either in `OptimisticResetVecEnvWrapper`(for efficient resets) or `AutoResetEnvWrapper` (to recover the default gymnax auto-reset behaviour).
+See `ppo.py` in [Craftax Baselines](https://github.com/MichaelTMatthews/Craftax_Baselines) for correct usage.
+Using `auto_reset=True` will return a regular auto-reset environment, which can be treated like any other gymnax environment.
 
 ### Texture Caching
-We use a texture cache to avoid recreating the texture atlas every time Craftax is imported. If you are just running Craftax as a benchmark this will not affect you.  However, if you are editing the game (e.g. adding new blocks, entities etc.) then a stale cache could cause errors. You can export the following environment variable to force textures to be created from scratch.
+We use a texture cache to avoid recreating the texture atlas every time Craftax is imported. If you are just running Craftax as a benchmark this will not affect you.  However, if you are editing the game (e.g. adding new blocks, entities etc.) then a stale cache could cause errors. You can export the following environment variable to force textures to be created from scratch every run.
 ```
 export CRAFTAX_RELOAD_TEXTURES=true
 ```
@@ -110,22 +114,31 @@ If you would like to add an algorithm please open a PR and provide a reference t
 We report reward as a % of the maximum (226).
 
 ## Craftax-1B
-| Algorithm | Reward (% max) |                                  Source                                   |
-|:----------|---------------:|:-------------------------------------------------------------------------:|
-| PPO-RNN   |           15.3 | <a href="https://github.com/luchris429/purejaxrl/tree/main">PureJaxRL</a> |
-| PPO       |           11.9 | <a href="https://github.com/luchris429/purejaxrl/tree/main">PureJaxRL</a> |
-| ICM       |           11.9 |           <a href="https://arxiv.org/abs/1705.05363">ICM</a>              |
-| E3B       |           11.0 |            <a href="https://arxiv.org/abs/2210.05805">E3B</a>             |
+| Algorithm | Reward (% max) |                                              Code                                               |                  Paper                  |
+|:----------|---------------:|:-----------------------------------------------------------------------------------------------:|:---------------------------------------:|
+| PPO-GTrXL |           18.3 | [TransformerXL_PPO_JAX](https://github.com/Reytuag/transformerXL_PPO_JAX)                       | [GTrXL](https://arxiv.org/abs/1910.06764)| 
+| PPO-RNN   |           15.3 | [Craftax_Baselines](https://github.com/MichaelTMatthews/Craftax_Baselines/blob/main/ppo_rnn.py) | [PPO](https://arxiv.org/abs/1707.06347) |
+| RND       |           12.0 | [Craftax_Baselines](https://github.com/MichaelTMatthews/Craftax_Baselines/blob/main/ppo_rnd.py) | [RND](https://arxiv.org/abs/1810.12894) |
+| PPO       |           11.9 |   [Craftax_Baselines](https://github.com/MichaelTMatthews/Craftax_Baselines/blob/main/ppo.py)   | [PPO](https://arxiv.org/abs/1707.06347) |
+| ICM       |           11.9 |   [Craftax_Baselines](https://github.com/MichaelTMatthews/Craftax_Baselines/blob/main/ppo.py)   | [ICM](https://arxiv.org/pdf/1705.05363) |
+| E3B       |           11.0 |   [Craftax_Baselines](https://github.com/MichaelTMatthews/Craftax_Baselines/blob/main/ppo.py)   | [E3B](https://arxiv.org/abs/2210.05805) |
 
 
 ## Craftax-1M
-| Algorithm | Reward (% max) |                                  Source                                   |
-|:----------|---------------:|:-------------------------------------------------------------------------:|
-| PPO-RNN   |            2.3 | <a href="https://github.com/luchris429/purejaxrl/tree/main">PureJaxRL</a> |
-| PPO       |            2.2 | <a href="https://github.com/luchris429/purejaxrl/tree/main">PureJaxRL</a> |
-| ICM       |            2.2 |           <a href="https://arxiv.org/abs/1705.05363">ICM</a>              |
-| E3B       |            2.2 |            <a href="https://arxiv.org/abs/2210.05805">E3B</a>             |
+| Algorithm | Reward (% max) |                                              Code                                               |                  Paper                  |
+|:----------|---------------:|:-----------------------------------------------------------------------------------------------:|:---------------------------------------:|
+| PPO-RNN   |            2.3 | [Craftax_Baselines](https://github.com/MichaelTMatthews/Craftax_Baselines/blob/main/ppo_rnn.py) | [PPO](https://arxiv.org/abs/1707.06347) |
+| RND       |            2.2 | [Craftax_Baselines](https://github.com/MichaelTMatthews/Craftax_Baselines/blob/main/ppo_rnd.py) | [RND](https://arxiv.org/abs/1810.12894) |
+| PPO       |            2.2 |   [Craftax_Baselines](https://github.com/MichaelTMatthews/Craftax_Baselines/blob/main/ppo.py)   | [PPO](https://arxiv.org/abs/1707.06347) |
+| ICM       |            2.2 |   [Craftax_Baselines](https://github.com/MichaelTMatthews/Craftax_Baselines/blob/main/ppo.py)   | [ICM](https://arxiv.org/pdf/1705.05363) |
+| E3B       |            2.2 |   [Craftax_Baselines](https://github.com/MichaelTMatthews/Craftax_Baselines/blob/main/ppo.py)   | [E3B](https://arxiv.org/abs/2210.05805) |
 
+
+# 💾 Offline Dataset
+
+A small dataset of mixed-skill human trajectories is available [here](https://drive.google.com/file/d/1wCMdUIsGOWYkNW55Rs0rHkYKUZhaQdtq/view?usp=sharing).
+Once the zip file has been extracted, the trajectories can be loaded with the `load_compressed_pickle` function.  These were gathered on an earlier version of Craftax and it is recommended you use [v1.1.0](https://github.com/MichaelTMatthews/Craftax/releases/tag/v1.1.0) or earlier to investigate them.
+`run1` is the only trajectory to complete the game.
 
 # 🔎 See Also
 - ⛏️ [Crafter](https://github.com/danijar/crafter) The original Crafter benchmark.
@@ -139,10 +152,10 @@ We report reward as a % of the maximum (226).
 # 📚 Citation
 If you use Craftax in your work please cite it as follows:
 ```
-@article{matthews2024craftax,
-  title={Craftax: A Lightning-Fast Benchmark for Open-Ended Reinforcement Learning},
-  author={Michael Matthews and Michael Beukman and Benjamin Ellis and Mikayel Samvelyan and Matthew Jackson and Samuel Coward and Jakob Foerster},
-  journal={arXiv preprint},
-  year={2024},
+@inproceedings{matthews2024craftax,
+    author={Michael Matthews and Michael Beukman and Benjamin Ellis and Mikayel Samvelyan and Matthew Jackson and Samuel Coward and Jakob Foerster},
+    title = {Craftax: A Lightning-Fast Benchmark for Open-Ended Reinforcement Learning},
+    booktitle = {International Conference on Machine Learning ({ICML})},
+    year = {2024}
 }
 ```
