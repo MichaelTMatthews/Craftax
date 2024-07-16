@@ -690,7 +690,7 @@ def do_crafting(state, action):
     )
 
     # Iron armour
-    can_craft_iron_armour = (new_inventory.armour < 1).sum() > 0
+    can_craft_iron_armour = (new_inventory.armour < 1).sum(axis=1) > 0
     can_craft_iron_armour = jnp.logical_and(
         can_craft_iron_armour,
         jnp.logical_and(new_inventory.iron >= 3, new_inventory.coal >= 3),
@@ -709,15 +709,21 @@ def do_crafting(state, action):
     new_inventory = new_inventory.replace(
         iron=new_inventory.iron - 3 * is_crafting_iron_armour,
         coal=new_inventory.coal - 3 * is_crafting_iron_armour,
-        armour=new_inventory.armour.at[:, iron_armour_index_to_craft].set(
+        armour=new_inventory.armour.at[
+            jnp.arange(0, len(new_inventory.armour)),
+            iron_armour_index_to_craft
+        ].set(
             is_crafting_iron_armour * 1
             + (1 - is_crafting_iron_armour)
-            * new_inventory.armour[:, iron_armour_index_to_craft]
+            * new_inventory.armour[
+                jnp.arange(0, len(new_inventory.armour)),
+                iron_armour_index_to_craft
+            ]
         ),
     )
-    new_achievements = new_achievements.at[:, Achievement.MAKE_IRON_ARMOUR.value].set(
+    new_achievements = new_achievements.at[Achievement.MAKE_IRON_ARMOUR.value].set(
         jnp.logical_or(
-            new_achievements[:, Achievement.MAKE_IRON_ARMOUR.value],
+            new_achievements[Achievement.MAKE_IRON_ARMOUR.value],
             is_crafting_iron_armour,
         )
     )
@@ -740,10 +746,16 @@ def do_crafting(state, action):
 
     new_inventory = new_inventory.replace(
         diamond=new_inventory.diamond - 3 * is_crafting_diamond_armour,
-        armour=new_inventory.armour.at[:, diamond_armour_index_to_craft].set(
+        armour=new_inventory.armour.at[
+            jnp.arange(0, len(new_inventory.armour)),
+            diamond_armour_index_to_craft
+        ].set(
             is_crafting_diamond_armour * 2
             + (1 - is_crafting_diamond_armour)
-            * new_inventory.armour[:, diamond_armour_index_to_craft]
+            * new_inventory.armour[
+                jnp.arange(0, len(new_inventory.armour)),
+                diamond_armour_index_to_craft
+            ]
         ),
     )
     new_achievements = new_achievements.at[:, Achievement.MAKE_DIAMOND_ARMOUR.value].set(
