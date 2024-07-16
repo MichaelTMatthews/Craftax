@@ -2422,67 +2422,55 @@ def spawn_mobs(state, rng, params, static_params):
 def change_floor(
     state: EnvState, action, env_params: EnvParams, static_params: StaticEnvParams
 ):
-    def _moving_down_check(player_position, action):
-        is_moving_down = jnp.logical_and(
-            action == Action.DESCEND.value,
-            jnp.logical_or(
-                env_params.god_mode,
-                jnp.logical_and(
-                    state.item_map[
-                        state.player_level, player_position[0], player_position[1]
-                    ]
-                    == ItemType.LADDER_DOWN.value,
-                    state.monsters_killed[state.player_level]
-                    >= MONSTERS_KILLED_TO_CLEAR_LEVEL
-                )
+    is_moving_down = jnp.logical_and(
+        action == Action.DESCEND.value,
+        jnp.logical_or(
+            env_params.god_mode,
+            jnp.logical_and(
+                state.item_map[
+                    state.player_level, state.player_position[:, 0], state.player_position[:, 1]
+                ]
+                == ItemType.LADDER_DOWN.value,
+                state.monsters_killed[state.player_level] >= MONSTERS_KILLED_TO_CLEAR_LEVEL
             )
         )
-        return is_moving_down
-    
-    # Check if any of the players ask to move down
-    is_moving_down = jax.vmap(_moving_down_check, in_axes=(0,0))(
-        state.player_position, action
-    ).any()
+    )
     is_moving_down = jnp.logical_and(
         is_moving_down,
         state.player_level < static_params.num_levels - 1
     )
+    is_moving_down = is_moving_down.any()
 
     moving_down_position = state.up_ladders[state.player_level + 1]
 
-    def _moving_up_check(player_position, action):
-        is_moving_up = jnp.logical_and(
-            action == Action.ASCEND.value,
-            jnp.logical_or(
-                env_params.god_mode,
-                jnp.logical_and(
-                    state.item_map[
-                        state.player_level, player_position[0], player_position[1]
-                    ]
-                    == ItemType.LADDER_UP.value,
-                    state.monsters_killed[state.player_level]
-                    >= MONSTERS_KILLED_TO_CLEAR_LEVEL
-                )
+    is_moving_up = jnp.logical_and(
+        action == Action.ASCEND.value,
+        jnp.logical_or(
+            env_params.god_mode,
+            jnp.logical_and(
+                state.item_map[
+                    state.player_level, state.player_position[:, 0], state.player_position[:, 1]
+                ]
+                == ItemType.LADDER_UP.value,
+                state.monsters_killed[state.player_level]
+                >= MONSTERS_KILLED_TO_CLEAR_LEVEL
             )
         )
-        return is_moving_up
-    
-    # Check if any of the players ask to move up
-    is_moving_up = jax.vmap(_moving_up_check, in_axes=(0,0))(
-        state.player_position, action
-    ).any()
+    )
     is_moving_up = jnp.logical_and(
         is_moving_up,
         state.player_level > 0
     )
-
-    moving_up_position = state.down_ladders[state.player_level - 1]
+    is_moving_up = is_moving_up.any()
     
+    moving_up_position = state.down_ladders[state.player_level - 1]
+        
+    # prioritizes moving players down levels if two players are conflicted
     position = jax.lax.select(is_moving_down, moving_down_position,
                               jax.lax.select(is_moving_up, moving_up_position, state.player_position))
     delta_floor = jax.lax.select(is_moving_down, 1,
-                              jax.lax.select(is_moving_up, -1, 0))
-
+                                 jax.lax.select(is_moving_up, -1, 0))
+    
     move_down_achievement = LEVEL_ACHIEVEMENT_MAP[state.player_level + delta_floor]
 
     new_achievements = state.achievements.at[:, move_down_achievement].set(
