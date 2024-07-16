@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "craftax"
-version = "1.1.1"
+version = "1.4.3"
 authors = [
   { name="Michael Matthews", email="michael.matthews@eng.ox.ac.uk" },
 ]
@@ -35,12 +35,12 @@ dependencies = [
 ]
 
 [project.scripts]
-play_craftax = "craftax.play_craftax:entry_point"
-play_craftax_classic = "craftax_classic.play_craftax_classic:main"
+play_craftax = "craftax.craftax.play_craftax:entry_point"
+play_craftax_classic = "craftax.craftax_classic.play_craftax_classic:entry_point"
 
 [project.urls]
 Homepage = "https://github.com/MichaelTMatthews/Craftax"
 Issues = "https://github.com/MichaelTMatthews/Craftax/issues"
 
 [tool.setuptools.packages.find]
-where=["src"]
+include=["craftax*"]
