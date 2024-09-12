@@ -14,7 +14,14 @@ from craftax.craftax_classic.envs.craftax_symbolic_env import (
     CraftaxClassicSymbolicEnv,
     CraftaxClassicSymbolicEnvNoAutoReset,
 )
-
+from craftax.craftax_marl.envs.craftax_symbolic_env import (
+    CraftaxMARLSymbolicEnv,
+    CraftaxMARLSymbolicEnvNoAutoReset
+)
+from craftax.craftax_marl.envs.craftax_pixels_env import (
+    CraftaxMARLPixelsEnv,
+    CraftaxMARLPixelsEnvNoAutoReset
+)
 
 def make_craftax_env_from_name(name: str, auto_reset: bool):
     if auto_reset:
@@ -32,6 +39,17 @@ def make_craftax_env_from_name(name: str, auto_reset: bool):
             or name == "Craftax-Classic-Pixels-AutoReset-v1"
         ):
             return CraftaxClassicPixelsEnv()
+        
+        if (
+            name == "Craftax-MARL-Symbolic-v1"
+            or name == "Craftax-MARL-Symbolic-AutoReset-v1"
+        ):
+            return CraftaxMARLSymbolicEnv()
+        elif (
+            name == "Craftax-MARL-Pixels-v1"
+            or name == "Craftax-MARL-Pixels-AutoReset-v1"
+        ):
+            return CraftaxMARLPixelsEnv()
     else:
         if name == "Craftax-Symbolic-v1":
             return CraftaxSymbolicEnvNoAutoReset()
@@ -41,6 +59,10 @@ def make_craftax_env_from_name(name: str, auto_reset: bool):
             return CraftaxClassicSymbolicEnvNoAutoReset()
         elif name == "Craftax-Classic-Pixels-v1":
             return CraftaxClassicPixelsEnvNoAutoReset()
+        elif name == "Craftax-MARL-Symbolic-v1":
+            return CraftaxMARLSymbolicEnvNoAutoReset()
+        elif name == "Craftax-MARL-Pixels-v1":
+            return CraftaxMARLPixelsEnvNoAutoReset()
 
     raise ValueError(f"Unknown craftax environment: {name}")
 
