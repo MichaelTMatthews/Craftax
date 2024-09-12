@@ -2432,10 +2432,10 @@ def spawn_mobs(state, rng, params, static_params):
 
 
 def change_floor(
-    state: EnvState, action, env_params: EnvParams, static_params: StaticEnvParams
+    state: EnvState, actions, env_params: EnvParams, static_params: StaticEnvParams
 ):
     is_moving_down = jnp.logical_and(
-        action == Action.DESCEND.value,
+        actions == Action.DESCEND.value,
         jnp.logical_or(
             env_params.god_mode,
             jnp.logical_and(
@@ -2456,7 +2456,7 @@ def change_floor(
     moving_down_position = state.up_ladders[state.player_level + 1]
 
     is_moving_up = jnp.logical_and(
-        action == Action.ASCEND.value,
+        actions == Action.ASCEND.value,
         jnp.logical_or(
             env_params.god_mode,
             jnp.logical_and(
