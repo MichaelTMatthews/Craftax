@@ -515,7 +515,7 @@ def do_action(rng, state, action, static_params):
     return state
 
 
-def do_crafting(state, action):
+def do_crafting(state, actions):
     is_at_crafting_table = is_near_block(state, BlockType.CRAFTING_TABLE.value)
     is_at_furnace = is_near_block(state, BlockType.FURNACE.value)
 
@@ -525,7 +525,7 @@ def do_crafting(state, action):
     can_craft_wood_pickaxe = state.inventory.wood >= 1
 
     is_crafting_wood_pickaxe = jnp.logical_and(
-        action == Action.MAKE_WOOD_PICKAXE.value,
+        actions == Action.MAKE_WOOD_PICKAXE.value,
         jnp.logical_and(
             can_craft_wood_pickaxe,
             jnp.logical_and(is_at_crafting_table, state.inventory.pickaxe < 1),
@@ -543,7 +543,7 @@ def do_crafting(state, action):
         new_inventory.wood >= 1, new_inventory.stone >= 1
     )
     is_crafting_stone_pickaxe = jnp.logical_and(
-        action == Action.MAKE_STONE_PICKAXE.value,
+        actions == Action.MAKE_STONE_PICKAXE.value,
         jnp.logical_and(
             can_craft_stone_pickaxe,
             jnp.logical_and(is_at_crafting_table, new_inventory.pickaxe < 2),
@@ -569,7 +569,7 @@ def do_crafting(state, action):
         ),
     )
     is_crafting_iron_pickaxe = jnp.logical_and(
-        action == Action.MAKE_IRON_PICKAXE.value,
+        actions == Action.MAKE_IRON_PICKAXE.value,
         jnp.logical_and(
             can_craft_iron_pickaxe,
             jnp.logical_and(
@@ -593,7 +593,7 @@ def do_crafting(state, action):
         new_inventory.wood >= 1, new_inventory.diamond >= 3
     )
     is_crafting_diamond_pickaxe = jnp.logical_and(
-        action == Action.MAKE_DIAMOND_PICKAXE.value,
+        actions == Action.MAKE_DIAMOND_PICKAXE.value,
         jnp.logical_and(
             can_craft_diamond_pickaxe,
             jnp.logical_and(is_at_crafting_table, new_inventory.pickaxe < 4),
@@ -610,7 +610,7 @@ def do_crafting(state, action):
     # Wood sword
     can_craft_wood_sword = new_inventory.wood >= 1
     is_crafting_wood_sword = jnp.logical_and(
-        action == Action.MAKE_WOOD_SWORD.value,
+        actions == Action.MAKE_WOOD_SWORD.value,
         jnp.logical_and(
             can_craft_wood_sword,
             jnp.logical_and(is_at_crafting_table, new_inventory.sword < 1),
@@ -628,7 +628,7 @@ def do_crafting(state, action):
         new_inventory.stone >= 1, new_inventory.wood >= 1
     )
     is_crafting_stone_sword = jnp.logical_and(
-        action == Action.MAKE_STONE_SWORD.value,
+        actions == Action.MAKE_STONE_SWORD.value,
         jnp.logical_and(
             can_craft_stone_sword,
             jnp.logical_and(is_at_crafting_table, new_inventory.sword < 2),
@@ -651,7 +651,7 @@ def do_crafting(state, action):
         ),
     )
     is_crafting_iron_sword = jnp.logical_and(
-        action == Action.MAKE_IRON_SWORD.value,
+        actions == Action.MAKE_IRON_SWORD.value,
         jnp.logical_and(
             can_craft_iron_sword,
             jnp.logical_and(
@@ -675,7 +675,7 @@ def do_crafting(state, action):
         new_inventory.diamond >= 2, new_inventory.wood >= 1
     )
     is_crafting_diamond_sword = jnp.logical_and(
-        action == Action.MAKE_DIAMOND_SWORD.value,
+        actions == Action.MAKE_DIAMOND_SWORD.value,
         jnp.logical_and(
             can_craft_diamond_sword,
             jnp.logical_and(is_at_crafting_table, new_inventory.sword < 4),
@@ -699,7 +699,7 @@ def do_crafting(state, action):
     iron_armour_index_to_craft = jnp.argmax(new_inventory.armour < 1, axis=1)
 
     is_crafting_iron_armour = jnp.logical_and(
-        action == Action.MAKE_IRON_ARMOUR.value,
+        actions == Action.MAKE_IRON_ARMOUR.value,
         jnp.logical_and(
             can_craft_iron_armour,
             jnp.logical_and(is_at_crafting_table, is_at_furnace),
@@ -768,7 +768,7 @@ def do_crafting(state, action):
     # Arrow
     can_craft_arrow = jnp.logical_and(new_inventory.stone >= 1, new_inventory.wood >= 1)
     is_crafting_arrow = jnp.logical_and(
-        action == Action.MAKE_ARROW.value,
+        actions == Action.MAKE_ARROW.value,
         jnp.logical_and(
             can_craft_arrow,
             jnp.logical_and(is_at_crafting_table, new_inventory.arrows < 99),
@@ -783,7 +783,7 @@ def do_crafting(state, action):
     # Torch
     can_craft_torch = jnp.logical_and(new_inventory.coal >= 1, new_inventory.wood >= 1)
     is_crafting_torch = jnp.logical_and(
-        action == Action.MAKE_TORCH.value,
+        actions == Action.MAKE_TORCH.value,
         jnp.logical_and(
             can_craft_torch,
             jnp.logical_and(is_at_crafting_table, new_inventory.torches < 99),
