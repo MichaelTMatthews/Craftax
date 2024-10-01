@@ -281,16 +281,32 @@ def get_damage(damage_vector, defense_vector):
 
 def in_bounds(state, position):
     in_bounds_x = jnp.logical_and(
-        0 <= position[0], position[0] < state.map[state.player_level].shape[0]
+        0 <= position[:, 0], position[:, 0] < state.map[state.player_level].shape[0]
     )
     in_bounds_y = jnp.logical_and(
-        0 <= position[1], position[1] < state.map[state.player_level].shape[1]
+        0 <= position[:, 1], position[:, 1] < state.map[state.player_level].shape[1]
     )
     return jnp.logical_and(in_bounds_x, in_bounds_y)
 
 
 def is_in_solid_block(state, position):
-    return SOLID_BLOCK_MAPPING[state.map[state.player_level, position[0], position[1]]]
+    return SOLID_BLOCK_MAPPING[state.map[state.player_level, position[:, 0], position[:, 1]]]
+
+
+def is_position_not_colliding_other_player(state, position):
+    # Verify that next step isn't in another player's next position
+    next_pos_clash = jnp.fill_diagonal(
+        (jnp.expand_dims(position, axis=1) == jnp.expand_dims(position, axis=0)).all(axis=2), 
+        False, 
+        inplace=False
+    )
+    next_pos_clash = next_pos_clash.any(axis=1)
+
+    # Verify that next step isn't in another player's current position
+    curr_pos_clash = (jnp.expand_dims(position, axis=1) == jnp.expand_dims(state.player_position, axis=0)).all(axis=2)
+    curr_pos_clash = curr_pos_clash.any(axis=1)
+
+    return jnp.logical_not(jnp.logical_or(next_pos_clash, curr_pos_clash))
 
 
 def is_position_in_bounds_not_in_mob_not_colliding(state, position, collision_map):
@@ -298,10 +314,10 @@ def is_position_in_bounds_not_in_mob_not_colliding(state, position, collision_ma
     in_solid_block = is_in_solid_block(state, position)
     in_mob = is_in_mob(state, position)
     in_lava = (
-        state.map[state.player_level][position[0], position[1]] == BlockType.LAVA.value
+        state.map[state.player_level][position[:, 0], position[:, 1]] == BlockType.LAVA.value
     )
     in_water = (
-        state.map[state.player_level][position[0], position[1]] == BlockType.WATER.value
+        state.map[state.player_level][position[:, 0], position[:, 1]] == BlockType.WATER.value
     )
     on_ground_block = jnp.logical_and(
         jnp.logical_not(in_solid_block),
@@ -337,15 +353,10 @@ def is_position_in_bounds_not_in_mob_not_colliding(state, position, collision_ma
 
 
 def is_near_block(state, block_type):
-    def _is_given_block(unused, loc_add):
-        pos = state.player_position + loc_add
-        is_in_bounds = in_bounds(state, pos)
-        is_correct_block = state.map[state.player_level, pos[:, 0], pos[:, 1]] == block_type
-        return None, jnp.logical_and(is_in_bounds, is_correct_block)
-
-    _, is_block = jax.lax.scan(_is_given_block, None, CLOSE_BLOCKS)
-
-    return is_block.sum(axis=0) > 0
+    close_blocks = jax.vmap(jnp.add, in_axes=(None, 0))(state.player_position, CLOSE_BLOCKS)
+    in_bound_blocks = jax.vmap(in_bounds, in_axes=(None, 0))(state, close_blocks)
+    correct_blocks = state.map[state.player_level, close_blocks[:, :, 0], close_blocks[:, :, 1]] == block_type
+    return (jnp.logical_and(in_bound_blocks, correct_blocks)).any(axis=0)
 
 
 def calculate_light_level(timestep, params):
@@ -355,8 +366,8 @@ def calculate_light_level(timestep, params):
 
 def is_in_mob(state: EnvState, position: chex.Array):
     return jnp.logical_or(
-        state.mob_map[state.player_level, position[0], position[1]],
-        (state.player_position == position).all(),
+        state.mob_map[state.player_level, position[:, 0], position[:, 1]],
+        (state.player_position == position).all(axis=1),
     )
 
 

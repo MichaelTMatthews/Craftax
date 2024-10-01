@@ -2028,19 +2028,20 @@ def update_plants(state, static_params):
     return state
 
 
-def move_player(state, action, params):
-    proposed_position = state.player_position + DIRECTIONS[action]
+def move_player(state, actions, params):
+    proposed_position = state.player_position + DIRECTIONS[actions]
 
     valid_move = is_position_in_bounds_not_in_mob_not_colliding(
         state, proposed_position, COLLISION_LAND_CREATURE
-    )
+    ) 
+    valid_move = jnp.logical_and(valid_move, is_position_not_colliding_other_player(state, proposed_position))
     valid_move = jnp.logical_or(valid_move, params.god_mode)
 
-    position = state.player_position + valid_move.astype(jnp.int32) * DIRECTIONS[action]
+    position = state.player_position + jnp.expand_dims(valid_move, axis=1).astype(jnp.int32) * DIRECTIONS[actions]
 
-    is_new_direction = jnp.sum(jnp.abs(DIRECTIONS[action])) != 0
+    is_new_direction = jnp.sum(jnp.abs(DIRECTIONS[actions]), axis=1) != 0
     new_direction = (
-        state.player_direction * (1 - is_new_direction) + action * is_new_direction
+        state.player_direction * (1 - is_new_direction) + actions * is_new_direction
     )
 
     state = state.replace(
