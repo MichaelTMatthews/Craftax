@@ -32,9 +32,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "black",
-    "orbax-checkpoint",
     "pre-commit",
-    "wandb",
 ]
 
 [project.scripts]
