@@ -22,16 +22,17 @@ dependencies = [
     "optax",
     "flax",
     "numpy",
-    "black",
-    "pre-commit",
-    "argparse",
-    "wandb",
-    "orbax-checkpoint",
     "pygame",
     "gymnax",
     "chex",
     "matplotlib",
     "imageio",
+]
+
+[project.optional-dependencies]
+dev = [
+    "black",
+    "pre-commit",
 ]
 
 [project.scripts]
