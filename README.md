@@ -73,7 +73,8 @@ If you want to extend Craftax, run (make sure you have `pip>=23.0`):
 ```
 git clone https://github.com/MichaelTMatthews/Craftax.git
 cd Craftax
-pip install --editable .
+pip install -e ".[dev]"
+pre-commit install
 ```
 
 ## GPU-Enabled JAX
