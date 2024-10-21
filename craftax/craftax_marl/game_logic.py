@@ -2610,7 +2610,7 @@ def drink_potion(state, action):
 
     # Red
     is_drinking_red_potion = jnp.logical_and(
-        action == Action.DRINK_POTION_RED.value, state.inventory.potions[0] > 0
+        action == Action.DRINK_POTION_RED.value, state.inventory.potions[:, 0] > 0
     )
     drinking_potion_index = (
         is_drinking_red_potion * 0
@@ -2620,7 +2620,7 @@ def drink_potion(state, action):
 
     # Green
     is_drinking_green_potion = jnp.logical_and(
-        action == Action.DRINK_POTION_GREEN.value, state.inventory.potions[1] > 0
+        action == Action.DRINK_POTION_GREEN.value, state.inventory.potions[:, 1] > 0
     )
     drinking_potion_index = (
         is_drinking_green_potion * 1
@@ -2630,7 +2630,7 @@ def drink_potion(state, action):
 
     # Blue
     is_drinking_blue_potion = jnp.logical_and(
-        action == Action.DRINK_POTION_BLUE.value, state.inventory.potions[2] > 0
+        action == Action.DRINK_POTION_BLUE.value, state.inventory.potions[:, 2] > 0
     )
     drinking_potion_index = (
         is_drinking_blue_potion * 2
@@ -2640,7 +2640,7 @@ def drink_potion(state, action):
 
     # Pink
     is_drinking_pink_potion = jnp.logical_and(
-        action == Action.DRINK_POTION_PINK.value, state.inventory.potions[3] > 0
+        action == Action.DRINK_POTION_PINK.value, state.inventory.potions[:, 3] > 0
     )
     drinking_potion_index = (
         is_drinking_pink_potion * 3
@@ -2650,7 +2650,7 @@ def drink_potion(state, action):
 
     # Cyan
     is_drinking_cyan_potion = jnp.logical_and(
-        action == Action.DRINK_POTION_CYAN.value, state.inventory.potions[4] > 0
+        action == Action.DRINK_POTION_CYAN.value, state.inventory.potions[:, 4] > 0
     )
     drinking_potion_index = (
         is_drinking_cyan_potion * 4
@@ -2660,7 +2660,7 @@ def drink_potion(state, action):
 
     # Yellow
     is_drinking_yellow_potion = jnp.logical_and(
-        action == Action.DRINK_POTION_YELLOW.value, state.inventory.potions[5] > 0
+        action == Action.DRINK_POTION_YELLOW.value, state.inventory.potions[:, 5] > 0
     )
     drinking_potion_index = (
         is_drinking_yellow_potion * 5
@@ -2684,16 +2684,16 @@ def drink_potion(state, action):
     delta_energy += is_drinking_potion * (potion_effect_index == 4) * 8
     delta_energy += is_drinking_potion * (potion_effect_index == 5) * (-3)
 
-    new_achievements = state.achievements.at[Achievement.DRINK_POTION.value].set(
+    new_achievements = state.achievements.at[:, Achievement.DRINK_POTION.value].set(
         jnp.logical_or(
-            state.achievements[Achievement.DRINK_POTION.value], is_drinking_potion
+            state.achievements[:, Achievement.DRINK_POTION.value], is_drinking_potion
         )
     )
 
     return state.replace(
         inventory=state.inventory.replace(
-            potions=state.inventory.potions.at[drinking_potion_index].set(
-                state.inventory.potions[drinking_potion_index] - 1 * is_drinking_potion
+            potions=state.inventory.potions.at[jnp.arange(state.inventory.potions.shape[0]), drinking_potion_index].set(
+                state.inventory.potions[jnp.arange(state.inventory.potions.shape[0]), drinking_potion_index] - 1 * is_drinking_potion
             )
         ),
         player_health=state.player_health + delta_health,
