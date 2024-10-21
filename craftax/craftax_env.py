@@ -16,12 +16,13 @@ from craftax.craftax_classic.envs.craftax_symbolic_env import (
 )
 from craftax.craftax_marl.envs.craftax_symbolic_env import (
     CraftaxMARLSymbolicEnv,
-    CraftaxMARLSymbolicEnvNoAutoReset
+    CraftaxMARLSymbolicEnvNoAutoReset,
 )
 from craftax.craftax_marl.envs.craftax_pixels_env import (
     CraftaxMARLPixelsEnv,
-    CraftaxMARLPixelsEnvNoAutoReset
+    CraftaxMARLPixelsEnvNoAutoReset,
 )
+
 
 def make_craftax_env_from_name(name: str, auto_reset: bool):
     if auto_reset:
@@ -39,7 +40,7 @@ def make_craftax_env_from_name(name: str, auto_reset: bool):
             or name == "Craftax-Classic-Pixels-AutoReset-v1"
         ):
             return CraftaxClassicPixelsEnv()
-        
+
         if (
             name == "Craftax-MARL-Symbolic-v1"
             or name == "Craftax-MARL-Symbolic-AutoReset-v1"

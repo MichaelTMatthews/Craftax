@@ -266,7 +266,10 @@ def generate_dungeon(rng, static_params, config):
 
     rng, _rng = jax.random.split(rng)
     included_rooms_mask = jnp.zeros(num_rooms, dtype=bool).at[-1].set(True)
-    (padded_map, _, _), _, = jax.lax.scan(
+    (
+        (padded_map, _, _),
+        _,
+    ) = jax.lax.scan(
         _add_path, (padded_map, included_rooms_mask, _rng), jnp.arange(0, num_rooms)
     )
 

@@ -21,6 +21,7 @@ TEXTURE_CACHE_FILE = os.path.join(
     pathlib.Path(__file__).parent.resolve(), "assets", "texture_cache_classic.pbz2"
 )
 
+
 # ENUMS
 class BlockType(Enum):
     INVALID = 0
@@ -390,9 +391,7 @@ def load_all_textures(block_pixel_size):
         np.linspace(-1, 1, OBS_DIM[0] * block_pixel_size),
         np.linspace(-1, 1, OBS_DIM[1] * block_pixel_size),
     )
-    night_noise_intensity_texture = (
-        1 - np.exp(-0.5 * (xs**2 + ys**2) / (0.5**2)).T
-    )
+    night_noise_intensity_texture = 1 - np.exp(-0.5 * (xs**2 + ys**2) / (0.5**2)).T
 
     night_noise_intensity_texture = jnp.expand_dims(
         night_noise_intensity_texture, axis=-1

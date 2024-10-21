@@ -19,9 +19,13 @@ class CraftaxMARLSymbolicEnvNoAutoReset(EnvironmentNoAutoReset):
         super().__init__()
 
         if static_env_params is None:
-            static_env_params = CraftaxMARLSymbolicEnvNoAutoReset.default_static_params()
+            static_env_params = (
+                CraftaxMARLSymbolicEnvNoAutoReset.default_static_params()
+            )
         self.static_env_params = static_env_params
-        self.player_names = [f"agent_{i}" for i in range(self.static_env_params.player_count)]
+        self.player_names = [
+            f"agent_{i}" for i in range(self.static_env_params.player_count)
+        ]
 
     @property
     def default_params(self) -> EnvParams:
@@ -32,11 +36,17 @@ class CraftaxMARLSymbolicEnvNoAutoReset(EnvironmentNoAutoReset):
         return StaticEnvParams()
 
     def step_env(
-        self, rng: chex.PRNGKey, state: EnvState, actions: dict[str,int], params: EnvParams
+        self,
+        rng: chex.PRNGKey,
+        state: EnvState,
+        actions: dict[str, int],
+        params: EnvParams,
     ) -> Tuple[chex.Array, EnvState, float, bool, dict]:
-        
+
         actions = jnp.array(list(actions.values()))
-        state, reward = craftax_step(rng, state, actions, params, self.static_env_params)
+        state, reward = craftax_step(
+            rng, state, actions, params, self.static_env_params
+        )
 
         done = self.is_terminal(state, params)
         info = compute_score(state, done)
@@ -126,7 +136,9 @@ class CraftaxMARLSymbolicEnv(environment.Environment):
         if static_env_params is None:
             static_env_params = CraftaxMARLSymbolicEnv.default_static_params()
         self.static_env_params = static_env_params
-        self.player_names = [f"agent_{i}" for i in range(self.static_env_params.player_count)]
+        self.player_names = [
+            f"agent_{i}" for i in range(self.static_env_params.player_count)
+        ]
 
     @property
     def default_params(self) -> EnvParams:
@@ -137,11 +149,17 @@ class CraftaxMARLSymbolicEnv(environment.Environment):
         return StaticEnvParams()
 
     def step_env(
-        self, rng: chex.PRNGKey, state: EnvState, actions: dict[str,int], params: EnvParams
+        self,
+        rng: chex.PRNGKey,
+        state: EnvState,
+        actions: dict[str, int],
+        params: EnvParams,
     ) -> Tuple[chex.Array, EnvState, float, bool, dict]:
-        
+
         actions = jnp.array(list(actions.values()))
-        state, reward = craftax_step(rng, state, actions, params, self.static_env_params)
+        state, reward = craftax_step(
+            rng, state, actions, params, self.static_env_params
+        )
 
         done = self.is_terminal(state, params)
         info = compute_score(state, done)

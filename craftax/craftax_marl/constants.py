@@ -20,6 +20,7 @@ TEXTURE_CACHE_FILE = os.path.join(
     pathlib.Path(__file__).parent.resolve(), "assets", "texture_cache.pbz2"
 )
 
+
 # ENUMS
 class BlockType(Enum):
     INVALID = 0

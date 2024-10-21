@@ -281,21 +281,21 @@ DUNGEON_CONFIG = DungeonConfig(
     special_block=BlockType.PATH.value,
     fountain_block=BlockType.FOUNTAIN.value,
     rare_path_replacement_block=BlockType.PATH.value,
-    valid_ladder=BlockType.PATH.value
+    valid_ladder=BlockType.PATH.value,
 )
 
 SEWER_CONFIG = DungeonConfig(
     special_block=BlockType.ENCHANTMENT_TABLE_ICE.value,
     fountain_block=BlockType.WATER.value,
     rare_path_replacement_block=BlockType.WATER.value,
-    valid_ladder=BlockType.PATH.value
+    valid_ladder=BlockType.PATH.value,
 )
 
 VAULTS_CONFIG = DungeonConfig(
     special_block=BlockType.ENCHANTMENT_TABLE_FIRE.value,
     fountain_block=BlockType.FOUNTAIN.value,
     rare_path_replacement_block=BlockType.PATH.value,
-    valid_ladder=BlockType.PATH.value
+    valid_ladder=BlockType.PATH.value,
 )
 
 ALL_DUNGEON_CONFIGS = jax.tree_map(

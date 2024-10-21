@@ -7,7 +7,9 @@ def interpolant(t):
     return t * t * t * (t * (t * 6 - 15) + 10)
 
 
-def generate_perlin_noise_2d(rng, shape, res, interpolant=interpolant, override_angles=None):
+def generate_perlin_noise_2d(
+    rng, shape, res, interpolant=interpolant, override_angles=None
+):
     delta = (res[0] / shape[0], res[1] / shape[1])
     d = (shape[0] // res[0], shape[1] // res[1])
     grid = (
@@ -41,7 +43,14 @@ def generate_perlin_noise_2d(rng, shape, res, interpolant=interpolant, override_
 
 
 def generate_fractal_noise_2d(
-    rng, shape, res, octaves=1, persistence=0.5, lacunarity=2, interpolant=interpolant, override_angles=None
+    rng,
+    shape,
+    res,
+    octaves=1,
+    persistence=0.5,
+    lacunarity=2,
+    interpolant=interpolant,
+    override_angles=None,
 ):
     noise = jnp.zeros(shape)
     frequency = 1
@@ -49,7 +58,11 @@ def generate_fractal_noise_2d(
     for _ in range(octaves):
         rng, _rng = jax.random.split(rng)
         noise += amplitude * generate_perlin_noise_2d(
-            _rng, shape, (frequency * res[0], frequency * res[1]), interpolant, override_angles=override_angles
+            _rng,
+            shape,
+            (frequency * res[0], frequency * res[1]),
+            interpolant,
+            override_angles=override_angles,
         )
         frequency *= lacunarity
         amplitude *= persistence
