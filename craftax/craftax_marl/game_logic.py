@@ -2015,7 +2015,7 @@ def update_plants(state, static_params):
     new_map, _ = jax.lax.scan(
         _set_plant_block,
         state.map[0],
-        jnp.arange(static_params.max_growing_plants),
+        jnp.arange(static_params.max_growing_plants * static_params.player_count),
     )
 
     new_whole_map = state.map.at[0].set(new_map)
