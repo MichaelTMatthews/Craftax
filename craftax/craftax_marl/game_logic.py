@@ -2704,33 +2704,37 @@ def drink_potion(state, action):
 
 
 def read_book(rng, state, action):
+    num_players, num_spells = state.learned_spells.shape
+
     is_reading_book = jnp.logical_and(
         action == Action.READ_BOOK.value, state.inventory.books > 0
     )
     spells_to_learn = jnp.logical_not(state.learned_spells).astype(float)
-    spells_to_learn /= spells_to_learn.sum()
+    spells_to_learn /= jnp.expand_dims(spells_to_learn.sum(axis=1), 1)
 
-    rng, _rng = jax.random.split(rng)
-    spell_to_learn_index = jax.random.choice(
-        _rng, jnp.arange(2), shape=(), p=spells_to_learn
+    _rngs = jax.random.split(rng, num_players+1)
+    rng, _rng = _rngs[0], _rngs[1:]
+    
+    spell_to_learn_index = jax.vmap(jax.random.choice, in_axes=(0, None, None, None, 0))(
+        _rng, jnp.arange(num_spells), (), True, spells_to_learn 
     )
 
     learn_spell_achievement = jax.lax.select(
         spell_to_learn_index,
-        Achievement.LEARN_ICEBALL.value,
-        Achievement.LEARN_FIREBALL.value,
+        jnp.full((num_players,), Achievement.LEARN_ICEBALL.value),
+        jnp.full((num_players,), Achievement.LEARN_FIREBALL.value),
     )
 
-    new_achievements = state.achievements.at[learn_spell_achievement].set(
-        jnp.logical_or(state.achievements[learn_spell_achievement], is_reading_book)
+    new_achievements = state.achievements.at[jnp.arange(num_players), learn_spell_achievement].set(
+        jnp.logical_or(state.achievements[jnp.arange(num_players), learn_spell_achievement], is_reading_book)
     )
 
     return state.replace(
         inventory=state.inventory.replace(
             books=state.inventory.books - 1 * is_reading_book
         ),
-        learned_spells=state.learned_spells.at[spell_to_learn_index].set(
-            jnp.logical_or(state.learned_spells[spell_to_learn_index], is_reading_book)
+        learned_spells=state.learned_spells.at[jnp.arange(num_players), spell_to_learn_index].set(
+            jnp.logical_or(state.learned_spells[jnp.arange(num_players), spell_to_learn_index], is_reading_book)
         ),
         achievements=new_achievements,
     )
