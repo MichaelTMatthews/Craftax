@@ -2740,10 +2740,10 @@ def read_book(rng, state, action):
     )
 
 
-def enchant(rng, state: EnvState, action):
+def enchant(rng, state: EnvState, action, static_params: StaticEnvParams):
     target_block_position = state.player_position + DIRECTIONS[state.player_direction]
     target_block = state.map[
-        state.player_level, target_block_position[0], target_block_position[1]
+        state.player_level, target_block_position[:, 0], target_block_position[:, 1]
     ]
     target_block_is_enchantment_table = jnp.logical_or(
         target_block == BlockType.ENCHANTMENT_TABLE_FIRE.value,
@@ -2751,13 +2751,15 @@ def enchant(rng, state: EnvState, action):
     )
 
     enchantment_type = jax.lax.select(
-        target_block == BlockType.ENCHANTMENT_TABLE_FIRE.value, 1, 2
+        target_block == BlockType.ENCHANTMENT_TABLE_FIRE.value, 
+        jnp.full((static_params.player_count,), 1), 
+        jnp.full((static_params.player_count,), 2)
     )
 
     num_gems = jax.lax.select(
         target_block == BlockType.ENCHANTMENT_TABLE_FIRE.value,
-        state.inventory.ruby,
-        state.inventory.sapphire,
+        jnp.full((static_params.player_count,), state.inventory.ruby),
+        jnp.full((static_params.player_count,), state.inventory.sapphire),
     )
 
     could_enchant = jnp.logical_and(
@@ -2780,7 +2782,7 @@ def enchant(rng, state: EnvState, action):
     is_enchanting_armour = jnp.logical_and(
         could_enchant,
         jnp.logical_and(
-            action == Action.ENCHANT_ARMOUR.value, state.inventory.armour.sum() > 0
+            action == Action.ENCHANT_ARMOUR.value, state.inventory.armour.sum(axis=1) > 0
         ),
     )
 
@@ -2791,9 +2793,14 @@ def enchant(rng, state: EnvState, action):
     )
 
     armour_targets = (
-        unenchanted_armour + (unenchanted_armour.sum() == 0) * opposite_enchanted_armour
+        unenchanted_armour + (unenchanted_armour.sum(axis=1) == 0) * opposite_enchanted_armour
     )
-    armour_target = jax.random.choice(_rng, jnp.arange(4), shape=(), p=armour_targets)
+
+    _rngs = jax.random.split(rng, static_params.player_count+1)
+    rng, _rng = _rngs[0], _rngs[1:]
+    armour_target = jax.vmap(jax.random.choice, in_axes=(0, None, None, None, 0))(
+        _rng, jnp.arange(4), (), True, armour_targets
+    )
 
     is_enchanting = jnp.logical_or(
         is_enchanting_sword, jnp.logical_or(is_enchanting_bow, is_enchanting_armour)
@@ -2808,9 +2815,9 @@ def enchant(rng, state: EnvState, action):
         + (1 - is_enchanting_bow) * state.bow_enchantment
     )
 
-    new_armour_enchantments = state.armour_enchantments.at[armour_target].set(
+    new_armour_enchantments = state.armour_enchantments.at[jnp.arange(static_params.player_count), armour_target].set(
         is_enchanting_armour * enchantment_type
-        + (1 - is_enchanting_armour) * state.armour_enchantments[armour_target]
+        + (1 - is_enchanting_armour) * state.armour_enchantments[jnp.arange(static_params.player_count), armour_target]
     )
 
     new_sapphire = state.inventory.sapphire - 1 * is_enchanting * (
@@ -2819,15 +2826,15 @@ def enchant(rng, state: EnvState, action):
     new_ruby = state.inventory.ruby - 1 * is_enchanting * (enchantment_type == 1)
     new_mana = state.player_mana - 9 * is_enchanting
 
-    new_achievements = state.achievements.at[Achievement.ENCHANT_SWORD.value].set(
+    new_achievements = state.achievements.at[:, Achievement.ENCHANT_SWORD.value].set(
         jnp.logical_or(
-            state.achievements[Achievement.ENCHANT_SWORD.value], is_enchanting_sword
+            state.achievements[:, Achievement.ENCHANT_SWORD.value], is_enchanting_sword
         )
     )
 
-    new_achievements = new_achievements.at[Achievement.ENCHANT_ARMOUR.value].set(
+    new_achievements = new_achievements.at[:, Achievement.ENCHANT_ARMOUR.value].set(
         jnp.logical_or(
-            new_achievements[Achievement.ENCHANT_ARMOUR.value], is_enchanting_armour
+            new_achievements[:, Achievement.ENCHANT_ARMOUR.value], is_enchanting_armour
         )
     )
 
