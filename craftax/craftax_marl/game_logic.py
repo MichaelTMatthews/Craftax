@@ -2852,9 +2852,9 @@ def enchant(rng, state: EnvState, action, static_params: StaticEnvParams):
 
 
 def boss_logic(state, static_params):
-    new_achievements = state.achievements.at[Achievement.DEFEAT_NECROMANCER.value].set(
+    new_achievements = state.achievements.at[:, Achievement.DEFEAT_NECROMANCER.value].set(
         jnp.logical_or(
-            state.achievements[Achievement.DEFEAT_NECROMANCER.value],
+            state.achievements[:, Achievement.DEFEAT_NECROMANCER.value],
             has_beaten_boss(state, static_params),
         )
     )
