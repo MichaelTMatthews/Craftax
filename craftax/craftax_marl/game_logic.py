@@ -2872,118 +2872,118 @@ def calculate_inventory_achievements(state):
     # at the end of each timestep
 
     # Wood
-    achievements = state.achievements.at[Achievement.COLLECT_WOOD.value].set(
+    achievements = state.achievements.at[:, Achievement.COLLECT_WOOD.value].set(
         jnp.logical_or(
-            state.achievements[Achievement.COLLECT_WOOD.value], state.inventory.wood > 0
+            state.achievements[:, Achievement.COLLECT_WOOD.value], state.inventory.wood > 0
         )
     )
     # Stone
-    achievements = achievements.at[Achievement.COLLECT_STONE.value].set(
+    achievements = achievements.at[:, Achievement.COLLECT_STONE.value].set(
         jnp.logical_or(
-            achievements[Achievement.COLLECT_STONE.value], state.inventory.stone > 0
+            achievements[:, Achievement.COLLECT_STONE.value], state.inventory.stone > 0
         )
     )
     # Coal
-    achievements = achievements.at[Achievement.COLLECT_COAL.value].set(
+    achievements = achievements.at[:, Achievement.COLLECT_COAL.value].set(
         jnp.logical_or(
-            achievements[Achievement.COLLECT_COAL.value], state.inventory.coal > 0
+            achievements[:, Achievement.COLLECT_COAL.value], state.inventory.coal > 0
         )
     )
     # Iron
-    achievements = achievements.at[Achievement.COLLECT_IRON.value].set(
+    achievements = achievements.at[:, Achievement.COLLECT_IRON.value].set(
         jnp.logical_or(
-            achievements[Achievement.COLLECT_IRON.value], state.inventory.iron > 0
+            achievements[:, Achievement.COLLECT_IRON.value], state.inventory.iron > 0
         )
     )
     # Diamond
-    achievements = achievements.at[Achievement.COLLECT_DIAMOND.value].set(
+    achievements = achievements.at[:, Achievement.COLLECT_DIAMOND.value].set(
         jnp.logical_or(
-            achievements[Achievement.COLLECT_DIAMOND.value], state.inventory.diamond > 0
+            achievements[:, Achievement.COLLECT_DIAMOND.value], state.inventory.diamond > 0
         )
     )
     # Ruby
-    achievements = achievements.at[Achievement.COLLECT_RUBY.value].set(
+    achievements = achievements.at[:, Achievement.COLLECT_RUBY.value].set(
         jnp.logical_or(
-            achievements[Achievement.COLLECT_RUBY.value], state.inventory.ruby > 0
+            achievements[:, Achievement.COLLECT_RUBY.value], state.inventory.ruby > 0
         )
     )
     # Sapphire
-    achievements = achievements.at[Achievement.COLLECT_SAPPHIRE.value].set(
+    achievements = achievements.at[:, Achievement.COLLECT_SAPPHIRE.value].set(
         jnp.logical_or(
-            achievements[Achievement.COLLECT_SAPPHIRE.value],
+            achievements[:, Achievement.COLLECT_SAPPHIRE.value],
             state.inventory.sapphire > 0,
         )
     )
     # Sapling
-    achievements = achievements.at[Achievement.COLLECT_SAPLING.value].set(
+    achievements = achievements.at[:, Achievement.COLLECT_SAPLING.value].set(
         jnp.logical_or(
-            achievements[Achievement.COLLECT_SAPLING.value], state.inventory.sapling > 0
+            achievements[:, Achievement.COLLECT_SAPLING.value], state.inventory.sapling > 0
         )
     )
     # Bow
-    achievements = achievements.at[Achievement.FIND_BOW.value].set(
+    achievements = achievements.at[:, Achievement.FIND_BOW.value].set(
         jnp.logical_or(
-            achievements[Achievement.FIND_BOW.value], state.inventory.bow > 0
+            achievements[:, Achievement.FIND_BOW.value], state.inventory.bow > 0
         )
     )
     # Arrow
-    achievements = achievements.at[Achievement.MAKE_ARROW.value].set(
+    achievements = achievements.at[:, Achievement.MAKE_ARROW.value].set(
         jnp.logical_or(
-            achievements[Achievement.MAKE_ARROW.value], state.inventory.arrows > 0
+            achievements[:, Achievement.MAKE_ARROW.value], state.inventory.arrows > 0
         )
     )
     # Torch
-    achievements = achievements.at[Achievement.MAKE_TORCH.value].set(
+    achievements = achievements.at[:, Achievement.MAKE_TORCH.value].set(
         jnp.logical_or(
-            achievements[Achievement.MAKE_TORCH.value], state.inventory.torches > 0
+            achievements[:, Achievement.MAKE_TORCH.value], state.inventory.torches > 0
         )
     )
 
     # Pickaxe
-    achievements = achievements.at[Achievement.MAKE_WOOD_PICKAXE.value].set(
+    achievements = achievements.at[:, Achievement.MAKE_WOOD_PICKAXE.value].set(
         jnp.logical_or(
-            achievements[Achievement.MAKE_WOOD_PICKAXE.value],
+            achievements[:, Achievement.MAKE_WOOD_PICKAXE.value],
             state.inventory.pickaxe >= 1,
         )
     )
-    achievements = achievements.at[Achievement.MAKE_STONE_PICKAXE.value].set(
+    achievements = achievements.at[:, Achievement.MAKE_STONE_PICKAXE.value].set(
         jnp.logical_or(
-            achievements[Achievement.MAKE_STONE_PICKAXE.value],
+            achievements[:, Achievement.MAKE_STONE_PICKAXE.value],
             state.inventory.pickaxe >= 2,
         )
     )
-    achievements = achievements.at[Achievement.MAKE_IRON_PICKAXE.value].set(
+    achievements = achievements.at[:, Achievement.MAKE_IRON_PICKAXE.value].set(
         jnp.logical_or(
-            achievements[Achievement.MAKE_IRON_PICKAXE.value],
+            achievements[:, Achievement.MAKE_IRON_PICKAXE.value],
             state.inventory.pickaxe >= 3,
         )
     )
-    achievements = achievements.at[Achievement.MAKE_DIAMOND_PICKAXE.value].set(
+    achievements = achievements.at[:, Achievement.MAKE_DIAMOND_PICKAXE.value].set(
         jnp.logical_or(
-            achievements[Achievement.MAKE_DIAMOND_PICKAXE.value],
+            achievements[:, Achievement.MAKE_DIAMOND_PICKAXE.value],
             state.inventory.pickaxe >= 4,
         )
     )
 
     # Sword
-    achievements = achievements.at[Achievement.MAKE_WOOD_SWORD.value].set(
+    achievements = achievements.at[:, Achievement.MAKE_WOOD_SWORD.value].set(
         jnp.logical_or(
-            achievements[Achievement.MAKE_WOOD_SWORD.value], state.inventory.sword >= 1
+            achievements[:, Achievement.MAKE_WOOD_SWORD.value], state.inventory.sword >= 1
         )
     )
-    achievements = achievements.at[Achievement.MAKE_STONE_SWORD.value].set(
+    achievements = achievements.at[:, Achievement.MAKE_STONE_SWORD.value].set(
         jnp.logical_or(
-            achievements[Achievement.MAKE_STONE_SWORD.value], state.inventory.sword >= 2
+            achievements[:, Achievement.MAKE_STONE_SWORD.value], state.inventory.sword >= 2
         )
     )
-    achievements = achievements.at[Achievement.MAKE_IRON_SWORD.value].set(
+    achievements = achievements.at[:, Achievement.MAKE_IRON_SWORD.value].set(
         jnp.logical_or(
-            achievements[Achievement.MAKE_IRON_SWORD.value], state.inventory.sword >= 3
+            achievements[:, Achievement.MAKE_IRON_SWORD.value], state.inventory.sword >= 3
         )
     )
-    achievements = achievements.at[Achievement.MAKE_DIAMOND_SWORD.value].set(
+    achievements = achievements.at[:, Achievement.MAKE_DIAMOND_SWORD.value].set(
         jnp.logical_or(
-            achievements[Achievement.MAKE_DIAMOND_SWORD.value],
+            achievements[:, Achievement.MAKE_DIAMOND_SWORD.value],
             state.inventory.sword >= 4,
         )
     )
