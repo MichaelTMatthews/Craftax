@@ -2554,32 +2554,43 @@ def change_floor(
 
 def shoot_projectile(state: EnvState, action: int, static_params: StaticEnvParams):
     # Arrow
-    is_shooting_arrow = jnp.logical_and(
-        action == Action.SHOOT_ARROW.value,
-        jnp.logical_and(
-            state.inventory.bow >= 1,
+    def _spawn_player_projectiles(projectile_info, player_index):
+        player_projectiles, player_projectile_directions = projectile_info
+
+        is_shooting_arrow = jnp.logical_and(
+            action[player_index] == Action.SHOOT_ARROW.value,
             jnp.logical_and(
-                state.inventory.arrows >= 1,
-                state.player_projectiles.mask[state.player_level].sum()
-                < static_params.max_player_projectiles,
+                state.inventory.bow[player_index] >= 1,
+                jnp.logical_and(
+                    state.inventory.arrows[player_index] >= 1,
+                    player_projectiles.mask[state.player_level].sum()
+                    < (static_params.max_player_projectiles * static_params.player_count),
+                ),
             ),
-        ),
+        )
+
+        new_player_projectiles, new_player_projectile_directions = spawn_projectile(
+            state, 
+            static_params, 
+            player_projectiles, 
+            player_projectile_directions, 
+            state.player_position[player_index], 
+            is_shooting_arrow,
+            DIRECTIONS[state.player_direction[player_index]],
+            ProjectileType.ARROW2.value,
+        )
+
+        return (new_player_projectiles, new_player_projectile_directions), is_shooting_arrow
+
+    (new_player_projectiles, new_player_projectile_directions), is_shooting_arrow = jax.lax.scan(
+        _spawn_player_projectiles, 
+        (state.player_projectiles, state.player_projectile_directions),
+        jnp.arange(static_params.player_count),
     )
 
-    new_player_projectiles, new_player_projectile_directions = spawn_projectile(
-        state,
-        static_params,
-        state.player_projectiles,
-        state.player_projectile_directions,
-        state.player_position,
-        is_shooting_arrow,
-        DIRECTIONS[state.player_direction],
-        ProjectileType.ARROW2.value,
-    )
-
-    new_achievements = state.achievements.at[Achievement.FIRE_BOW.value].set(
+    new_achievements = state.achievements.at[:, Achievement.FIRE_BOW.value].set(
         jnp.logical_or(
-            state.achievements[Achievement.FIRE_BOW.value], is_shooting_arrow
+            state.achievements[:, Achievement.FIRE_BOW.value], is_shooting_arrow
         )
     )
 
