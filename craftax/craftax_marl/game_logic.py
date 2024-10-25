@@ -2605,50 +2605,57 @@ def shoot_projectile(state: EnvState, action: int, static_params: StaticEnvParam
 
 
 def cast_spell(state, action, static_params):
-    # Arrow
-    is_casting_fireball = jnp.logical_and(
-        action == Action.CAST_FIREBALL.value,
-        jnp.logical_and(
-            state.player_mana >= 2,
-            state.player_projectiles.mask[state.player_level].sum()
-            < static_params.max_player_projectiles,
-        ),
-    )
-    is_casting_fireball = jnp.logical_and(is_casting_fireball, state.learned_spells[0])
 
-    is_casting_iceball = jnp.logical_and(
-        action == Action.CAST_ICEBALL.value,
-        jnp.logical_and(
-            state.player_mana >= 2,
-            state.player_projectiles.mask[state.player_level].sum()
-            < static_params.max_player_projectiles,
-        ),
-    )
-    is_casting_iceball = jnp.logical_and(is_casting_iceball, state.learned_spells[1])
+    def _cast_player_spell(player_projectile_info, player_index):
+        player_projectiles, player_projectile_directions = player_projectile_info
 
-    is_casting_spell = jnp.logical_or(is_casting_fireball, is_casting_iceball)
-    projectile_type = (
-        is_casting_fireball * ProjectileType.FIREBALL.value
-        + is_casting_iceball * ProjectileType.ICEBALL.value
-    )
+        is_casting_fireball = jnp.logical_and(
+            action[player_index] == Action.CAST_FIREBALL.value,
+            jnp.logical_and(
+                state.player_mana[player_index] >= 2,
+                state.player_projectiles.mask[state.player_level].sum()
+                < (static_params.max_player_projectiles * static_params.player_count),
+            ),
+        )
+        is_casting_fireball = jnp.logical_and(is_casting_fireball, state.learned_spells[player_index, 0])
 
-    new_player_projectiles, new_player_projectile_directions = spawn_projectile(
-        state,
-        static_params,
-        state.player_projectiles,
-        state.player_projectile_directions,
-        state.player_position,
-        is_casting_spell,
-        DIRECTIONS[state.player_direction],
-        projectile_type,
-    )
+        is_casting_iceball = jnp.logical_and(
+            action[player_index] == Action.CAST_ICEBALL.value,
+            jnp.logical_and(
+                state.player_mana[player_index] >= 2,
+                state.player_projectiles.mask[state.player_level].sum()
+                < (static_params.max_player_projectiles * static_params.player_count),
+            ),
+        )
+        is_casting_iceball = jnp.logical_and(is_casting_iceball, state.learned_spells[player_index, 1])
 
+        is_casting_spell = jnp.logical_or(is_casting_fireball, is_casting_iceball)
+        projectile_type = (
+            is_casting_fireball * ProjectileType.FIREBALL.value
+            + is_casting_iceball * ProjectileType.ICEBALL.value
+        )
+        new_player_projectiles, new_player_projectile_directions = spawn_projectile(
+            state,
+            static_params,
+            player_projectiles,
+            player_projectile_directions,
+            state.player_position[player_index],
+            is_casting_spell,
+            DIRECTIONS[state.player_direction[player_index]],
+            projectile_type,
+        )
+
+        return (new_player_projectiles, new_player_projectile_directions), jnp.array([is_casting_fireball, is_casting_iceball])
+    
+    (new_player_projectiles, new_player_projectile_directions), spells_cast = jax.lax.scan(_cast_player_spell, (state.player_projectiles, state.player_projectile_directions), jnp.arange(static_params.player_count)) 
+
+    is_casting_spell = spells_cast.any(axis=1)
     casting_achievement = (
-        is_casting_fireball * Achievement.CAST_FIREBALL.value
-        + is_casting_iceball * Achievement.CAST_ICEBALL.value
+        spells_cast[:, 0] * Achievement.CAST_FIREBALL.value
+        + spells_cast[:, 1] * Achievement.CAST_ICEBALL.value
     )
-    new_achievements = state.achievements.at[casting_achievement].set(
-        jnp.logical_or(state.achievements[casting_achievement], is_casting_spell)
+    new_achievements = state.achievements.at[jnp.arange(static_params.player_count), casting_achievement].set(
+        jnp.logical_or(state.achievements[jnp.arange(static_params.player_count), casting_achievement], is_casting_spell)
     )
 
     return state.replace(
