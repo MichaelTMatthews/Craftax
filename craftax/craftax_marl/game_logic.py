@@ -803,287 +803,327 @@ def do_crafting(state, actions):
     return state
 
 
-def add_new_growing_plant(state, position, is_placing_sapling, static_params):
-    def _is_empty(unused, index):
-        return None, jnp.logical_not(state.growing_plants_mask[index])
-
-    _, is_empty = jax.lax.scan(
-        _is_empty, None, jnp.arange(static_params.max_growing_plants)
-    )
-
+def add_new_growing_plant(growing_plant_positions, growing_plant_age, growing_plant_mask, position, is_placing_sapling):
+    is_empty = jnp.logical_not(growing_plant_mask)
     plant_index = jnp.argmax(is_empty)
-    is_an_empty_slot = is_empty.sum() > 0
-
+    is_an_empty_slot = is_empty.any()
     is_adding_plant = jnp.logical_and(is_an_empty_slot, is_placing_sapling)
 
     new_growing_plants_positions = jax.lax.select(
         is_adding_plant,
-        state.growing_plants_positions.at[plant_index].set(position),
-        state.growing_plants_positions,
+        growing_plant_positions.at[plant_index].set(position),
+        growing_plant_positions,
     )
     new_growing_plants_age = jax.lax.select(
         is_adding_plant,
-        state.growing_plants_age.at[plant_index].set(0),
-        state.growing_plants_age,
+        growing_plant_age.at[plant_index].set(0),
+        growing_plant_age,
     )
     new_growing_plants_mask = jax.lax.select(
         is_adding_plant,
-        state.growing_plants_mask.at[plant_index].set(True),
-        state.growing_plants_mask,
+        growing_plant_mask.at[plant_index].set(True),
+        growing_plant_mask,
     )
-
-    return new_growing_plants_positions, new_growing_plants_age, new_growing_plants_mask
+    return new_growing_plants_positions, new_growing_plants_age, new_growing_plants_mask, is_adding_plant
 
 
 def place_block(state, action, static_params):
     placing_block_position = state.player_position + DIRECTIONS[state.player_direction]
+    equal_block_placement = (jnp.expand_dims(placing_block_position, axis=1) == jnp.expand_dims(placing_block_position, axis=0)).all(axis=2)
 
+    new_map = state.map[state.player_level]
     new_item_map = state.item_map[state.player_level]
 
-    is_placement_on_solid_block_or_item = jnp.logical_or(
-        is_in_solid_block(state, placing_block_position),
-        new_item_map[placing_block_position[0], placing_block_position[1]]
-        != ItemType.NONE.value,
+    is_block_in_other_player = is_in_other_player(state, placing_block_position)
+    is_block_in_mob = is_in_mob(state, placing_block_position)
+    is_block_in_bounds = in_bounds(state, placing_block_position)
+    is_placement_in_bounds_not_in_mobs = jnp.logical_and(
+        is_block_in_bounds,
+        jnp.logical_not(jnp.logical_or(
+            is_block_in_other_player,
+            is_block_in_mob
+        ))
     )
 
     # Crafting table
+    is_valid_placement = jnp.logical_and(
+        is_placement_in_bounds_not_in_mobs,
+        jnp.logical_and(
+            jnp.logical_not(is_in_solid_block(new_map, placing_block_position)),
+            new_item_map[placing_block_position[:, 0], placing_block_position[:, 1]]
+            == ItemType.NONE.value,
+        )
+    )
     crafting_table_key_down = action == Action.PLACE_TABLE.value
     has_wood = state.inventory.wood >= 2
-    is_placing_crafting_table = jnp.logical_and(
+    is_player_placing_crafting_table = jnp.logical_and(
         crafting_table_key_down,
-        jnp.logical_and(jnp.logical_not(is_placement_on_solid_block_or_item), has_wood),
+        jnp.logical_and(is_valid_placement, has_wood),
     )
+    is_any_player_placing_crafting_table = jnp.logical_and(
+        equal_block_placement,
+        is_player_placing_crafting_table[:, None]
+    ).any(axis=0)
+
     placed_crafting_table_block = jax.lax.select(
-        is_placing_crafting_table,
-        BlockType.CRAFTING_TABLE.value,
-        state.map[state.player_level][
-            placing_block_position[0], placing_block_position[1]
+        is_any_player_placing_crafting_table,
+        jnp.full(static_params.player_count, BlockType.CRAFTING_TABLE.value),
+        new_map[
+            placing_block_position[:, 0], placing_block_position[:, 1]
         ],
     )
     new_map = (
-        state.map[state.player_level]
-        .at[placing_block_position[0], placing_block_position[1]]
+        new_map
+        .at[placing_block_position[:, 0], placing_block_position[:, 1]]
         .set(placed_crafting_table_block)
     )
     new_inventory = state.inventory.replace(
-        wood=state.inventory.wood - 2 * is_placing_crafting_table
+        wood=state.inventory.wood - 2 * is_player_placing_crafting_table
     )
-    new_achievements = state.achievements.at[Achievement.PLACE_TABLE.value].set(
+    new_achievements = state.achievements.at[:, Achievement.PLACE_TABLE.value].set(
         jnp.logical_or(
-            state.achievements[Achievement.PLACE_TABLE.value], is_placing_crafting_table
+            state.achievements[:, Achievement.PLACE_TABLE.value], is_player_placing_crafting_table
         )
     )
 
+
     # Furnace
+    is_valid_placement = jnp.logical_and(
+        is_placement_in_bounds_not_in_mobs,
+        jnp.logical_and(
+            jnp.logical_not(is_in_solid_block(new_map, placing_block_position)),
+            new_item_map[placing_block_position[:, 0], placing_block_position[:, 1]]
+            == ItemType.NONE.value,
+        )
+    )
+
     furnace_key_down = action == Action.PLACE_FURNACE.value
     has_stone = new_inventory.stone > 0
-    is_placing_furnace = jnp.logical_and(
+    is_player_placing_furnace = jnp.logical_and(
         furnace_key_down,
         jnp.logical_and(
-            jnp.logical_not(is_placement_on_solid_block_or_item), has_stone
+            is_valid_placement, has_stone
         ),
     )
+    is_any_player_placing_furnace = jnp.logical_and(
+        equal_block_placement,
+        is_player_placing_furnace[:, None]
+    ).any(axis=0)
     placed_furnace_block = jax.lax.select(
-        is_placing_furnace,
-        BlockType.FURNACE.value,
-        new_map[placing_block_position[0], placing_block_position[1]],
+        is_any_player_placing_furnace,
+        jnp.full(static_params.player_count, BlockType.FURNACE.value),
+        new_map[placing_block_position[:, 0], placing_block_position[:, 1]],
     )
-    new_map = new_map.at[placing_block_position[0], placing_block_position[1]].set(
+    new_map = new_map.at[placing_block_position[:, 0], placing_block_position[:, 1]].set(
         placed_furnace_block
     )
     new_inventory = new_inventory.replace(
-        stone=new_inventory.stone - 1 * is_placing_furnace
+        stone=new_inventory.stone - 1 * is_player_placing_furnace
     )
-    new_achievements = new_achievements.at[Achievement.PLACE_FURNACE.value].set(
+    new_achievements = new_achievements.at[:, Achievement.PLACE_FURNACE.value].set(
         jnp.logical_or(
-            new_achievements[Achievement.PLACE_FURNACE.value], is_placing_furnace
+            new_achievements[:, Achievement.PLACE_FURNACE.value], is_player_placing_furnace
         )
     )
 
     # Stone
     stone_key_down = action == Action.PLACE_STONE.value
     has_stone = new_inventory.stone > 0
-    is_placing_on_valid_block = jnp.logical_or(
-        state.map[state.player_level][
-            placing_block_position[0], placing_block_position[1]
-        ]
-        == BlockType.WATER.value,
-        jnp.logical_not(is_placement_on_solid_block_or_item),
+    is_valid_placement = jnp.logical_and(
+        is_placement_in_bounds_not_in_mobs,
+        new_item_map[placing_block_position[:, 0], placing_block_position[:, 1]]
+        == ItemType.NONE.value,
     )
-    is_placing_stone = jnp.logical_and(
+    is_valid_placement = jnp.logical_and(
+        is_valid_placement,
+        jnp.logical_or(
+            new_map[
+                placing_block_position[:, 0], placing_block_position[:, 1]
+            ]
+            == BlockType.WATER.value,
+            jnp.logical_not(is_in_solid_block(new_map, placing_block_position)),
+        )
+    )
+    is_player_placing_stone = jnp.logical_and(
         stone_key_down,
-        jnp.logical_and(is_placing_on_valid_block, has_stone),
+        jnp.logical_and(is_valid_placement, has_stone),
     )
+    is_any_player_placing_stone = jnp.logical_and(
+        equal_block_placement,
+        is_player_placing_stone[:, None]
+    ).any(axis=0)
     placed_stone_block = jax.lax.select(
-        is_placing_stone,
-        BlockType.STONE.value,
-        new_map[placing_block_position[0], placing_block_position[1]],
+        is_any_player_placing_stone,
+        jnp.full(static_params.player_count, BlockType.STONE.value),
+        new_map[placing_block_position[:, 0], placing_block_position[:, 1]],
     )
-    new_map = new_map.at[placing_block_position[0], placing_block_position[1]].set(
+    new_map = new_map.at[placing_block_position[:, 0], placing_block_position[:, 1]].set(
         placed_stone_block
     )
     new_inventory = new_inventory.replace(
-        stone=new_inventory.stone - 1 * is_placing_stone
+        stone=new_inventory.stone - 1 * is_player_placing_stone
     )
-    new_achievements = new_achievements.at[Achievement.PLACE_STONE.value].set(
+    new_achievements = new_achievements.at[:, Achievement.PLACE_STONE.value].set(
         jnp.logical_or(
-            new_achievements[Achievement.PLACE_STONE.value], is_placing_stone
+            new_achievements[:, Achievement.PLACE_STONE.value], is_player_placing_stone
         )
     )
 
-    # Torch
-    torch_key_down = action == Action.PLACE_TORCH.value
-    has_torch = new_inventory.torches > 0
+    # Torch (TODO)
+    # TODO: Make more parallelized
+    def _player_place_torch(action_info, player_index):
+        (
+            working_item_map,
+            working_padded_light_map,
+        ) = action_info
 
-    is_placing_on_valid_block = CAN_PLACE_ITEM_MAPPING[
-        state.map[state.player_level][
-            placing_block_position[0], placing_block_position[1]
-        ]
-    ]
+        torch_key_down = action[player_index] == Action.PLACE_TORCH.value
+        has_torch = new_inventory.torches[player_index] > 0
+        
+        is_valid_placement = jnp.logical_and(
+            CAN_PLACE_ITEM_MAPPING[
+                new_map[
+                    placing_block_position[player_index, 0], placing_block_position[player_index, 1]
+                ]
+            ],
+            working_item_map[placing_block_position[player_index, 0], placing_block_position[player_index, 1]]
+            == ItemType.NONE.value,
+        )
+        is_valid_placement = jnp.logical_and(
+            is_placement_in_bounds_not_in_mobs[player_index],
+            is_valid_placement
+        )
+        is_player_placing_torch = jnp.logical_and(
+            torch_key_down,
+            jnp.logical_and(is_valid_placement, has_torch),
+        )
+        placed_torch_item = jax.lax.select(
+            is_player_placing_torch,
+            ItemType.TORCH.value,
+            working_item_map[placing_block_position[player_index, 0], placing_block_position[player_index, 1]],
+        )
+        working_item_map = working_item_map.at[
+            placing_block_position[player_index, 0], placing_block_position[player_index, 1]
+        ].set(placed_torch_item)
 
-    is_placing_on_valid_block = jnp.logical_and(
-        is_placing_on_valid_block,
-        new_item_map[placing_block_position[0], placing_block_position[1]]
-        == ItemType.NONE.value,
-    )
-    is_placing_torch = jnp.logical_and(
-        torch_key_down,
-        jnp.logical_and(is_placing_on_valid_block, has_torch),
-    )
-
-    placed_torch_item = jax.lax.select(
-        is_placing_torch,
-        ItemType.TORCH.value,
-        new_item_map[placing_block_position[0], placing_block_position[1]],
-    )
-    new_item_map = new_item_map.at[
-        placing_block_position[0], placing_block_position[1]
-    ].set(placed_torch_item)
-    new_inventory = new_inventory.replace(
-        torches=new_inventory.torches - 1 * is_placing_torch
-    )
-
+        current_light_map = jax.lax.dynamic_slice(
+            working_padded_light_map,
+            placing_block_position[player_index]
+            - jnp.array([4, 4])
+            + jnp.array([light_map_padding, light_map_padding]),
+            (9, 9),
+        )
+        torch_light_map = jnp.clip(TORCH_LIGHT_MAP + current_light_map, 0.0, 1.0)
+        torch_light_map = torch_light_map * is_player_placing_torch + current_light_map * (
+            1 - is_player_placing_torch
+        )
+        working_padded_light_map = jax.lax.dynamic_update_slice(
+            working_padded_light_map,
+            torch_light_map,
+            placing_block_position[player_index]
+            - jnp.array([4, 4])
+            + jnp.array([light_map_padding, light_map_padding]),
+        )
+        return (working_item_map, working_padded_light_map), is_player_placing_torch
+    
     light_map_padding = 6
-    padded_light_map = jnp.pad(
+    padded_light_map_floor = jnp.pad(
         state.light_map[state.player_level],
         (light_map_padding, light_map_padding),
         constant_values=0,
     )
-
-    current_light_map = jax.lax.dynamic_slice(
-        padded_light_map,
-        placing_block_position
-        - jnp.array([4, 4])
-        + jnp.array([light_map_padding, light_map_padding]),
-        (9, 9),
+    (new_item_map, padded_light_map_floor), is_player_placing_torch = jax.lax.scan(
+        _player_place_torch,
+        (new_item_map, padded_light_map_floor),
+        jnp.arange(static_params.player_count)
     )
-
-    torch_light_map = jnp.clip(TORCH_LIGHT_MAP + current_light_map, 0.0, 1.0)
-
-    torch_light_map = torch_light_map * is_placing_torch + current_light_map * (
-        1 - is_placing_torch
-    )
-
-    new_padded_light_map_floor = jax.lax.dynamic_update_slice(
-        padded_light_map,
-        torch_light_map,
-        placing_block_position
-        - jnp.array([4, 4])
-        + jnp.array([light_map_padding, light_map_padding]),
-    )
-    new_light_map_floor = new_padded_light_map_floor[
+    new_light_map_floor = padded_light_map_floor[
         light_map_padding:-light_map_padding, light_map_padding:-light_map_padding
     ]
     new_light_map = state.light_map.at[state.player_level].set(new_light_map_floor)
 
-    new_achievements = new_achievements.at[Achievement.PLACE_TORCH.value].set(
+    new_inventory = new_inventory.replace(
+        torches=new_inventory.torches - 1 * is_player_placing_torch
+    )
+    new_achievements = new_achievements.at[:, Achievement.PLACE_TORCH.value].set(
         jnp.logical_or(
-            new_achievements[Achievement.PLACE_TORCH.value], is_placing_torch
+            new_achievements[:, Achievement.PLACE_TORCH.value], is_player_placing_torch
         )
     )
 
+
     # Plant
-    sapling_key_down = action == Action.PLACE_PLANT.value
-    has_sapling = new_inventory.sapling > 0
-    is_placing_sapling = jnp.logical_and(
-        sapling_key_down,
-        jnp.logical_and(
-            new_map[placing_block_position[0], placing_block_position[1]]
-            == BlockType.GRASS.value,
-            has_sapling,
-        ),
-    )
-    is_placing_sapling = jnp.logical_and(
-        is_placing_sapling,
-        new_item_map[placing_block_position[0], placing_block_position[1]]
-        == ItemType.NONE.value,
-    )
-    placed_sapling_block = jax.lax.select(
-        is_placing_sapling,
-        BlockType.PLANT.value,
-        new_map[placing_block_position[0], placing_block_position[1]],
-    )
-    new_map = new_map.at[placing_block_position[0], placing_block_position[1]].set(
-        placed_sapling_block
-    )
-    new_inventory = new_inventory.replace(
-        sapling=new_inventory.sapling - 1 * is_placing_sapling
-    )
-    new_achievements = new_achievements.at[Achievement.PLACE_PLANT.value].set(
-        jnp.logical_or(
-            new_achievements[Achievement.PLACE_PLANT.value], is_placing_sapling
+    # TODO: Make more parallelized
+    def _player_place_plant(action_info, player_index):
+        (
+            working_map, 
+            working_growing_plants_positions,
+            working_growing_plants_age,
+            working_growing_plants_mask,
+        ) = action_info
+        sapling_key_down = action[player_index] == Action.PLACE_PLANT.value
+        has_sapling = state.inventory.sapling[player_index] > 0
+        is_valid_placement = jnp.logical_and(
+            is_placement_in_bounds_not_in_mobs[player_index],
+            jnp.logical_and(
+                working_map[placing_block_position[player_index, 0], placing_block_position[player_index, 1]]
+                == BlockType.GRASS.value,
+                new_item_map[placing_block_position[player_index, 0], placing_block_position[player_index, 1]]
+                == ItemType.NONE.value,
+            )
         )
+        is_player_placing_sapling = jnp.logical_and(
+            is_valid_placement,
+            jnp.logical_and(
+                sapling_key_down,
+                has_sapling,
+            )
+        )
+        (
+            working_growing_plants_positions,
+            working_growing_plants_age,
+            working_growing_plants_mask,
+            is_player_placing_sapling
+        ) = add_new_growing_plant(
+            working_growing_plants_positions,
+            working_growing_plants_age,
+            working_growing_plants_mask,
+            placing_block_position[player_index], 
+            is_player_placing_sapling,
+        )
+        placed_sapling_block = jax.lax.select(
+            is_player_placing_sapling,
+            BlockType.PLANT.value,
+            working_map[placing_block_position[player_index, 0], placing_block_position[player_index, 1]],
+        )
+        working_map = working_map.at[placing_block_position[player_index, 0], placing_block_position[player_index, 1]].set(
+            placed_sapling_block
+        )
+        return (
+            working_map,
+            working_growing_plants_positions,
+            working_growing_plants_age,
+            working_growing_plants_mask,
+        ), is_player_placing_sapling
+
+    (new_map, new_growing_plants_positions, new_growing_plants_age, new_growing_plants_mask), is_player_placing_sapling = jax.lax.scan(
+        _player_place_plant,
+        (new_map, state.growing_plants_positions, state.growing_plants_age, state.growing_plants_mask),
+        jnp.arange(static_params.player_count)
     )
-    (
-        new_growing_plants_positions,
-        new_growing_plants_age,
-        new_growing_plants_mask,
-    ) = add_new_growing_plant(
-        state, placing_block_position, is_placing_sapling, static_params
+
+    new_inventory = new_inventory.replace(
+        sapling=new_inventory.sapling - 1 * is_player_placing_sapling
+    )
+    new_achievements = new_achievements.at[:, Achievement.PLACE_PLANT.value].set(
+        jnp.logical_or(
+            new_achievements[:, Achievement.PLACE_PLANT.value], is_player_placing_sapling
+        )
     )
 
     # Do?
-
-    action_block = state.player_position + DIRECTIONS[state.player_direction]
-    action_block_in_bounds = in_bounds(state, action_block)
-    action_block_in_bounds = jnp.logical_and(
-        action_block_in_bounds, jnp.logical_not(is_in_mob(state, action_block))
-    )
-
-    new_map = jax.lax.select(
-        action_block_in_bounds, new_map, state.map[state.player_level]
-    )
-    new_item_map = jax.lax.select(
-        action_block_in_bounds, new_item_map, state.item_map[state.player_level]
-    )
-    new_inventory = jax.tree_map(
-        lambda x, y: jax.lax.select(action_block_in_bounds, x, y),
-        new_inventory,
-        state.inventory,
-    )
-    new_achievements = jax.tree_map(
-        lambda x, y: jax.lax.select(action_block_in_bounds, x, y),
-        new_achievements,
-        state.achievements,
-    )
-    new_growing_plants_positions = jax.lax.select(
-        action_block_in_bounds,
-        new_growing_plants_positions,
-        state.growing_plants_positions,
-    )
-    new_growing_plants_age = jax.lax.select(
-        action_block_in_bounds, new_growing_plants_age, state.growing_plants_age
-    )
-    new_growing_plants_mask = jax.lax.select(
-        action_block_in_bounds, new_growing_plants_mask, state.growing_plants_mask
-    )
-    new_light_map = jax.lax.select(
-        action_block_in_bounds, new_light_map, state.light_map
-    )
-
     new_whole_map = state.map.at[state.player_level].set(new_map)
     new_whole_item_map = state.item_map.at[state.player_level].set(new_item_map)
-
     state = state.replace(
         map=new_whole_map,
         item_map=new_whole_item_map,
