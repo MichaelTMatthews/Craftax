@@ -2137,8 +2137,8 @@ def move_player(state, actions, params):
 
 
 def spawn_mobs(state, rng, params, static_params):
-    player_distance_map = get_distance_map(
-        state.player_position, static_params.map_size
+    player_distance_map = get_all_players_distance_map(
+        state.player_position, state.player_alive, static_params
     )
     grave_map = jnp.logical_or(
         state.map[state.player_level] == BlockType.GRAVE.value,
@@ -2148,6 +2148,7 @@ def spawn_mobs(state, rng, params, static_params):
         ),
     )
 
+    floor_mob_spawn_chance = FLOOR_MOB_SPAWN_CHANCE * static_params.player_count
     monster_spawn_coeff = (
         1
         + (state.monsters_killed[state.player_level] < MONSTERS_KILLED_TO_CLEAR_LEVEL)
@@ -2169,7 +2170,7 @@ def spawn_mobs(state, rng, params, static_params):
     rng, _rng = jax.random.split(rng)
     can_spawn_passive_mob = jnp.logical_and(
         can_spawn_passive_mob,
-        jax.random.uniform(_rng) < FLOOR_MOB_SPAWN_CHANCE[state.player_level, 0],
+        jax.random.uniform(_rng) < floor_mob_spawn_chance[state.player_level, 0],
     )
 
     can_spawn_passive_mob = jnp.logical_and(
@@ -2186,8 +2187,6 @@ def spawn_mobs(state, rng, params, static_params):
             ),
         ),
     )
-    grass_map = state.map[state.player_level] == BlockType.GRASS.value
-    path_map = state.map[state.player_level] == BlockType.PATH.value
     new_passive_mob_type = FLOOR_MOB_MAPPING[state.player_level, MobType.PASSIVE.value]
 
     passive_mobs_can_spawn_map = all_valid_blocks_map
@@ -2201,6 +2200,12 @@ def spawn_mobs(state, rng, params, static_params):
     passive_mobs_can_spawn_map = jnp.logical_and(
         passive_mobs_can_spawn_map, jnp.logical_not(state.mob_map[state.player_level])
     )
+
+    # To avoid spawning mobs ontop of dead players
+    passive_mobs_can_spawn_map = passive_mobs_can_spawn_map.at[
+        state.player_position[:, 0], state.player_position[:, 1]
+    ].set(False)
+
     can_spawn_passive_mob = jnp.logical_and(
         can_spawn_passive_mob, passive_mobs_can_spawn_map.sum() > 0
     )
@@ -2286,7 +2291,7 @@ def spawn_mobs(state, rng, params, static_params):
 
     # Melee mobs
     can_spawn_melee_mob = (
-        state.melee_mobs.mask[state.player_level].sum() < static_params.max_melee_mobs
+        state.melee_mobs.mask[state.player_level].sum() < static_params.max_melee_mobs * static_params.player_count
     )
 
     new_melee_mob_type = FLOOR_MOB_MAPPING[state.player_level, MobType.MELEE.value]
@@ -2301,9 +2306,9 @@ def spawn_mobs(state, rng, params, static_params):
     )
 
     rng, _rng = jax.random.split(rng)
-    melee_mob_spawn_chance = FLOOR_MOB_SPAWN_CHANCE[
+    melee_mob_spawn_chance = floor_mob_spawn_chance[
         state.player_level, 1
-    ] + FLOOR_MOB_SPAWN_CHANCE[state.player_level, 3] * jnp.square(
+    ] + floor_mob_spawn_chance[state.player_level, 3] * jnp.square(
         1 - state.light_level
     )
     can_spawn_melee_mob = jnp.logical_and(
@@ -2324,6 +2329,9 @@ def spawn_mobs(state, rng, params, static_params):
     melee_mobs_can_spawn_map = jnp.logical_and(
         melee_mobs_can_spawn_map, jnp.logical_not(state.mob_map[state.player_level])
     )
+    melee_mobs_can_spawn_map = melee_mobs_can_spawn_map.at[
+        state.player_position[:, 0], state.player_position[:, 1]
+    ].set(False)
 
     can_spawn_melee_mob = jnp.logical_and(
         can_spawn_melee_mob, melee_mobs_can_spawn_map.sum() > 0
@@ -2417,7 +2425,7 @@ def spawn_mobs(state, rng, params, static_params):
     can_spawn_ranged_mob = jnp.logical_and(
         can_spawn_ranged_mob,
         jax.random.uniform(_rng)
-        < FLOOR_MOB_SPAWN_CHANCE[state.player_level, 2] * monster_spawn_coeff,
+        < floor_mob_spawn_chance[state.player_level, 2] * monster_spawn_coeff,
     )
 
     # Hack for deep thing
@@ -2439,6 +2447,9 @@ def spawn_mobs(state, rng, params, static_params):
     ranged_mobs_can_spawn_map = jnp.logical_and(
         ranged_mobs_can_spawn_map, jnp.logical_not(state.mob_map[state.player_level])
     )
+    ranged_mobs_can_spawn_map = ranged_mobs_can_spawn_map.at[
+        state.player_position[:, 0], state.player_position[:, 1]
+    ].set(False)
 
     can_spawn_ranged_mob = jnp.logical_and(
         can_spawn_ranged_mob, ranged_mobs_can_spawn_map.sum() > 0
@@ -2645,7 +2656,6 @@ def shoot_projectile(state: EnvState, action: int, static_params: StaticEnvParam
 
 
 def cast_spell(state, action, static_params):
-
     def _cast_player_spell(player_projectile_info, player_index):
         player_projectiles, player_projectile_directions = player_projectile_info
 
