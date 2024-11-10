@@ -325,8 +325,10 @@ def render_craftax_pixels(state, block_pixel_size, do_night_noise=True):
     )
 
     # Render player
-    player_texture_index = jax.vmap(jax.lax.select, in_axes=(0, None, 0))(
-        state.is_sleeping, 4, state.player_direction - 1
+    player_texture_index = jnp.where(
+        state.is_sleeping,
+        4,
+        state.player_direction - 1
     )
     map_pixels = (
         map_pixels

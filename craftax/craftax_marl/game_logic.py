@@ -865,9 +865,9 @@ def place_block(state, action, static_params):
         is_player_placing_crafting_table[:, None]
     ).any(axis=0)
 
-    placed_crafting_table_block = jax.lax.select(
+    placed_crafting_table_block = jnp.where(
         is_any_player_placing_crafting_table,
-        jnp.full(static_params.player_count, BlockType.CRAFTING_TABLE.value),
+        BlockType.CRAFTING_TABLE.value,
         new_map[
             placing_block_position[:, 0], placing_block_position[:, 1]
         ],
@@ -909,9 +909,9 @@ def place_block(state, action, static_params):
         equal_block_placement,
         is_player_placing_furnace[:, None]
     ).any(axis=0)
-    placed_furnace_block = jax.lax.select(
+    placed_furnace_block = jnp.where(
         is_any_player_placing_furnace,
-        jnp.full(static_params.player_count, BlockType.FURNACE.value),
+        BlockType.FURNACE.value,
         new_map[placing_block_position[:, 0], placing_block_position[:, 1]],
     )
     new_map = new_map.at[placing_block_position[:, 0], placing_block_position[:, 1]].set(
@@ -952,9 +952,9 @@ def place_block(state, action, static_params):
         equal_block_placement,
         is_player_placing_stone[:, None]
     ).any(axis=0)
-    placed_stone_block = jax.lax.select(
+    placed_stone_block = jnp.where(
         is_any_player_placing_stone,
-        jnp.full(static_params.player_count, BlockType.STONE.value),
+        BlockType.STONE.value,
         new_map[placing_block_position[:, 0], placing_block_position[:, 1]],
     )
     new_map = new_map.at[placing_block_position[:, 0], placing_block_position[:, 1]].set(
@@ -1921,18 +1921,18 @@ def update_player_intrinsics(state, action, static_params):
     intrinsic_decay_coeff = 1.0 - (0.125 * (state.player_dexterity - 1))
 
     # Hunger
-    hunger_add = jax.lax.select(
+    hunger_add = jnp.where(
         state.is_sleeping, 
-        jnp.full(static_params.player_count, 0.5), 
-        jnp.full(static_params.player_count, 1.0),
+        0.5, 
+        1.0,
     ) * intrinsic_decay_coeff
     new_hunger = state.player_hunger + hunger_add
 
     hungered_food = jnp.maximum(state.player_food - 1 * not_boss, 0)
-    new_food = jax.lax.select(new_hunger > 25, hungered_food, state.player_food)
-    new_hunger = jax.lax.select(
+    new_food = jnp.where(new_hunger > 25, hungered_food, state.player_food)
+    new_hunger = jnp.where(
         new_hunger > 25, 
-        jnp.full(static_params.player_count, 0.0), 
+        0.0, 
         new_hunger
     )
 
@@ -1942,17 +1942,17 @@ def update_player_intrinsics(state, action, static_params):
     )
 
     # Thirst
-    thirst_add = jax.lax.select(
+    thirst_add = jnp.where(
         state.is_sleeping, 
-        jnp.full(static_params.player_count, 0.5), 
-        jnp.full(static_params.player_count, 1.0),
+        0.5, 
+        1.0,
     ) * intrinsic_decay_coeff
     new_thirst = state.player_thirst + thirst_add
     thirsted_drink = jnp.maximum(state.player_drink - 1 * not_boss, 0)
-    new_drink = jax.lax.select(new_thirst > 20, thirsted_drink, state.player_drink)
-    new_thirst = jax.lax.select(
+    new_drink = jnp.where(new_thirst > 20, thirsted_drink, state.player_drink)
+    new_thirst = jnp.where(
         new_thirst > 20, 
-        jnp.full(static_params.player_count, 0.0), 
+        0.0, 
         new_thirst
     )
 
@@ -1962,31 +1962,31 @@ def update_player_intrinsics(state, action, static_params):
     )
 
     # Fatigue
-    new_fatigue = jax.lax.select(
+    new_fatigue = jnp.where(
         state.is_sleeping,
         jnp.minimum(state.player_fatigue - 1, 0),
         state.player_fatigue + intrinsic_decay_coeff,
     )
 
-    new_energy = jax.lax.select(
+    new_energy = jnp.where(
         new_fatigue > 30,
         jnp.maximum(state.player_energy - 1 * not_boss, 0),
         state.player_energy,
     )
-    new_fatigue = jax.lax.select(
+    new_fatigue = jnp.where(
         new_fatigue > 30, 
-        jnp.full(static_params.player_count, 0.0), 
+        0.0, 
         new_fatigue
     )
 
-    new_energy = jax.lax.select(
+    new_energy = jnp.where(
         new_fatigue < -10,
         jnp.minimum(state.player_energy + 1, get_max_energy(state)),
         new_energy,
     )
-    new_fatigue = jax.lax.select(
+    new_fatigue = jnp.where(
         new_fatigue < -10, 
-        jnp.full(static_params.player_count, 0.0), 
+        0.0, 
         new_fatigue
     )
 
@@ -2006,33 +2006,33 @@ def update_player_intrinsics(state, action, static_params):
     )
 
     all_necessities = necessities.all(axis=1)
-    recover_all = jax.lax.select(
+    recover_all = jnp.where(
         state.is_sleeping, 
-        jnp.full(static_params.player_count, 2.0), 
-        jnp.full(static_params.player_count, 1.0),
+        2.0, 
+        1.0,
     )
-    recover_not_all = jax.lax.select(
+    recover_not_all = jnp.where(
         state.is_sleeping, 
-        jnp.full(static_params.player_count, -0.5), 
-        jnp.full(static_params.player_count, -1.0),
+        -0.5, 
+        -1.0,
     ) * not_boss
-    recover_add = jax.lax.select(all_necessities, recover_all, recover_not_all)
+    recover_add = jnp.where(all_necessities, recover_all, recover_not_all)
 
     new_recover = state.player_recover + recover_add
 
     recovered_health = jnp.minimum(state.player_health + 1, get_max_health(state))
     derecovered_health = state.player_health - 1
 
-    new_health = jax.lax.select(new_recover > 25, recovered_health, state.player_health)
-    new_recover = jax.lax.select(
+    new_health = jnp.where(new_recover > 25, recovered_health, state.player_health)
+    new_recover = jnp.where(
         new_recover > 25, 
-        jnp.full(static_params.player_count, 0.0), 
+        0.0, 
         new_recover
     )
-    new_health = jax.lax.select(new_recover < -15, derecovered_health, new_health)
-    new_recover = jax.lax.select(
+    new_health = jnp.where(new_recover < -15, derecovered_health, new_health)
+    new_recover = jnp.where(
         new_recover < -15, 
-        jnp.full(static_params.player_count, 0.0), 
+        0.0, 
         new_recover
     )
 
@@ -2044,7 +2044,7 @@ def update_player_intrinsics(state, action, static_params):
     # Mana
     mana_recover_coeff = 1 + 0.25 * (state.player_intelligence - 1)
     new_recover_mana = (
-        jax.lax.select(
+        jnp.where(
             state.is_sleeping,
             state.player_recover_mana + 2,
             state.player_recover_mana + 1,
@@ -2052,12 +2052,12 @@ def update_player_intrinsics(state, action, static_params):
         * mana_recover_coeff
     )
 
-    new_mana = jax.lax.select(
+    new_mana = jnp.where(
         new_recover_mana > 30, state.player_mana + 1, state.player_mana
     )
-    new_recover_mana = jax.lax.select(
+    new_recover_mana = jnp.where(
         new_recover_mana > 30, 
-        jnp.full(static_params.player_count, 0.0), 
+        0.0, 
         new_recover_mana
     )
 
@@ -2831,10 +2831,10 @@ def read_book(rng, state, action):
         _rng, jnp.arange(num_spells), (), True, spells_to_learn 
     )
 
-    learn_spell_achievement = jax.lax.select(
+    learn_spell_achievement = jnp.where(
         spell_to_learn_index,
-        jnp.full((num_players,), Achievement.LEARN_ICEBALL.value),
-        jnp.full((num_players,), Achievement.LEARN_FIREBALL.value),
+        Achievement.LEARN_ICEBALL.value,
+        Achievement.LEARN_FIREBALL.value,
     )
 
     new_achievements = state.achievements.at[jnp.arange(num_players), learn_spell_achievement].set(
@@ -2862,16 +2862,16 @@ def enchant(rng, state: EnvState, action, static_params: StaticEnvParams):
         target_block == BlockType.ENCHANTMENT_TABLE_ICE.value,
     )
 
-    enchantment_type = jax.lax.select(
+    enchantment_type = jnp.where(
         target_block == BlockType.ENCHANTMENT_TABLE_FIRE.value, 
-        jnp.full((static_params.player_count,), 1), 
-        jnp.full((static_params.player_count,), 2)
+        1, 
+        2
     )
 
-    num_gems = jax.lax.select(
+    num_gems = jnp.where(
         target_block == BlockType.ENCHANTMENT_TABLE_FIRE.value,
-        jnp.full((static_params.player_count,), state.inventory.ruby),
-        jnp.full((static_params.player_count,), state.inventory.sapphire),
+        state.inventory.ruby,
+        state.inventory.sapphire,
     )
 
     could_enchant = jnp.logical_and(
