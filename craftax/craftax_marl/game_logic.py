@@ -3135,9 +3135,14 @@ def craftax_step(
     init_achievements = state.achievements
     init_health = state.player_health
 
-    # Interrupt action if sleeping or resting
-    actions = jnp.where(
+    # TODO: modify any function (e.g. is_in_other_players) for dead players
+    # Interrupt action if dead, sleeping or resting
+    cant_do_action = jnp.logical_or(
+        jnp.logical_not(state.player_alive),
         jnp.logical_or(state.is_sleeping, state.is_resting),
+    )
+    actions = jnp.where(
+        cant_do_action,
         Action.NOOP.value,
         actions
     )
@@ -3209,9 +3214,12 @@ def craftax_step(
     health_reward = (state.player_health - init_health) * 0.1
     reward = achievement_reward + health_reward
 
+    player_alive = state.player_health > 0.0
+
     rng, _rng = jax.random.split(rng)
 
     state = state.replace(
+        player_alive=player_alive,
         timestep=state.timestep + 1,
         light_level=calculate_light_level(state.timestep + 1, params),
         state_rng=_rng,

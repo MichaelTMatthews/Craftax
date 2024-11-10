@@ -139,7 +139,6 @@ class CraftaxMARLPixelsEnv(environment.Environment):
         self, rng: chex.PRNGKey, params: EnvParams
     ) -> Tuple[chex.Array, EnvState]:
         state = generate_world(rng, params, self.static_env_params)
-
         return self.get_obs(state), state
 
     def get_obs(self, state: EnvState) -> chex.Array:
@@ -149,12 +148,10 @@ class CraftaxMARLPixelsEnv(environment.Environment):
 
     def is_terminal(self, state: EnvState, params: EnvParams) -> bool:
         done_steps = state.timestep >= params.max_timesteps
-        is_dead = (state.player_health <= 0).all()
+        is_dead = jnp.logical_not(state.player_alive).all()
         defeated_boss = has_beaten_boss(state, self.static_env_params)
-
         is_terminal = jnp.logical_or(is_dead, done_steps)
         is_terminal = jnp.logical_or(is_terminal, defeated_boss)
-
         return is_terminal
 
     @property

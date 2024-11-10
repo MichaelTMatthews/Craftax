@@ -55,6 +55,7 @@ class EnvState:
     player_position: jnp.ndarray
     player_level: int
     player_direction: jnp.ndarray
+    player_alive: jnp.ndarray
 
     # Intrinsics
     player_health: jnp.ndarray
