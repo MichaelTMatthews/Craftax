@@ -33,21 +33,27 @@ def has_beaten_boss(state, static_params):
 
 def attack_mob_class(
     state,
+    action,
     mobs,
     position,
     damage_vector,
     can_get_achievement,
     mob_class_index,
 ):
-    def is_attacking_mob_at_index(unused, mob_index):
-        in_mob = (mobs.position[state.player_level, mob_index] == position).all()
-        return None, jnp.logical_and(in_mob, mobs.mask[state.player_level, mob_index])
+    doing_attack = action == Action.DO.value
 
-    _, is_attacking_mob_array = jax.lax.scan(
-        is_attacking_mob_at_index, None, jnp.arange(mobs.mask.shape[1])
+    def is_attacking_mob_at_index(mob_index):
+        in_mob = (mobs.position[state.player_level, mob_index] == position).all(axis=1)
+        return jnp.logical_and(in_mob, mobs.mask[state.player_level, mob_index])
+
+    is_attacking_mob_array = jax.vmap(is_attacking_mob_at_index)(
+        jnp.arange(mobs.mask.shape[1])
     )
-    is_attacking_mob = is_attacking_mob_array.sum() > 0
-    target_mob_index = jnp.argmax(is_attacking_mob_array)
+    is_attacking_mob = jnp.logical_and(
+        is_attacking_mob_array.sum(axis=0) > 0,
+        doing_attack,
+    )
+    target_mob_index = jnp.argmax(is_attacking_mob_array, axis=0)
 
     damage = get_damage(
         damage_vector,
@@ -61,42 +67,61 @@ def attack_mob_class(
     )
     mobs = mobs.replace(health=new_mob_health)
 
-    old_mask = mobs.mask[state.player_level, target_mob_index]
+    old_mask = mobs.mask[state.player_level]
     mobs = mobs.replace(mask=jnp.logical_and(mobs.health > 0, mobs.mask))
     did_kill_mob = jnp.logical_and(
-        old_mask,
-        jnp.logical_not(mobs.mask[state.player_level, target_mob_index]),
+        jnp.logical_and(
+            old_mask[target_mob_index],
+            jnp.logical_not(mobs.mask[state.player_level, target_mob_index]),
+        ),
+        is_attacking_mob,
+    )
+
+    mobs_killed = jnp.sum(
+        jnp.logical_and(
+            old_mask,
+            jnp.logical_not(mobs.mask[state.player_level]),
+        )
     )
 
     achievement_for_kill = MOB_ACHIEVEMENT_MAP[
         mob_class_index, mobs.type_id[state.player_level, target_mob_index]
     ]
 
-    new_achievements = state.achievements.at[achievement_for_kill].set(
+    new_achievements = state.achievements.at[
+        jnp.arange(len(state.achievements)), achievement_for_kill
+    ].set(
         jnp.logical_or(
-            state.achievements[achievement_for_kill],
+            state.achievements[
+                jnp.arange(len(state.achievements)), achievement_for_kill
+            ],
             jnp.logical_and(did_kill_mob, can_get_achievement),
         )
     )
 
-    return mobs, did_kill_mob, is_attacking_mob, new_achievements
+    return mobs, did_kill_mob, is_attacking_mob, mobs_killed, new_achievements
 
 
-def attack_mob(state, position, damage_vector, can_eat):
+def attack_mob(state, action, position, damage_vector, can_eat):
+    monsters_killed = state.monsters_killed
+
     # Melee
     (
         new_melee_mobs,
         did_kill_melee_mob,
         is_attacking_melee_mob,
+        melee_mobs_killed,
         new_achievements,
     ) = attack_mob_class(
         state,
+        action,
         state.melee_mobs,
         position,
         damage_vector,
         True,
         1,
     )
+    monsters_killed = monsters_killed.at[state.player_level].add(melee_mobs_killed)
 
     state = state.replace(
         melee_mobs=new_melee_mobs,
@@ -108,9 +133,11 @@ def attack_mob(state, position, damage_vector, can_eat):
         new_passive_mobs,
         did_kill_passive_mob,
         is_attacking_passive_mob,
+        passive_mobs_killed,
         new_achievements,
     ) = attack_mob_class(
         state,
+        action,
         state.passive_mobs,
         position,
         damage_vector,
@@ -118,13 +145,15 @@ def attack_mob(state, position, damage_vector, can_eat):
         0,
     )
 
-    new_food = jax.lax.select(
+    new_food = jnp.where(
         jnp.logical_and(did_kill_passive_mob, can_eat),
         jnp.minimum(get_max_food(state), state.player_food + 6),
         state.player_food,
     )
-    new_hunger = jax.lax.select(
-        jnp.logical_and(did_kill_passive_mob, can_eat), 0.0, state.player_hunger
+    new_hunger = jnp.where(
+        jnp.logical_and(did_kill_passive_mob, can_eat),
+        0.0,
+        state.player_hunger,
     )
 
     state = state.replace(
@@ -139,15 +168,19 @@ def attack_mob(state, position, damage_vector, can_eat):
         new_ranged_mobs,
         did_kill_ranged_mob,
         is_attacking_ranged_mob,
+        ranged_mobs_killed,
         new_achievements,
     ) = attack_mob_class(
         state,
+        action,
         state.ranged_mobs,
         position,
         damage_vector,
         True,
         2,
     )
+
+    monsters_killed = monsters_killed.at[state.player_level].add(ranged_mobs_killed)
 
     state = state.replace(
         ranged_mobs=new_ranged_mobs,
@@ -165,15 +198,10 @@ def attack_mob(state, position, damage_vector, can_eat):
     did_kill_mob = jnp.logical_or(did_kill_monster, did_kill_passive_mob)
 
     state = state.replace(
-        mob_map=state.mob_map.at[state.player_level, position[0], position[1]].set(
-            jnp.logical_and(
-                state.mob_map[state.player_level, position[0], position[1]],
-                jnp.logical_not(did_kill_mob),
-            )
-        ),
-        monsters_killed=state.monsters_killed.at[state.player_level].add(
-            1 * did_kill_monster
-        ),
+        mob_map=state.mob_map.at[
+            state.player_level, position[:, 0], position[:, 1]
+        ].min(jnp.logical_not(did_kill_mob)),
+        monsters_killed=monsters_killed,
     )
 
     return state, did_attack_mob, did_kill_mob
@@ -250,10 +278,10 @@ def get_damage_done_to_player(state, static_params, damage_vector):
             (state.armour_enchantments == 1) * 0.2,
             (state.armour_enchantments == 2) * 0.2,
         ],
-        axis=0,
+        axis=1,
     )
 
-    defense_vector = scaled_defenses.sum(axis=1)
+    defense_vector = scaled_defenses.sum(axis=2)
 
     damage_vector *= (
         1 + is_fighting_boss(state, static_params) * BOSS_FIGHT_EXTRA_DAMAGE
@@ -281,54 +309,58 @@ def get_player_damage_vector(state):
         state.player_intelligence - 1
     )  # Int=5 does 25% more enchant damage
 
-    return jnp.stack([physical_damage, fire_damage, ice_damage], axis=0)
+    return jnp.stack([physical_damage, fire_damage, ice_damage], axis=1)
 
 
 def get_damage(damage_vector, defense_vector):
     damages = (1.0 - defense_vector) * damage_vector
+    return damages.sum(axis=1)
 
-    return damages.sum()
 
-
-def in_bounds(state, position):
+def in_bounds(position, static_params):
     in_bounds_x = jnp.logical_and(
-        0 <= position[:, 0], position[:, 0] < state.map[state.player_level].shape[0]
+        0 <= position[:, 0], position[:, 0] < static_params.map_size[0]
     )
     in_bounds_y = jnp.logical_and(
-        0 <= position[:, 1], position[:, 1] < state.map[state.player_level].shape[1]
+        0 <= position[:, 1], position[:, 1] < static_params.map_size[1]
     )
     return jnp.logical_and(in_bounds_x, in_bounds_y)
 
 
-def is_in_solid_block(state, position):
-    return SOLID_BLOCK_MAPPING[state.map[state.player_level, position[:, 0], position[:, 1]]]
+def is_in_solid_block(level_map, position):
+    return SOLID_BLOCK_MAPPING[
+        level_map[position[:, 0], position[:, 1]]
+    ]
 
 
 def is_position_not_colliding_other_player(state, position):
     # Verify that next step isn't in another player's next position
     next_pos_clash = jnp.fill_diagonal(
-        (jnp.expand_dims(position, axis=1) == jnp.expand_dims(position, axis=0)).all(axis=2), 
-        False, 
-        inplace=False
+        (jnp.expand_dims(position, axis=1) == jnp.expand_dims(position, axis=0)).all(
+            axis=2
+        ),
+        False,
+        inplace=False,
     )
     next_pos_clash = next_pos_clash.any(axis=1)
 
     # Verify that next step isn't in another player's current position
-    curr_pos_clash = (jnp.expand_dims(position, axis=1) == jnp.expand_dims(state.player_position, axis=0)).all(axis=2)
-    curr_pos_clash = curr_pos_clash.any(axis=1)
+    curr_pos_clash = is_in_other_player(state, position)
 
     return jnp.logical_not(jnp.logical_or(next_pos_clash, curr_pos_clash))
 
 
-def is_position_in_bounds_not_in_mob_not_colliding(state, position, collision_map):
-    pos_in_bounds = in_bounds(state, position)
-    in_solid_block = is_in_solid_block(state, position)
+def is_position_in_bounds_not_in_mob_not_colliding(state, position, collision_map, static_params):
+    pos_in_bounds = in_bounds(position, static_params)
+    in_solid_block = is_in_solid_block(state.map[state.player_level], position)
     in_mob = is_in_mob(state, position)
     in_lava = (
-        state.map[state.player_level][position[:, 0], position[:, 1]] == BlockType.LAVA.value
+        state.map[state.player_level][position[:, 0], position[:, 1]]
+        == BlockType.LAVA.value
     )
     in_water = (
-        state.map[state.player_level][position[:, 0], position[:, 1]] == BlockType.WATER.value
+        state.map[state.player_level][position[:, 0], position[:, 1]]
+        == BlockType.WATER.value
     )
     on_ground_block = jnp.logical_and(
         jnp.logical_not(in_solid_block),
@@ -364,9 +396,14 @@ def is_position_in_bounds_not_in_mob_not_colliding(state, position, collision_ma
 
 
 def is_near_block(state, block_type):
-    close_blocks = jax.vmap(jnp.add, in_axes=(None, 0))(state.player_position, CLOSE_BLOCKS)
+    close_blocks = jax.vmap(jnp.add, in_axes=(None, 0))(
+        state.player_position, CLOSE_BLOCKS
+    )
     in_bound_blocks = jax.vmap(in_bounds, in_axes=(None, 0))(state, close_blocks)
-    correct_blocks = state.map[state.player_level, close_blocks[:, :, 0], close_blocks[:, :, 1]] == block_type
+    correct_blocks = (
+        state.map[state.player_level, close_blocks[:, :, 0], close_blocks[:, :, 1]]
+        == block_type
+    )
     return (jnp.logical_and(in_bound_blocks, correct_blocks)).any(axis=0)
 
 
@@ -375,11 +412,14 @@ def calculate_light_level(timestep, params):
     return 1 - jnp.abs(jnp.cos(jnp.pi * progress)) ** 3
 
 
+def is_in_other_player(state: EnvState, position: chex.Array):
+    is_pos_in_other_player = (jnp.expand_dims(state.player_position, axis=1) == jnp.expand_dims(position, axis=0)).all(axis=2)
+    is_pos_in_other_player = is_pos_in_other_player.any(axis=0)
+    return is_pos_in_other_player
+
+
 def is_in_mob(state: EnvState, position: chex.Array):
-    return jnp.logical_or(
-        state.mob_map[state.player_level, position[:, 0], position[:, 1]],
-        (state.player_position == position).all(axis=1),
-    )
+    return state.mob_map[state.player_level, position[:, 0], position[:, 1]]
 
 
 def get_max_health(state):
@@ -426,19 +466,15 @@ def clip_inventory_and_intrinsics(state, params):
 
 
 def find_valid_ladder_areas(valid_ladder_map, player_count):
-    d = player_count*2 - 1
+    d = player_count * 2 - 1
     s = jnp.ones((d,))
 
-    valid_areas = jax.vmap(jnp.convolve, in_axes=(0,None,None))(
-        valid_ladder_map, s, 'valid'
+    valid_areas = jax.vmap(jnp.convolve, in_axes=(0, None, None))(
+        valid_ladder_map, s, "valid"
     )
     valid_areas = valid_areas == d
     valid_areas = jnp.pad(
-        valid_areas,
-        (
-            (0,0),
-            (0, valid_ladder_map.shape[1] - valid_areas.shape[1])
-        )
+        valid_areas, ((0, 0), (0, valid_ladder_map.shape[1] - valid_areas.shape[1]))
     )
     return valid_areas
 
@@ -446,8 +482,7 @@ def find_valid_ladder_areas(valid_ladder_map, player_count):
 def get_ladder_positions(rng, static_params, config, map):
     valid_ladder_down = (map == config.valid_ladder).astype(jnp.float32)
     valid_ladder_down = find_valid_ladder_areas(
-        valid_ladder_down, 
-        static_params.player_count
+        valid_ladder_down, static_params.player_count
     ).flatten()
     ladder_index = jax.random.choice(
         rng,
@@ -460,8 +495,10 @@ def get_ladder_positions(rng, static_params, config, map):
             ladder_index % static_params.map_size[0],
         ]
     )
-    ladder_positions = jnp.array([
-        ladder_positions_corner[0].repeat(static_params.player_count),
-        ladder_positions_corner[1] + jnp.arange(static_params.player_count)*2
-    ]).T
+    ladder_positions = jnp.array(
+        [
+            ladder_positions_corner[0].repeat(static_params.player_count),
+            ladder_positions_corner[1] + jnp.arange(static_params.player_count) * 2,
+        ]
+    ).T
     return ladder_positions

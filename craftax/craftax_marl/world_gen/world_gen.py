@@ -2,7 +2,8 @@ import jax
 import jax.scipy as jsp
 
 from craftax_marl.constants import *
-from craftax_marl.game_logic import calculate_light_level, get_distance_map
+from craftax_marl.game_logic import calculate_light_level
+from craftax_marl.util.maths_utils import get_all_players_distance_map
 from craftax_marl.craftax_state import EnvState, Inventory, Mobs
 from craftax_marl.util.game_logic_utils import get_ladder_positions
 from craftax_marl.util.noise import generate_fractal_noise_2d
@@ -321,10 +322,9 @@ def generate_smoothworld(rng, static_params, player_position, config, params=Non
     else:
         fractal_noise_angles = (None, None, None, None, None)
 
-    player_proximity_map = jax.vmap(get_distance_map, in_axes=(0, None))(
-        player_position, static_params.map_size
+    player_proximity_map = get_all_players_distance_map(
+        player_position, jnp.full(static_params.player_count, True), static_params
     )
-    player_proximity_map = jnp.min(player_proximity_map, axis=0).astype(jnp.float32)
     player_proximity_map_water = (
         player_proximity_map / config.player_proximity_map_water_strength
     )
@@ -578,10 +578,10 @@ def generate_world(rng, params, static_params):
 
     # Plants
     growing_plants_positions = jnp.zeros(
-        (static_params.max_growing_plants, 2), dtype=jnp.int32
+        (static_params.max_growing_plants * static_params.player_count, 2), dtype=jnp.int32
     )
-    growing_plants_age = jnp.zeros(static_params.max_growing_plants, dtype=jnp.int32)
-    growing_plants_mask = jnp.zeros(static_params.max_growing_plants, dtype=bool)
+    growing_plants_age = jnp.zeros(static_params.max_growing_plants * static_params.player_count, dtype=jnp.int32)
+    growing_plants_mask = jnp.zeros(static_params.max_growing_plants * static_params.player_count, dtype=bool)
 
     # Potion mapping for episode
     rng, _rng = jax.random.split(rng)

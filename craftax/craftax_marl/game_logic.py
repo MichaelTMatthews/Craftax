@@ -1,4 +1,5 @@
 from craftax_marl.util.game_logic_utils import *
+from craftax_marl.util.maths_utils import *
 
 
 def update_plants_with_eat(state, plant_position, static_params):
@@ -464,7 +465,7 @@ def do_action(rng, state, action, static_params):
     )
 
     # Action mining
-    action_block_in_bounds = in_bounds(state, block_position)
+    action_block_in_bounds = in_bounds(block_position, static_params)
     action_block_in_bounds = jnp.logical_and(
         action_block_in_bounds, jnp.logical_not(did_attack_mob)
     )
@@ -836,7 +837,7 @@ def place_block(state, action, static_params):
 
     is_block_in_other_player = is_in_other_player(state, placing_block_position)
     is_block_in_mob = is_in_mob(state, placing_block_position)
-    is_block_in_bounds = in_bounds(state, placing_block_position)
+    is_block_in_bounds = in_bounds(placing_block_position, static_params)
     is_placement_in_bounds_not_in_mobs = jnp.logical_and(
         is_block_in_bounds,
         jnp.logical_not(jnp.logical_or(
@@ -1147,21 +1148,34 @@ def update_mobs(rng, state, params, static_params):
 
         # Random move
         rng, _rng = jax.random.split(rng)
+        valid_random_moves = in_bounds(
+            DIRECTIONS[1:5] + melee_mobs.position[state.player_level, melee_mob_index], 
+            static_params
+        )
         random_move_direction = jax.random.choice(
             _rng,
             DIRECTIONS[1:5],
+            p=valid_random_moves
         )
         random_move_proposed_position = (
             melee_mobs.position[state.player_level, melee_mob_index]
             + random_move_direction
         )
 
-        # Move towards player
+        # Move towards closest player
         player_move_direction = jnp.zeros((2,), dtype=jnp.int32)
-        player_move_direction_abs = jnp.abs(
+        all_players_move_direction_abs = jnp.abs(
             state.player_position
             - melee_mobs.position[state.player_level, melee_mob_index]
         )
+        distance_to_players = all_players_move_direction_abs.sum(axis=1)
+        player_targetted = jnp.argmin(jnp.where(
+            state.player_alive,
+            distance_to_players,
+            jnp.inf
+        ))
+        player_move_direction_abs = all_players_move_direction_abs[player_targetted]
+
         player_move_direction_index_p = (
             player_move_direction_abs == player_move_direction_abs.max()
         ) / player_move_direction_abs.sum()
@@ -1176,10 +1190,8 @@ def update_mobs(rng, state, params, static_params):
             player_move_direction_index
         ].set(
             jnp.sign(
-                state.player_position[player_move_direction_index]
-                - melee_mobs.position[state.player_level, melee_mob_index][
-                    player_move_direction_index
-                ]
+                state.player_position[player_targetted, player_move_direction_index]
+                - melee_mobs.position[state.player_level, melee_mob_index, player_move_direction_index]
             ).astype(jnp.int32)
         )
         player_move_proposed_position = (
@@ -1188,24 +1200,18 @@ def update_mobs(rng, state, params, static_params):
         )
 
         # Choose movement
-        close_to_player = (
-            jnp.sum(
-                jnp.abs(
-                    melee_mobs.position[state.player_level, melee_mob_index]
-                    - state.player_position
-                )
-            )
-            < 10
-        )
+        close_to_player = distance_to_players < 10
+        close_to_player = jnp.logical_and(
+            close_to_player,
+            state.player_alive
+        ).any()
         close_to_player = jnp.logical_or(
             close_to_player, is_fighting_boss(state, static_params)
         )
-
         rng, _rng = jax.random.split(rng)
         close_to_player = jnp.logical_and(
             close_to_player, jax.random.uniform(_rng) < 0.75
         )
-
         proposed_position = jax.lax.select(
             close_to_player,
             player_move_proposed_position,
@@ -1213,14 +1219,10 @@ def update_mobs(rng, state, params, static_params):
         )
 
         # Choose attack or not
-        is_attacking_player = (
-            jnp.sum(
-                jnp.abs(
-                    melee_mobs.position[state.player_level, melee_mob_index]
-                    - state.player_position
-                )
-            )
-            == 1
+        is_attacking_player = distance_to_players == 1
+        is_attacking_player = jnp.logical_and(
+            is_attacking_player,
+            state.player_alive
         )
         is_attacking_player = jnp.logical_and(
             is_attacking_player,
@@ -1231,7 +1233,7 @@ def update_mobs(rng, state, params, static_params):
         )
 
         proposed_position = jax.lax.select(
-            is_attacking_player,
+            is_attacking_player.any(),
             melee_mobs.position[state.player_level, melee_mob_index],
             proposed_position,
         )
@@ -1241,11 +1243,11 @@ def update_mobs(rng, state, params, static_params):
         ]
 
         melee_mob_damage = get_damage_done_to_player(
-            state, static_params, melee_mob_base_damage * (1 + 2.5 * state.is_sleeping)
+            state, static_params, melee_mob_base_damage * (1 + 2.5 * state.is_sleeping[:, None])
         )
 
-        new_cooldown = jax.lax.select(
-            is_attacking_player,
+        new_cooldown = jnp.where(
+            is_attacking_player.any(),
             5,
             melee_mobs.attack_cooldown[state.player_level, melee_mob_index] - 1,
         )
@@ -1260,9 +1262,9 @@ def update_mobs(rng, state, params, static_params):
             is_resting=jnp.logical_and(
                 state.is_resting, jnp.logical_not(is_attacking_player)
             ),
-            achievements=state.achievements.at[Achievement.WAKE_UP.value].set(
+            achievements=state.achievements.at[:, Achievement.WAKE_UP.value].set(
                 jnp.logical_or(
-                    state.achievements[Achievement.WAKE_UP.value], is_waking_player
+                    state.achievements[:, Achievement.WAKE_UP.value], is_waking_player
                 )
             ),
         )
@@ -1270,21 +1272,25 @@ def update_mobs(rng, state, params, static_params):
         mob_type = melee_mobs.type_id[state.player_level, melee_mob_index]
         collision_map = MOB_TYPE_COLLISION_MAPPING[mob_type, 1]
         valid_move = is_position_in_bounds_not_in_mob_not_colliding(
-            state, proposed_position, collision_map
+            state, proposed_position[None, :], collision_map, static_params
         )
+        valid_move = jnp.logical_and(
+            valid_move,
+            is_in_other_player(state, proposed_position[None, :])
+        ).item()
+
+        
         position = jax.lax.select(
             valid_move,
             proposed_position,
             melee_mobs.position[state.player_level, melee_mob_index],
         )
 
-        should_not_despawn = (
-            jnp.abs(
-                melee_mobs.position[state.player_level, melee_mob_index]
-                - state.player_position
-            ).sum()
-            < params.mob_despawn_distance
-        )
+        should_not_despawn = distance_to_players < params.mob_despawn_distance
+        should_not_despawn = jnp.logical_and(
+            should_not_despawn,
+            state.player_alive
+        ).any()
         should_not_despawn = jnp.logical_or(
             should_not_despawn, is_fighting_boss(state, static_params)
         )
@@ -1346,9 +1352,14 @@ def update_mobs(rng, state, params, static_params):
 
         # Random move
         rng, _rng = jax.random.split(rng)
+        valid_random_moves = in_bounds(
+            DIRECTIONS[1:9] + passive_mobs.position[state.player_level, passive_mob_index], 
+            static_params
+        )
         random_move_direction = jax.random.choice(
             _rng,
             DIRECTIONS[1:9],  # 50% chance of not moving
+            p=valid_random_moves
         )
         proposed_position = (
             passive_mobs.position[state.player_level, passive_mob_index]
@@ -1358,21 +1369,26 @@ def update_mobs(rng, state, params, static_params):
         mob_type = passive_mobs.type_id[state.player_level, passive_mob_index]
         collision_map = MOB_TYPE_COLLISION_MAPPING[mob_type, 0]
         valid_move = is_position_in_bounds_not_in_mob_not_colliding(
-            state, proposed_position, collision_map
+            state, proposed_position[None, :], collision_map, static_params
         )
+        valid_move = jnp.logical_and(
+            valid_move,
+            is_in_other_player(state, proposed_position[None, :])
+        ).item()
         position = jax.lax.select(
             valid_move,
             proposed_position,
             passive_mobs.position[state.player_level, passive_mob_index],
         )
 
-        should_not_despawn = (
-            jnp.abs(
-                passive_mobs.position[state.player_level, passive_mob_index]
-                - state.player_position
-            ).sum()
-            < params.mob_despawn_distance
-        )
+        distance_to_players = jnp.abs(
+            state.player_position
+            - passive_mobs.position[state.player_level, passive_mob_index]
+        ).sum(axis=1)
+        should_not_despawn = jnp.logical_and(
+            distance_to_players < params.mob_despawn_distance,
+            state.player_alive
+        ).any()
 
         # Clear our old entry if we are alive
         new_mob_map = state.mob_map.at[
@@ -1438,21 +1454,33 @@ def update_mobs(rng, state, params, static_params):
 
         # Random move
         rng, _rng = jax.random.split(rng)
+        valid_random_moves = in_bounds(
+            DIRECTIONS[1:5] + ranged_mobs.position[state.player_level, ranged_mob_index], 
+            static_params
+        )
         random_move_direction = jax.random.choice(
             _rng,
             DIRECTIONS[1:5],
+            p=valid_random_moves
         )
         random_move_proposed_position = (
             ranged_mobs.position[state.player_level, ranged_mob_index]
             + random_move_direction
         )
 
-        # Move towards player
+        # Move towards closest player
         player_move_direction = jnp.zeros((2,), dtype=jnp.int32)
-        player_move_direction_abs = jnp.abs(
+        all_players_move_direction_abs = jnp.abs(
             state.player_position
             - ranged_mobs.position[state.player_level, ranged_mob_index]
         )
+        distance_to_players = all_players_move_direction_abs.sum(axis=1)
+        player_targetted = jnp.argmin(jnp.where(
+            state.player_alive,
+            distance_to_players,
+            jnp.inf
+        ))
+        player_move_direction_abs = all_players_move_direction_abs[player_targetted]
         player_move_direction_index_p = (
             player_move_direction_abs == player_move_direction_abs.max()
         ) / player_move_direction_abs.sum()
@@ -1467,10 +1495,8 @@ def update_mobs(rng, state, params, static_params):
             player_move_direction_index
         ].set(
             jnp.sign(
-                state.player_position[player_move_direction_index]
-                - ranged_mobs.position[state.player_level, ranged_mob_index][
-                    player_move_direction_index
-                ]
+                state.player_position[player_targetted, player_move_direction_index]
+                - ranged_mobs.position[state.player_level, ranged_mob_index, player_move_direction_index]
             ).astype(jnp.int32)
         )
         player_move_towards_proposed_position = (
@@ -1483,15 +1509,8 @@ def update_mobs(rng, state, params, static_params):
         )
 
         # Choose movement
-        distance_to_player = jnp.sum(
-            jnp.abs(
-                ranged_mobs.position[state.player_level, ranged_mob_index]
-                - state.player_position
-            )
-        )
-
-        far_from_player = distance_to_player >= 6
-        too_close_to_player = distance_to_player <= 3
+        far_from_player = distance_to_players[player_move_direction_index] >= 6
+        too_close_to_player = distance_to_players[player_move_direction_index] <= 3
 
         proposed_position = jax.lax.select(
             far_from_player,
@@ -1507,30 +1526,13 @@ def update_mobs(rng, state, params, static_params):
         rng, _rng = jax.random.split(rng)
 
         proposed_position = jax.lax.select(
-            jax.random.uniform(_rng) > 0.85,
+            jax.random.uniform(_rng) < 0.15,
             proposed_position,
             random_move_proposed_position,
         )
 
         # Choose attack or not
-        is_attacking_player = jnp.logical_and(
-            distance_to_player >= 4, distance_to_player <= 5
-        )
-        # If we're too close to player (so we want to run) but are blocked, we shoot
-        mob_type = ranged_mobs.type_id[state.player_level, ranged_mob_index]
-        collision_map = MOB_TYPE_COLLISION_MAPPING[mob_type, 2]
-        is_attacking_player = jnp.logical_or(
-            is_attacking_player,
-            jnp.logical_and(
-                too_close_to_player,
-                jnp.logical_not(
-                    is_position_in_bounds_not_in_mob_not_colliding(
-                        state, proposed_position, collision_map
-                    )
-                ),
-            ),
-        )
-
+        is_attacking_player = jnp.logical_not(far_from_player)
         is_attacking_player = jnp.logical_and(
             is_attacking_player,
             ranged_mobs.attack_cooldown[state.player_level, ranged_mob_index] <= 0,
@@ -1542,7 +1544,7 @@ def update_mobs(rng, state, params, static_params):
         # Spawn projectile
         can_spawn_projectile = (
             state.mob_projectiles.mask[state.player_level].sum()
-            < static_params.max_mob_projectiles
+            < static_params.max_mob_projectiles * static_params.player_count
         )
         new_projectile_position = ranged_mobs.position[
             state.player_level, ranged_mob_index
@@ -1552,13 +1554,15 @@ def update_mobs(rng, state, params, static_params):
             is_attacking_player, can_spawn_projectile
         )
 
-        new_mob_projectiles, new_mob_projectile_directions = spawn_projectile(
+        new_mob_projectiles, new_mob_projectile_directions, new_mob_projectile_owners = spawn_projectile(
             state,
             static_params,
             state.mob_projectiles,
             state.mob_projectile_directions,
+            state.mob_projectile_owners,
             new_projectile_position,
             is_spawning_projectile,
+            ranged_mob_index,
             player_move_direction,
             RANGED_MOB_TYPE_TO_PROJECTILE_TYPE_MAPPING[
                 ranged_mobs.type_id[state.player_level, ranged_mob_index]
@@ -1568,6 +1572,7 @@ def update_mobs(rng, state, params, static_params):
         state = state.replace(
             mob_projectiles=new_mob_projectiles,
             mob_projectile_directions=new_mob_projectile_directions,
+            mob_projectile_owners=new_mob_projectile_owners,
         )
 
         proposed_position = jax.lax.select(
@@ -1582,9 +1587,15 @@ def update_mobs(rng, state, params, static_params):
             ranged_mobs.attack_cooldown[state.player_level, ranged_mob_index] - 1,
         )
 
+        mob_type = ranged_mobs.type_id[state.player_level, ranged_mob_index]
+        collision_map = MOB_TYPE_COLLISION_MAPPING[mob_type, 2]
         valid_move = is_position_in_bounds_not_in_mob_not_colliding(
-            state, proposed_position, collision_map
+            state, proposed_position[None, :], collision_map, static_params
         )
+        valid_move = jnp.logical_and(
+            valid_move,
+            is_in_other_player(state, proposed_position[None, :])
+        ).item()
 
         position = jax.lax.select(
             valid_move,
@@ -1592,13 +1603,11 @@ def update_mobs(rng, state, params, static_params):
             ranged_mobs.position[state.player_level, ranged_mob_index],
         )
 
-        should_not_despawn = (
-            jnp.abs(
-                ranged_mobs.position[state.player_level, ranged_mob_index]
-                - state.player_position
-            ).sum()
-            < params.mob_despawn_distance
-        )
+        should_not_despawn = distance_to_players < params.mob_despawn_distance
+        should_not_despawn = jnp.logical_and(
+            should_not_despawn,
+            state.player_alive
+        ).any()
         should_not_despawn = jnp.logical_or(
             should_not_despawn, is_fighting_boss(state, static_params)
         )
@@ -1666,10 +1675,9 @@ def update_mobs(rng, state, params, static_params):
             + state.mob_projectile_directions[state.player_level, projectile_index]
         )
 
-        proposed_position_in_player = (proposed_position == state.player_position).all()
 
-        proposed_position_in_bounds = in_bounds(state, proposed_position)
-        in_wall = is_in_solid_block(state, proposed_position)
+        proposed_position_in_bounds = in_bounds(proposed_position[None, :], static_params).item()
+        in_wall = is_in_solid_block(state.map[state.player_level], proposed_position[None, :]).item()
         in_wall = jnp.logical_and(
             in_wall,
             jnp.logical_not(
@@ -1679,7 +1687,7 @@ def update_mobs(rng, state, params, static_params):
                 == BlockType.WATER.value
             ),
         )  # Arrows can go over water
-        in_mob = is_in_mob(state, proposed_position)
+        in_mob = is_in_mob(state, proposed_position[None, :]).item()
 
         continue_move = jnp.logical_and(
             proposed_position_in_bounds, jnp.logical_not(in_wall)
@@ -1690,17 +1698,19 @@ def update_mobs(rng, state, params, static_params):
             (
                 projectiles.position[state.player_level, projectile_index]
                 == state.player_position
-            ).all(),
+            ).all(axis=1),
             projectiles.mask[state.player_level, projectile_index],
         )
 
+        proposed_position_in_player = (proposed_position == state.player_position).all(axis=1)
         hit_player1 = jnp.logical_and(
             proposed_position_in_player,
             projectiles.mask[state.player_level, projectile_index],
         )
         hit_player = jnp.logical_or(hit_player0, hit_player1)
+        hit_player = jnp.logical_and(hit_player, state.player_alive)
 
-        continue_move = jnp.logical_and(continue_move, jnp.logical_not(hit_player))
+        continue_move = jnp.logical_and(continue_move, jnp.logical_not(hit_player.any()))
 
         position = proposed_position
 
@@ -1731,7 +1741,7 @@ def update_mobs(rng, state, params, static_params):
         projectile_damage = get_damage_done_to_player(
             state,
             static_params,
-            MOB_TYPE_DAMAGE_MAPPING[projectile_type, MobType.PROJECTILE.value],
+            MOB_TYPE_DAMAGE_MAPPING[projectile_type, MobType.PROJECTILE.value][None, :],
         )
 
         state = state.replace(
@@ -1757,12 +1767,16 @@ def update_mobs(rng, state, params, static_params):
     (rng, state), _ = jax.lax.scan(
         _move_mob_projectile,
         (rng, state),
-        jnp.arange(static_params.max_mob_projectiles),
+        jnp.arange(static_params.max_mob_projectiles * static_params.player_count),
     )
 
     def _move_player_projectile(rng_and_state, projectile_index):
         rng, state = rng_and_state
         projectiles = state.player_projectiles
+
+        projectile_owner = state.player_projectile_owners[
+            state.player_level, projectile_index
+        ]
 
         projectile_type = state.player_projectiles.type_id[
             state.player_level, projectile_index
@@ -1780,7 +1794,7 @@ def update_mobs(rng, state, params, static_params):
 
         # Bow enchantment
         arrow_damage_add = jnp.zeros(3, dtype=jnp.float32)
-        arrow_damage_add = arrow_damage_add.at[state.bow_enchantment].set(
+        arrow_damage_add = arrow_damage_add.at[state.bow_enchantment[projectile_owner]].set(
             projectile_damage_vector[0] / 2
         )
         arrow_damage_add = arrow_damage_add.at[0].set(0)
@@ -1792,8 +1806,8 @@ def update_mobs(rng, state, params, static_params):
         )
 
         # Apply attribute scaling
-        arrow_damage_coeff = 1 + 0.2 * (state.player_dexterity - 1)
-        magic_damage_coeff = 1 + 0.5 * (state.player_intelligence - 1)
+        arrow_damage_coeff = 1 + 0.2 * (state.player_dexterity[projectile_owner] - 1)
+        magic_damage_coeff = 1 + 0.5 * (state.player_intelligence[projectile_owner] - 1)
 
         projectile_damage_vector *= jax.lax.select(
             is_arrow,
@@ -1814,9 +1828,9 @@ def update_mobs(rng, state, params, static_params):
             projectiles.position[state.player_level, projectile_index]
             + state.player_projectile_directions[state.player_level, projectile_index]
         )
-
-        proposed_position_in_bounds = in_bounds(state, proposed_position)
-        in_wall = is_in_solid_block(state, proposed_position)
+        
+        proposed_position_in_bounds = in_bounds(proposed_position[None, :], static_params).item()
+        in_wall = is_in_solid_block(state.map[state.player_level], proposed_position[None, :]).item()
         in_wall = jnp.logical_and(
             in_wall,
             jnp.logical_not(
@@ -1827,18 +1841,26 @@ def update_mobs(rng, state, params, static_params):
             ),
         )  # Arrows can go over water
 
+        deal_damage = jnp.array([Action.DO.value]) * projectiles.mask[state.player_level, projectile_index]
         state, did_attack_mob0, did_kill_mob0 = attack_mob(
             state,
-            projectiles.position[state.player_level, projectile_index],
-            projectile_damage_vector,
-            False,
+            deal_damage,
+            projectiles.position[None, state.player_level, projectile_index],
+            projectile_damage_vector[None, :],
+            jnp.array([False]),
         )
+        did_attack_mob0 = did_attack_mob0.item()
 
         projectile_damage_vector = projectile_damage_vector * (1 - did_attack_mob0)
 
         state, did_attack_mob1, did_kill_mob1 = attack_mob(
-            state, proposed_position, projectile_damage_vector, False
+            state,
+            deal_damage,
+            proposed_position[None, :],
+            projectile_damage_vector[None, :],
+            jnp.array([False])
         )
+        did_attack_mob1 = did_attack_mob1.item()
 
         did_attack_mob = jnp.logical_or(did_attack_mob0, did_attack_mob1)
 
@@ -2112,11 +2134,11 @@ def update_plants(state, static_params):
     return state
 
 
-def move_player(state, actions, params):
+def move_player(state, actions, params, static_params):
     proposed_position = state.player_position + DIRECTIONS[actions]
 
     valid_move = is_position_in_bounds_not_in_mob_not_colliding(
-        state, proposed_position, COLLISION_LAND_CREATURE
+        state, proposed_position, COLLISION_LAND_CREATURE, static_params
     ) 
     valid_move = jnp.logical_and(valid_move, is_position_not_colliding_other_player(state, proposed_position))
     valid_move = jnp.logical_or(valid_move, params.god_mode)
