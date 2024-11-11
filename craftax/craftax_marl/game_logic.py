@@ -3248,7 +3248,7 @@ def craftax_step(
     achievement_reward = (
         (state.achievements.astype(int) - init_achievements.astype(int))
         * achievement_coefficients
-    ).sum()
+    ).sum(axis=1)
     health_reward = (state.player_health - init_health) * 0.1
     reward = achievement_reward + health_reward
 
