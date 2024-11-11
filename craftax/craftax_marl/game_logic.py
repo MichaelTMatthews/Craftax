@@ -7,7 +7,7 @@ def update_plants_with_eat(state, plant_position, static_params):
         return None, (state.growing_plants_positions[index] == plant_position).all()
 
     _, is_plant = jax.lax.scan(
-        _is_plant, None, jnp.arange(static_params.max_growing_plants)
+        _is_plant, None, jnp.arange(static_params.max_growing_plants * static_params.player_count)
     )
 
     plant_index = jnp.argmax(is_plant)
@@ -1342,7 +1342,7 @@ def update_mobs(rng, state, params, static_params):
 
     rng, _rng = jax.random.split(rng)
     (rng, state), _ = jax.lax.scan(
-        _move_melee_mob, (rng, state), jnp.arange(static_params.max_melee_mobs)
+        _move_melee_mob, (rng, state), jnp.arange(static_params.max_melee_mobs * static_params.player_count)
     )
 
     # Move passive_mobs
@@ -1443,7 +1443,7 @@ def update_mobs(rng, state, params, static_params):
 
     rng, _rng = jax.random.split(rng)
     (rng, state), _ = jax.lax.scan(
-        _move_passive_mob, (rng, state), jnp.arange(static_params.max_passive_mobs)
+        _move_passive_mob, (rng, state), jnp.arange(static_params.max_passive_mobs * static_params.player_count)
     )
 
     # Move ranged_mobs
@@ -1662,7 +1662,7 @@ def update_mobs(rng, state, params, static_params):
 
     rng, _rng = jax.random.split(rng)
     (rng, state), _ = jax.lax.scan(
-        _move_ranged_mob, (rng, state), jnp.arange(static_params.max_ranged_mobs)
+        _move_ranged_mob, (rng, state), jnp.arange(static_params.max_ranged_mobs * static_params.player_count)
     )
 
     # Move projectiles
@@ -1892,7 +1892,7 @@ def update_mobs(rng, state, params, static_params):
     (rng, state), _ = jax.lax.scan(
         _move_player_projectile,
         (rng, state),
-        jnp.arange(static_params.max_player_projectiles),
+        jnp.arange(static_params.max_player_projectiles * static_params.player_count),
     )
 
     return state
@@ -2186,7 +2186,7 @@ def spawn_mobs(state, rng, params, static_params):
     # Passive mobs
     can_spawn_passive_mob = (
         state.passive_mobs.mask[state.player_level].sum()
-        < static_params.max_passive_mobs
+        < static_params.max_passive_mobs * static_params.player_count
     )
 
     rng, _rng = jax.random.split(rng)
@@ -2429,7 +2429,7 @@ def spawn_mobs(state, rng, params, static_params):
 
     # Ranged mobs
     can_spawn_ranged_mob = (
-        state.ranged_mobs.mask[state.player_level].sum() < static_params.max_ranged_mobs
+        state.ranged_mobs.mask[state.player_level].sum() < static_params.max_ranged_mobs * static_params.player_count
     )
 
     new_ranged_mob_type = FLOOR_MOB_MAPPING[state.player_level, MobType.RANGED.value]
