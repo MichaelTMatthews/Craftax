@@ -563,12 +563,16 @@ def generate_world(rng, params, static_params):
             (static_params.num_levels, max_num, 2), dtype=jnp.int32
         )
 
-        return projectiles, projectile_directions
+        projectile_owners = jnp.zeros(
+            (static_params.num_levels, max_num), dtype=jnp.int32
+        )
 
-    mob_projectiles, mob_projectile_directions = _create_projectiles(
+        return projectiles, projectile_directions, projectile_owners
+
+    mob_projectiles, mob_projectile_directions, mob_projectile_owners = _create_projectiles(
         static_params.max_mob_projectiles * static_params.player_count
     )
-    player_projectiles, player_projectile_directions = _create_projectiles(
+    player_projectiles, player_projectile_directions, player_projectile_owners = _create_projectiles(
         static_params.max_player_projectiles * static_params.player_count
     )
 
@@ -640,8 +644,10 @@ def generate_world(rng, params, static_params):
         passive_mobs=passive_mobs,
         mob_projectiles=mob_projectiles,
         mob_projectile_directions=mob_projectile_directions,
+        mob_projectile_owners=mob_projectile_owners,
         player_projectiles=player_projectiles,
         player_projectile_directions=player_projectile_directions,
+        player_projectile_owners=player_projectile_owners,
         growing_plants_positions=growing_plants_positions,
         growing_plants_age=growing_plants_age,
         growing_plants_mask=growing_plants_mask,

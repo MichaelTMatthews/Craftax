@@ -2606,7 +2606,7 @@ def change_floor(
 def shoot_projectile(state: EnvState, action: int, static_params: StaticEnvParams):
     # Arrow
     def _spawn_player_projectiles(projectile_info, player_index):
-        player_projectiles, player_projectile_directions = projectile_info
+        player_projectiles, player_projectile_directions, player_projectile_owners = projectile_info
 
         is_shooting_arrow = jnp.logical_and(
             action[player_index] == Action.SHOOT_ARROW.value,
@@ -2620,22 +2620,24 @@ def shoot_projectile(state: EnvState, action: int, static_params: StaticEnvParam
             ),
         )
 
-        new_player_projectiles, new_player_projectile_directions = spawn_projectile(
+        new_player_projectiles, new_player_projectile_directions, new_player_projectile_owners = spawn_projectile(
             state, 
             static_params, 
             player_projectiles, 
             player_projectile_directions, 
+            player_projectile_owners,
             state.player_position[player_index], 
             is_shooting_arrow,
+            player_index,
             DIRECTIONS[state.player_direction[player_index]],
             ProjectileType.ARROW2.value,
         )
 
-        return (new_player_projectiles, new_player_projectile_directions), is_shooting_arrow
+        return (new_player_projectiles, new_player_projectile_directions, new_player_projectile_owners), is_shooting_arrow
 
-    (new_player_projectiles, new_player_projectile_directions), is_shooting_arrow = jax.lax.scan(
+    (new_player_projectiles, new_player_projectile_directions, new_player_projectile_owners), is_shooting_arrow = jax.lax.scan(
         _spawn_player_projectiles, 
-        (state.player_projectiles, state.player_projectile_directions),
+        (state.player_projectiles, state.player_projectile_directions, state.player_projectile_owners),
         jnp.arange(static_params.player_count),
     )
 
@@ -2648,6 +2650,7 @@ def shoot_projectile(state: EnvState, action: int, static_params: StaticEnvParam
     return state.replace(
         player_projectiles=new_player_projectiles,
         player_projectile_directions=new_player_projectile_directions,
+        player_projectile_owners=new_player_projectile_owners,
         inventory=state.inventory.replace(
             arrows=state.inventory.arrows - 1 * is_shooting_arrow
         ),
@@ -2657,7 +2660,7 @@ def shoot_projectile(state: EnvState, action: int, static_params: StaticEnvParam
 
 def cast_spell(state, action, static_params):
     def _cast_player_spell(player_projectile_info, player_index):
-        player_projectiles, player_projectile_directions = player_projectile_info
+        player_projectiles, player_projectile_directions, player_projectile_owners = player_projectile_info
 
         is_casting_fireball = jnp.logical_and(
             action[player_index] == Action.CAST_FIREBALL.value,
@@ -2684,20 +2687,22 @@ def cast_spell(state, action, static_params):
             is_casting_fireball * ProjectileType.FIREBALL.value
             + is_casting_iceball * ProjectileType.ICEBALL.value
         )
-        new_player_projectiles, new_player_projectile_directions = spawn_projectile(
+        new_player_projectiles, new_player_projectile_directions, new_player_projectile_owners = spawn_projectile(
             state,
             static_params,
             player_projectiles,
             player_projectile_directions,
+            player_projectile_owners,
             state.player_position[player_index],
             is_casting_spell,
+            player_index,
             DIRECTIONS[state.player_direction[player_index]],
             projectile_type,
         )
 
-        return (new_player_projectiles, new_player_projectile_directions), jnp.array([is_casting_fireball, is_casting_iceball])
+        return (new_player_projectiles, new_player_projectile_directions, new_player_projectile_owners), jnp.array([is_casting_fireball, is_casting_iceball])
     
-    (new_player_projectiles, new_player_projectile_directions), spells_cast = jax.lax.scan(_cast_player_spell, (state.player_projectiles, state.player_projectile_directions), jnp.arange(static_params.player_count)) 
+    (new_player_projectiles, new_player_projectile_directions, new_player_projectile_owners), spells_cast = jax.lax.scan(_cast_player_spell, (state.player_projectiles, state.player_projectile_directions, state.player_projectile_owners), jnp.arange(static_params.player_count)) 
 
     is_casting_spell = spells_cast.any(axis=1)
     casting_achievement = (
@@ -2711,6 +2716,7 @@ def cast_spell(state, action, static_params):
     return state.replace(
         player_projectiles=new_player_projectiles,
         player_projectile_directions=new_player_projectile_directions,
+        player_projectile_owners=new_player_projectile_owners,
         player_mana=state.player_mana - is_casting_spell * 2,
         achievements=new_achievements,
     )

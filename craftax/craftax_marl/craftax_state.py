@@ -87,8 +87,10 @@ class EnvState:
 
     mob_projectiles: Mobs
     mob_projectile_directions: jnp.ndarray
+    mob_projectile_owners: jnp.ndarray
     player_projectiles: Mobs
     player_projectile_directions: jnp.ndarray
+    player_projectile_owners: jnp.ndarray
 
     growing_plants_positions: jnp.ndarray
     growing_plants_age: jnp.ndarray

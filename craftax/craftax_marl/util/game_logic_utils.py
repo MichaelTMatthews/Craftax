@@ -184,8 +184,10 @@ def spawn_projectile(
     static_params,
     projectiles,
     projectile_directions,
+    projectile_owners,
     new_projectile_position,
     is_spawning_projectile,
+    owner,
     direction,
     projectile_type,
 ):
@@ -206,6 +208,11 @@ def spawn_projectile(
         is_spawning_projectile,
         direction,
         projectile_directions[state.player_level, new_projectile_index],
+    )
+    new_projectile_owner = jax.lax.select(
+        is_spawning_projectile,
+        owner,
+        projectile_owners[state.player_level, new_projectile_index],
     )
     new_projectile_type = jax.lax.select(
         is_spawning_projectile,
@@ -229,7 +236,11 @@ def spawn_projectile(
         state.player_level, new_projectile_index
     ].set(new_projectile_direction)
 
-    return new_projectiles, new_projectile_directions
+    new_projectile_owners = projectile_owners.at[
+        state.player_level, new_projectile_index
+    ].set(new_projectile_owner)
+
+    return new_projectiles, new_projectile_directions, new_projectile_owners
 
 
 def get_damage_done_to_player(state, static_params, damage_vector):
