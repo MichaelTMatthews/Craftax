@@ -1511,8 +1511,8 @@ def update_mobs(rng, state, params, static_params):
         )
 
         # Choose movement
-        far_from_player = distance_to_players[player_move_direction_index] >= 6
-        too_close_to_player = distance_to_players[player_move_direction_index] <= 3
+        far_from_player = player_move_direction_abs[player_move_direction_index] >= 6
+        too_close_to_player = player_move_direction_abs[player_move_direction_index] <= 3
 
         proposed_position = jax.lax.select(
             far_from_player,
