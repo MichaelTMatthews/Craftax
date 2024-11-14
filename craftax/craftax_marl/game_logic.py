@@ -1273,11 +1273,12 @@ def update_mobs(rng, state, params, static_params):
         collision_map = MOB_TYPE_COLLISION_MAPPING[mob_type, 1]
         valid_move = is_position_in_bounds_not_in_mob_not_colliding(
             state, proposed_position[None, :], collision_map, static_params
-        )
+        )[0]
+        in_other_player = is_in_other_player(state, proposed_position[None, :])[0]
         valid_move = jnp.logical_and(
             valid_move,
-            is_in_other_player(state, proposed_position[None, :])
-        )[0]
+            jnp.logical_not(in_other_player)
+        )
 
         
         position = jax.lax.select(
@@ -1370,11 +1371,12 @@ def update_mobs(rng, state, params, static_params):
         collision_map = MOB_TYPE_COLLISION_MAPPING[mob_type, 0]
         valid_move = is_position_in_bounds_not_in_mob_not_colliding(
             state, proposed_position[None, :], collision_map, static_params
-        )
+        )[0]
+        in_other_player = is_in_other_player(state, proposed_position[None, :])[0]
         valid_move = jnp.logical_and(
             valid_move,
-            is_in_other_player(state, proposed_position[None, :])
-        )[0]
+            jnp.logical_not(in_other_player)
+        )
         position = jax.lax.select(
             valid_move,
             proposed_position,
@@ -1591,11 +1593,12 @@ def update_mobs(rng, state, params, static_params):
         collision_map = MOB_TYPE_COLLISION_MAPPING[mob_type, 2]
         valid_move = is_position_in_bounds_not_in_mob_not_colliding(
             state, proposed_position[None, :], collision_map, static_params
-        )
+        )[0]
+        in_other_player = is_in_other_player(state, proposed_position[None, :])[0]
         valid_move = jnp.logical_and(
             valid_move,
-            is_in_other_player(state, proposed_position[None, :])
-        )[0]
+            jnp.logical_not(in_other_player)
+        )
 
         position = jax.lax.select(
             valid_move,
