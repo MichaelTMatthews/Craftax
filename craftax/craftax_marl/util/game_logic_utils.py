@@ -395,16 +395,16 @@ def is_position_in_bounds_not_in_mob_not_colliding(state, position, collision_ma
     return valid_move
 
 
-def is_near_block(state, block_type):
-    close_blocks = jax.vmap(jnp.add, in_axes=(None, 0))(
+def is_near_block(state, block_type, static_params):
+    close_blocks = jax.vmap(jnp.add, in_axes=(0, None))(
         state.player_position, CLOSE_BLOCKS
     )
-    in_bound_blocks = jax.vmap(in_bounds, in_axes=(None, 0))(state, close_blocks)
+    in_bound_blocks = jax.vmap(in_bounds, in_axes=(0, None))(close_blocks, static_params)
     correct_blocks = (
         state.map[state.player_level, close_blocks[:, :, 0], close_blocks[:, :, 1]]
         == block_type
     )
-    return (jnp.logical_and(in_bound_blocks, correct_blocks)).any(axis=0)
+    return (jnp.logical_and(in_bound_blocks, correct_blocks)).any(axis=1)
 
 
 def calculate_light_level(timestep, params):

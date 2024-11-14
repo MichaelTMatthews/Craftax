@@ -516,9 +516,9 @@ def do_action(rng, state, action, static_params):
     return state
 
 
-def do_crafting(state, actions):
-    is_at_crafting_table = is_near_block(state, BlockType.CRAFTING_TABLE.value)
-    is_at_furnace = is_near_block(state, BlockType.FURNACE.value)
+def do_crafting(state, actions, static_params):
+    is_at_crafting_table = is_near_block(state, BlockType.CRAFTING_TABLE.value, static_params)
+    is_at_furnace = is_near_block(state, BlockType.FURNACE.value, static_params)
 
     new_achievements = state.achievements
 
