@@ -722,9 +722,9 @@ def do_crafting(state, actions, static_params):
             ]
         ),
     )
-    new_achievements = new_achievements.at[Achievement.MAKE_IRON_ARMOUR.value].set(
+    new_achievements = new_achievements.at[:, Achievement.MAKE_IRON_ARMOUR.value].set(
         jnp.logical_or(
-            new_achievements[Achievement.MAKE_IRON_ARMOUR.value],
+            new_achievements[:, Achievement.MAKE_IRON_ARMOUR.value],
             is_crafting_iron_armour,
         )
     )
@@ -738,7 +738,7 @@ def do_crafting(state, actions, static_params):
     diamond_armour_index_to_craft = jnp.argmax(new_inventory.armour < 2, axis=1)
 
     is_crafting_diamond_armour = jnp.logical_and(
-        action == Action.MAKE_DIAMOND_ARMOUR.value,
+        actions == Action.MAKE_DIAMOND_ARMOUR.value,
         jnp.logical_and(
             can_craft_diamond_armour,
             is_at_crafting_table,
@@ -1277,7 +1277,7 @@ def update_mobs(rng, state, params, static_params):
         valid_move = jnp.logical_and(
             valid_move,
             is_in_other_player(state, proposed_position[None, :])
-        ).item()
+        )[0]
 
         
         position = jax.lax.select(
@@ -1374,7 +1374,7 @@ def update_mobs(rng, state, params, static_params):
         valid_move = jnp.logical_and(
             valid_move,
             is_in_other_player(state, proposed_position[None, :])
-        ).item()
+        )[0]
         position = jax.lax.select(
             valid_move,
             proposed_position,
@@ -1595,7 +1595,7 @@ def update_mobs(rng, state, params, static_params):
         valid_move = jnp.logical_and(
             valid_move,
             is_in_other_player(state, proposed_position[None, :])
-        ).item()
+        )[0]
 
         position = jax.lax.select(
             valid_move,
@@ -1676,8 +1676,8 @@ def update_mobs(rng, state, params, static_params):
         )
 
 
-        proposed_position_in_bounds = in_bounds(proposed_position[None, :], static_params).item()
-        in_wall = is_in_solid_block(state.map[state.player_level], proposed_position[None, :]).item()
+        proposed_position_in_bounds = in_bounds(proposed_position[None, :], static_params)[0]
+        in_wall = is_in_solid_block(state.map[state.player_level], proposed_position[None, :])[0]
         in_wall = jnp.logical_and(
             in_wall,
             jnp.logical_not(
@@ -1687,7 +1687,7 @@ def update_mobs(rng, state, params, static_params):
                 == BlockType.WATER.value
             ),
         )  # Arrows can go over water
-        in_mob = is_in_mob(state, proposed_position[None, :]).item()
+        in_mob = is_in_mob(state, proposed_position[None, :])[0]
 
         continue_move = jnp.logical_and(
             proposed_position_in_bounds, jnp.logical_not(in_wall)
@@ -1829,8 +1829,8 @@ def update_mobs(rng, state, params, static_params):
             + state.player_projectile_directions[state.player_level, projectile_index]
         )
         
-        proposed_position_in_bounds = in_bounds(proposed_position[None, :], static_params).item()
-        in_wall = is_in_solid_block(state.map[state.player_level], proposed_position[None, :]).item()
+        proposed_position_in_bounds = in_bounds(proposed_position[None, :], static_params)[0]
+        in_wall = is_in_solid_block(state.map[state.player_level], proposed_position[None, :])[0]
         in_wall = jnp.logical_and(
             in_wall,
             jnp.logical_not(
@@ -1849,7 +1849,7 @@ def update_mobs(rng, state, params, static_params):
             projectile_damage_vector[None, :],
             jnp.array([False]),
         )
-        did_attack_mob0 = did_attack_mob0.item()
+        did_attack_mob0 = did_attack_mob0[0]
 
         projectile_damage_vector = projectile_damage_vector * (1 - did_attack_mob0)
 
@@ -1860,7 +1860,7 @@ def update_mobs(rng, state, params, static_params):
             projectile_damage_vector[None, :],
             jnp.array([False])
         )
-        did_attack_mob1 = did_attack_mob1.item()
+        did_attack_mob1 = did_attack_mob1[0]
 
         did_attack_mob = jnp.logical_or(did_attack_mob0, did_attack_mob1)
 
