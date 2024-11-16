@@ -1,6 +1,38 @@
 from craftax_marl.util.game_logic_utils import *
 from craftax_marl.util.maths_utils import *
 
+def revive_player(state, block_position, is_doing_action, static_params):
+    in_other_player = (jnp.expand_dims(state.player_position, axis=1) == jnp.expand_dims(block_position, axis=0)).all(axis=2).T
+    player_revived = jnp.argmax(in_other_player, axis=-1)
+    is_reviving_player = jnp.logical_and(
+        jnp.logical_and(
+            is_doing_action,
+            in_other_player.any(axis=-1),
+        ),
+        jnp.logical_not(state.player_alive[player_revived]),
+    )
+    is_player_being_revived = jnp.any(
+        jnp.logical_and(
+            jnp.arange(static_params.player_count)[:, None] == player_revived,
+            is_reviving_player[None, :]
+        ),
+        axis=-1
+    )
+    new_player_alive = jnp.where(
+        is_player_being_revived,
+        True,
+        state.player_alive,
+    )
+    new_player_health = jnp.where(
+        is_player_being_revived,
+        get_max_health(state) / 2,
+        state.player_health,
+    )
+    state = state.replace(
+        player_alive=new_player_alive,
+        player_health=new_player_health,
+    )
+    return state
 
 def update_plants_with_eat(state, plant_position, is_eating_plant):
     is_plant = jax.vmap(
@@ -188,6 +220,9 @@ def do_action(rng, state, action, static_params):
     state, did_attack_mob, did_kill_mob = attack_mob(
         state, doing_action, block_position, get_player_damage_vector(state), True
     )
+    
+    # Revive player
+    state = revive_player(state, block_position, doing_action, static_params)
     
     # BLOCKS
     # Tree
