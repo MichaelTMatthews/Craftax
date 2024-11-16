@@ -740,6 +740,7 @@ def load_all_textures(block_pixel_size):
             load_texture("player-up.png", block_pixel_size),
             load_texture("player-down.png", block_pixel_size),
             load_texture("player-sleep.png", block_pixel_size),
+            load_texture("player-dead.png", block_pixel_size),
         ]
     )
 

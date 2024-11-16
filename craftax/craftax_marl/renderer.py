@@ -406,6 +406,9 @@ def render_craftax_pixels(state, block_pixel_size, do_night_noise=True):
         player_texture_index = jax.lax.select(
             state.is_sleeping[player_index], 4, state.player_direction[player_index] - 1
         )
+        player_texture_index = jax.lax.select(
+            state.player_alive[player_index], player_texture_index, 5
+        )
         player_texture = textures["player_textures"][player_texture_index]
         player_texture, player_texture_alpha = (
             player_texture[:, :, :3],
