@@ -2065,7 +2065,7 @@ def update_player_intrinsics(state, action, static_params):
     )
     state = state.replace(
         is_sleeping=jnp.where(state.player_alive, new_is_sleeping, state.is_sleeping),
-        achievements=jnp.where(state.player_alive, new_achievements, state.achievements),
+        achievements=jnp.where(state.player_alive[:, None], new_achievements, state.achievements),
     )
 
     # Start resting?
