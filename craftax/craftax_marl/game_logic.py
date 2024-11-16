@@ -2016,18 +2016,21 @@ def update_player_intrinsics(state, action, static_params):
         action == Action.SLEEP.value, state.player_energy < get_max_energy(state)
     )
     new_is_sleeping = jnp.logical_or(state.is_sleeping, is_starting_sleep)
-    state = state.replace(is_sleeping=new_is_sleeping)
+    state = state.replace(
+        is_sleeping=jnp.where(state.player_alive, new_is_sleeping, state.is_sleeping)
+    )
 
     # Wake up?
     is_waking_up = jnp.logical_and(
         state.player_energy >= get_max_energy(state), state.is_sleeping
     )
     new_is_sleeping = jnp.logical_and(state.is_sleeping, jnp.logical_not(is_waking_up))
+    new_achievements = state.achievements.at[:, Achievement.WAKE_UP.value].set(
+        jnp.logical_or(state.achievements[:, Achievement.WAKE_UP.value], is_waking_up)
+    )
     state = state.replace(
-        is_sleeping=new_is_sleeping,
-        achievements=state.achievements.at[:, Achievement.WAKE_UP.value].set(
-            jnp.logical_or(state.achievements[:, Achievement.WAKE_UP.value], is_waking_up)
-        ),
+        is_sleeping=jnp.where(state.player_alive, new_is_sleeping, state.is_sleeping),
+        achievements=jnp.where(state.player_alive, new_achievements, state.achievements),
     )
 
     # Start resting?
@@ -2047,7 +2050,7 @@ def update_player_intrinsics(state, action, static_params):
     )
     new_is_resting = jnp.logical_and(state.is_resting, jnp.logical_not(is_waking_up))
     state = state.replace(
-        is_resting=new_is_resting,
+        is_resting=jnp.where(state.player_alive, new_is_resting, state.is_resting),
     )
 
     not_boss = jnp.logical_not(is_fighting_boss(state, static_params))
@@ -2071,8 +2074,8 @@ def update_player_intrinsics(state, action, static_params):
     )
 
     state = state.replace(
-        player_hunger=new_hunger,
-        player_food=new_food,
+        player_hunger=jnp.where(state.player_alive, new_hunger, state.player_hunger),
+        player_food=jnp.where(state.player_alive, new_food, state.player_food),
     )
 
     # Thirst
@@ -2091,8 +2094,8 @@ def update_player_intrinsics(state, action, static_params):
     )
 
     state = state.replace(
-        player_thirst=new_thirst,
-        player_drink=new_drink,
+        player_thirst=jnp.where(state.player_alive, new_thirst, state.player_thirst),
+        player_drink=jnp.where(state.player_alive, new_drink, state.player_drink),
     )
 
     # Fatigue
@@ -2125,8 +2128,8 @@ def update_player_intrinsics(state, action, static_params):
     )
 
     state = state.replace(
-        player_fatigue=new_fatigue,
-        player_energy=new_energy,
+        player_fatigue=jnp.where(state.player_alive, new_fatigue, state.player_fatigue),
+        player_energy=jnp.where(state.player_alive, new_energy, state.player_energy),
     )
 
     # Health
@@ -2171,8 +2174,8 @@ def update_player_intrinsics(state, action, static_params):
     )
 
     state = state.replace(
-        player_recover=new_recover,
-        player_health=new_health,
+        player_recover=jnp.where(state.player_alive, new_recover, state.player_recover),
+        player_health=jnp.where(state.player_alive, new_health, state.player_health),
     )
 
     # Mana
@@ -2196,8 +2199,8 @@ def update_player_intrinsics(state, action, static_params):
     )
 
     state = state.replace(
-        player_recover_mana=new_recover_mana,
-        player_mana=new_mana,
+        player_recover_mana=jnp.where(state.player_alive, new_recover_mana, state.player_recover_mana),
+        player_mana=jnp.where(state.player_alive, new_mana, state.player_mana),
     )
 
     return state
