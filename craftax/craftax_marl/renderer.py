@@ -106,9 +106,40 @@ def render_craftax_symbolic(state: EnvState, static_params: StaticEnvParams):
         ),
         jnp.arange(state.player_projectiles.mask.shape[1]),
     )
+    
+    
+    # Teammate map (0th index for alive, 1th for dead)
+    teammate_map = jnp.zeros(
+        (static_params.player_count, *OBS_DIM, 2), dtype=jnp.int32
+    )
+    local_position = (
+        -1 * state.player_position
+        + state.player_position[:, None]
+        + jnp.array([OBS_DIM[0], OBS_DIM[1]]) // 2
+    )
+    on_screen = jnp.logical_and(
+        local_position >= 0, local_position < jnp.array([OBS_DIM[0], OBS_DIM[1]])
+    ).all(axis=-1)
+    teammate_map = teammate_map.at[
+        jnp.arange(static_params.player_count), local_position[:, :, 0], local_position[:, :, 1], 0
+    ].set(
+        jnp.logical_and(
+            on_screen,
+            state.player_alive
+        )
+    )
+    teammate_map = teammate_map.at[
+        jnp.arange(static_params.player_count), local_position[:, :, 0], local_position[:, :, 1], 1
+    ].set(
+        jnp.logical_and(
+            on_screen,
+            jnp.logical_not(state.player_alive)
+        )
+    )
 
+    # Concat all maps
     all_map = jnp.concatenate(
-        [map_view_one_hot, item_map_view_one_hot, mob_map], axis=-1
+        [map_view_one_hot, item_map_view_one_hot, mob_map, teammate_map], axis=-1
     )
 
     # Light map
