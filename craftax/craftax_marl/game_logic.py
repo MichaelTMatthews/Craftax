@@ -2,23 +2,28 @@ from craftax_marl.util.game_logic_utils import *
 from craftax_marl.util.maths_utils import *
 
 
-def update_plants_with_eat(state, plant_position, static_params):
-    def _is_plant(unused, index):
-        return None, (state.growing_plants_positions[index] == plant_position).all()
-
-    _, is_plant = jax.lax.scan(
-        _is_plant, None, jnp.arange(static_params.max_growing_plants * static_params.player_count)
+def update_plants_with_eat(state, plant_position, is_eating_plant):
+    is_plant = jax.vmap(
+        jnp.equal, in_axes=(0, None)
+    )(
+        plant_position, 
+        state.growing_plants_positions
+    ).all(axis=-1)
+    plant_index = jnp.argmax(
+        is_plant, axis=-1
     )
-
-    plant_index = jnp.argmax(is_plant)
-
-    return state.growing_plants_age.at[plant_index].set(0)
+    selected_plant_age = jnp.where(
+        is_eating_plant,
+        0,
+        state.growing_plants_age[plant_index]
+    )
+    return state.growing_plants_age.at[plant_index].set(selected_plant_age)
 
 
 def add_items_from_chest(rng, state, inventory, is_opening_chest):
     # Wood (60%)
     rng, _rng = jax.random.split(rng)
-    is_looting_wood = jax.random.uniform(_rng) < 0.6
+    is_looting_wood = jax.random.uniform(_rng) < 0.6 * is_opening_chest
     rng, _rng = jax.random.split(rng)
     wood_loot_amount = (
         jax.random.randint(_rng, shape=(), minval=1, maxval=6) * is_looting_wood
@@ -26,7 +31,7 @@ def add_items_from_chest(rng, state, inventory, is_opening_chest):
 
     # Torch (60%)
     rng, _rng = jax.random.split(rng)
-    is_looting_torch = jax.random.uniform(_rng) < 0.6
+    is_looting_torch = jax.random.uniform(_rng) < 0.6 * is_opening_chest
     rng, _rng = jax.random.split(rng)
     torch_loot_amount = (
         jax.random.randint(_rng, shape=(), minval=4, maxval=8) * is_looting_torch
@@ -34,7 +39,7 @@ def add_items_from_chest(rng, state, inventory, is_opening_chest):
 
     # Ores (60%)
     rng, _rng = jax.random.split(rng)
-    is_looting_ore = jax.random.uniform(_rng) < 0.6
+    is_looting_ore = jax.random.uniform(_rng) < 0.6 * is_opening_chest
     rng, _rng = jax.random.split(rng)
     ore_loot_id = jax.random.choice(
         _rng,
@@ -73,7 +78,7 @@ def add_items_from_chest(rng, state, inventory, is_opening_chest):
 
     # Potion (50%)
     rng, _rng = jax.random.split(rng)
-    is_looting_potion = jax.random.uniform(_rng) < 0.5
+    is_looting_potion = jax.random.uniform(_rng) < 0.5 * is_opening_chest
     rng, _rng = jax.random.split(rng)
     potion_loot_index = jax.random.randint(_rng, shape=(), minval=0, maxval=6)
     rng, _rng = jax.random.split(rng)
@@ -81,7 +86,7 @@ def add_items_from_chest(rng, state, inventory, is_opening_chest):
 
     # Arrows (25%)
     rng, _rng = jax.random.split(rng)
-    is_looting_arrows = jax.random.uniform(_rng) < 0.25
+    is_looting_arrows = jax.random.uniform(_rng) < 0.25 * is_opening_chest
     rng, _rng = jax.random.split(rng)
     arrows_loot_amount = (
         jax.random.randint(_rng, shape=(), minval=1, maxval=5) * is_looting_arrows
@@ -140,53 +145,63 @@ def add_items_from_chest(rng, state, inventory, is_opening_chest):
     )
     new_bow_level = is_looting_bow * 1 + (1 - is_looting_bow) * inventory.bow
 
-    is_looting_book = jnp.logical_and(
+    can_loot_book = jnp.logical_and(
         jnp.logical_not(state.chests_opened[state.player_level]),
         jnp.logical_or(state.player_level == 3, state.player_level == 4),
+    )
+    is_looting_book = jnp.logical_and(
+        can_loot_book,
+        is_opening_chest
     )
 
     # Update inventory
     return inventory.replace(
-        torches=inventory.torches + torch_loot_amount * is_opening_chest,
-        coal=inventory.coal + coal_loot_amount * is_opening_chest,
-        iron=inventory.iron + iron_loot_amount * is_opening_chest,
-        diamond=inventory.diamond + diamond_loot_amount * is_opening_chest,
-        sapphire=inventory.sapphire + sapphire_loot_amount * is_opening_chest,
-        ruby=inventory.ruby + ruby_loot_amount * is_opening_chest,
-        arrows=inventory.arrows + arrows_loot_amount * is_opening_chest,
+        wood=inventory.wood + wood_loot_amount,
+        torches=inventory.torches + torch_loot_amount,
+        coal=inventory.coal + coal_loot_amount,
+        iron=inventory.iron + iron_loot_amount,
+        diamond=inventory.diamond + diamond_loot_amount,
+        sapphire=inventory.sapphire + sapphire_loot_amount,
+        ruby=inventory.ruby + ruby_loot_amount,
+        arrows=inventory.arrows + arrows_loot_amount,
         pickaxe=new_pickaxe_level,
         sword=new_sword_level,
-        potions=inventory.potions.at[potion_loot_index].set(
-            inventory.potions[potion_loot_index]
+        potions=inventory.potions.at[:, potion_loot_index].set(
+            inventory.potions[:, potion_loot_index]
             + potion_loot_amount * is_looting_potion * is_opening_chest
         ),
         bow=new_bow_level,
-        books=inventory.books + 1 * is_looting_book * is_opening_chest,
+        books=inventory.books + 1 * is_looting_book,
     )
 
 
 def do_action(rng, state, action, static_params):
-    old_state = state
 
     block_position = state.player_position + DIRECTIONS[state.player_direction]
+    equal_block_placement = (jnp.expand_dims(block_position, axis=1) == jnp.expand_dims(block_position, axis=0)).all(axis=2)
 
-    state, did_attack_mob, did_kill_mob = attack_mob(
-        state, block_position, get_player_damage_vector(state), True
+    doing_action = jnp.logical_and(
+        in_bounds(block_position, static_params),
+        action == Action.DO.value
     )
 
+    state, did_attack_mob, did_kill_mob = attack_mob(
+        state, doing_action, block_position, get_player_damage_vector(state), True
+    )
+    
     # BLOCKS
     # Tree
     can_mine_tree = True
     is_block_tree = (
-        state.map[state.player_level, block_position[0], block_position[1]]
+        state.map[state.player_level, block_position[:, 0], block_position[:, 1]]
         == BlockType.TREE.value
     )
     is_block_fire_tree = (
-        state.map[state.player_level, block_position[0], block_position[1]]
+        state.map[state.player_level, block_position[:, 0], block_position[:, 1]]
         == BlockType.FIRE_TREE.value
     )
     is_block_ice_shrub = (
-        state.map[state.player_level, block_position[0], block_position[1]]
+        state.map[state.player_level, block_position[:, 0], block_position[:, 1]]
         == BlockType.ICE_SHRUB.value
     )
 
@@ -194,23 +209,29 @@ def do_action(rng, state, action, static_params):
         is_block_tree, jnp.logical_or(is_block_fire_tree, is_block_ice_shrub)
     )
     is_mining_tree = jnp.logical_and(
-        is_block_tree_type,
-        can_mine_tree,
+        jnp.logical_and(
+            is_block_tree_type,
+            can_mine_tree,
+        ),
+        doing_action
     )
     tree_replacement_block = (
         is_block_tree * BlockType.GRASS.value
         + is_block_fire_tree * BlockType.FIRE_GRASS.value
         + is_block_ice_shrub * BlockType.ICE_GRASS.value
     )
-
-    mined_tree_block = jax.lax.select(
-        is_mining_tree,
+    is_any_player_mining_tree = jnp.logical_and(
+        equal_block_placement,
+        is_mining_tree[:, None]
+    ).any(axis=0)
+    mined_tree_block = jnp.where(
+        is_any_player_mining_tree,
         tree_replacement_block,
-        state.map[state.player_level, block_position[0], block_position[1]],
+        state.map[state.player_level, block_position[:, 0], block_position[:, 1]],
     )
     new_map = (
         state.map[state.player_level]
-        .at[block_position[0], block_position[1]]
+        .at[block_position[:, 0], block_position[:, 1]]
         .set(mined_tree_block)
     )
     new_inventory = state.inventory.replace(
@@ -219,134 +240,220 @@ def do_action(rng, state, action, static_params):
 
     # Stone
     can_mine_stone = state.inventory.pickaxe >= 1
+    is_block_stone = (
+        state.map[state.player_level][block_position[:, 0], block_position[:, 1]]
+        == BlockType.STONE.value
+    )
     is_mining_stone = jnp.logical_and(
-        state.map[state.player_level][block_position[0], block_position[1]]
-        == BlockType.STONE.value,
-        can_mine_stone,
+        jnp.logical_and(
+            is_block_stone,
+            can_mine_stone
+        ),
+        doing_action,
     )
-    mined_stone_block = jax.lax.select(
-        is_mining_stone,
+    is_any_player_mining_stone = jnp.logical_and(
+        equal_block_placement,
+        is_mining_stone[:, None]
+    ).any(axis=0)
+    mined_stone_block = jnp.where(
+        is_any_player_mining_stone,
         BlockType.PATH.value,
-        new_map[block_position[0], block_position[1]],
+        new_map[block_position[:, 0], block_position[:, 1]],
     )
-    new_map = new_map.at[block_position[0], block_position[1]].set(mined_stone_block)
+    new_map = new_map.at[block_position[:, 0], block_position[:, 1]].set(mined_stone_block)
     new_inventory = new_inventory.replace(
         stone=new_inventory.stone + 1 * is_mining_stone
     )
 
     # Furnace
-    is_mining_furnace = (
-        state.map[state.player_level][block_position[0], block_position[1]]
+    is_block_furnace = (
+        state.map[state.player_level, block_position[:, 0], block_position[:, 1]]
         == BlockType.FURNACE.value
     )
-
-    mined_furnace_block = jax.lax.select(
-        is_mining_furnace,
-        BlockType.PATH.value,
-        new_map[block_position[0], block_position[1]],
+    is_mining_furnace = jnp.logical_and(
+        is_block_furnace,
+        doing_action,
     )
-    new_map = new_map.at[block_position[0], block_position[1]].set(mined_furnace_block)
+    is_any_player_mining_furnace = jnp.logical_and(
+        equal_block_placement,
+        is_mining_furnace[:, None]
+    ).any(axis=0)
+    mined_furnace_block = jnp.where(
+        is_any_player_mining_furnace,
+        BlockType.PATH.value,
+        new_map[block_position[:, 0], block_position[:, 1]],
+    )
+    new_map = new_map.at[block_position[:, 0], block_position[:, 1]].set(mined_furnace_block)
 
     # Crafting Bench
-    is_mining_crafting_table = (
-        state.map[state.player_level][block_position[0], block_position[1]]
+    is_block_crafting_table = (
+        state.map[state.player_level, block_position[:, 0], block_position[:, 1]]
         == BlockType.CRAFTING_TABLE.value
     )
-
-    mined_crafting_table_block = jax.lax.select(
-        is_mining_crafting_table,
-        BlockType.PATH.value,
-        new_map[block_position[0], block_position[1]],
+    is_mining_crafting_table = jnp.logical_and(
+        is_block_crafting_table,
+        doing_action,
     )
-    new_map = new_map.at[block_position[0], block_position[1]].set(
+    is_any_player_mining_crafting_table = jnp.logical_and(
+        equal_block_placement,
+        is_mining_crafting_table[:, None]
+    ).any(axis=0)
+    mined_crafting_table_block = jnp.where(
+        is_any_player_mining_crafting_table,
+        BlockType.PATH.value,
+        new_map[block_position[:, 0], block_position[:, 1]],
+    )
+    new_map = new_map.at[block_position[:, 0], block_position[:, 1]].set(
         mined_crafting_table_block
     )
 
     # Coal
     can_mine_coal = state.inventory.pickaxe >= 1
+    is_block_coal = (
+        state.map[state.player_level][block_position[:, 0], block_position[:, 1]]
+        == BlockType.COAL.value
+    )
     is_mining_coal = jnp.logical_and(
-        state.map[state.player_level][block_position[0], block_position[1]]
-        == BlockType.COAL.value,
-        can_mine_coal,
+        jnp.logical_and(
+            is_block_coal,
+            can_mine_coal
+        ),
+        doing_action,
     )
-    mined_coal_block = jax.lax.select(
-        is_mining_coal,
+    is_any_player_mining_coal = jnp.logical_and(
+        equal_block_placement,
+        is_mining_coal[:, None]
+    ).any(axis=0)
+    mined_coal_block = jnp.where(
+        is_any_player_mining_coal,
         BlockType.PATH.value,
-        new_map[block_position[0], block_position[1]],
+        new_map[block_position[:, 0], block_position[:, 1]],
     )
-    new_map = new_map.at[block_position[0], block_position[1]].set(mined_coal_block)
-    new_inventory = new_inventory.replace(coal=new_inventory.coal + 1 * is_mining_coal)
+    new_map = new_map.at[block_position[:, 0], block_position[:, 1]].set(mined_coal_block)
+    new_inventory = new_inventory.replace(
+        coal=new_inventory.coal + 1 * is_mining_coal
+    )
 
     # Iron
     can_mine_iron = state.inventory.pickaxe >= 2
+    is_block_iron = (
+        state.map[state.player_level, block_position[:, 0], block_position[:, 1]]
+        == BlockType.IRON.value
+    )
     is_mining_iron = jnp.logical_and(
-        state.map[state.player_level][block_position[0], block_position[1]]
-        == BlockType.IRON.value,
-        can_mine_iron,
+        jnp.logical_and(
+            is_block_iron,
+            can_mine_iron
+        ),
+        doing_action,
     )
-    mined_iron_block = jax.lax.select(
-        is_mining_iron,
+    is_any_player_mining_iron = jnp.logical_and(
+        equal_block_placement,
+        is_mining_iron[:, None]
+    ).any(axis=0)
+    mined_iron_block = jnp.where(
+        is_any_player_mining_iron,
         BlockType.PATH.value,
-        new_map[block_position[0], block_position[1]],
+        new_map[block_position[:, 0], block_position[:, 1]],
     )
-    new_map = new_map.at[block_position[0], block_position[1]].set(mined_iron_block)
-    new_inventory = new_inventory.replace(iron=new_inventory.iron + 1 * is_mining_iron)
+    new_map = new_map.at[block_position[:, 0], block_position[:, 1]].set(mined_iron_block)
+    new_inventory = new_inventory.replace(
+        iron=new_inventory.iron + 1 * is_mining_iron
+    )
 
-    # Diamond
+    # Diamond  
     can_mine_diamond = state.inventory.pickaxe >= 3
+    is_block_diamond = (
+        state.map[state.player_level, block_position[:, 0], block_position[:, 1]]
+        == BlockType.DIAMOND.value
+    )
     is_mining_diamond = jnp.logical_and(
-        state.map[state.player_level][block_position[0], block_position[1]]
-        == BlockType.DIAMOND.value,
-        can_mine_diamond,
+        jnp.logical_and(
+            is_block_diamond,
+            can_mine_diamond
+        ),
+        doing_action,
     )
-    mined_diamond_block = jax.lax.select(
-        is_mining_diamond,
+    is_any_player_mining_diamond = jnp.logical_and(
+        equal_block_placement,
+        is_mining_diamond[:, None]
+    ).any(axis=0)
+    mined_diamond_block = jnp.where(
+        is_any_player_mining_diamond,
         BlockType.PATH.value,
-        new_map[block_position[0], block_position[1]],
+        new_map[block_position[:, 0], block_position[:, 1]],
     )
-    new_map = new_map.at[block_position[0], block_position[1]].set(mined_diamond_block)
+    new_map = new_map.at[block_position[:, 0], block_position[:, 1]].set(mined_diamond_block)
     new_inventory = new_inventory.replace(
         diamond=new_inventory.diamond + 1 * is_mining_diamond
     )
 
     # Sapphire
     can_mine_sapphire = state.inventory.pickaxe >= 4
+    is_block_sapphire = (
+        state.map[state.player_level, block_position[:, 0], block_position[:, 1]]
+        == BlockType.SAPPHIRE.value
+    )
     is_mining_sapphire = jnp.logical_and(
-        state.map[state.player_level][block_position[0], block_position[1]]
-        == BlockType.SAPPHIRE.value,
-        can_mine_sapphire,
+        jnp.logical_and(
+            is_block_sapphire,
+            can_mine_sapphire
+        ),
+        doing_action,
     )
-    mined_sapphire_block = jax.lax.select(
-        is_mining_sapphire,
+    is_any_player_mining_sapphire = jnp.logical_and(
+        equal_block_placement,
+        is_mining_sapphire[:, None]
+    ).any(axis=0)
+    mined_sapphire_block = jnp.where(
+        is_any_player_mining_sapphire,
         BlockType.PATH.value,
-        new_map[block_position[0], block_position[1]],
+        new_map[block_position[:, 0], block_position[:, 1]],
     )
-    new_map = new_map.at[block_position[0], block_position[1]].set(mined_sapphire_block)
+    new_map = new_map.at[block_position[:, 0], block_position[:, 1]].set(mined_sapphire_block)
     new_inventory = new_inventory.replace(
         sapphire=new_inventory.sapphire + 1 * is_mining_sapphire
     )
 
     # Ruby
     can_mine_ruby = state.inventory.pickaxe >= 4
+    is_block_ruby = (
+        state.map[state.player_level, block_position[:, 0], block_position[:, 1]]
+        == BlockType.RUBY.value
+    )
     is_mining_ruby = jnp.logical_and(
-        state.map[state.player_level][block_position[0], block_position[1]]
-        == BlockType.RUBY.value,
-        can_mine_ruby,
+        jnp.logical_and(
+            is_block_ruby,
+            can_mine_ruby
+        ),
+        doing_action,
     )
-    mined_ruby_block = jax.lax.select(
-        is_mining_ruby,
+    is_any_player_mining_ruby = jnp.logical_and(
+        equal_block_placement,
+        is_mining_ruby[:, None]
+    ).any(axis=0)
+    mined_ruby_block = jnp.where(
+        is_any_player_mining_ruby,
         BlockType.PATH.value,
-        new_map[block_position[0], block_position[1]],
+        new_map[block_position[:, 0], block_position[:, 1]],
     )
-    new_map = new_map.at[block_position[0], block_position[1]].set(mined_ruby_block)
-    new_inventory = new_inventory.replace(ruby=new_inventory.ruby + 1 * is_mining_ruby)
+    new_map = new_map.at[block_position[:, 0], block_position[:, 1]].set(mined_ruby_block)
+    new_inventory = new_inventory.replace(
+        ruby=new_inventory.ruby + 1 * is_mining_ruby
+    )
 
     # Sapling
     rng, _rng = jax.random.split(rng)
+    is_block_grass = (
+        state.map[state.player_level, block_position[:, 0], block_position[:, 1]]
+        == BlockType.GRASS.value
+    )
     is_mining_sapling = jnp.logical_and(
-        state.map[state.player_level][block_position[0], block_position[1]]
-        == BlockType.GRASS.value,
-        jax.random.uniform(_rng) < 0.1,
+        jnp.logical_and(
+            is_block_grass,
+            jax.random.uniform(_rng, (static_params.player_count,)) < 0.1,
+        ),
+        doing_action,
     )
 
     new_inventory = new_inventory.replace(
@@ -354,139 +461,149 @@ def do_action(rng, state, action, static_params):
     )
 
     # Water
-    is_drinking_water = jnp.logical_or(
-        state.map[state.player_level][block_position[0], block_position[1]]
+    is_block_water = jnp.logical_or(
+        state.map[state.player_level, block_position[:, 0], block_position[:, 1]]
         == BlockType.WATER.value,
-        state.map[state.player_level][block_position[0], block_position[1]]
+        state.map[state.player_level][block_position[:, 0], block_position[:, 1]]
         == BlockType.FOUNTAIN.value,
     )
-    new_drink = jax.lax.select(
+    is_drinking_water = jnp.logical_and(
+        is_block_water,
+        doing_action,
+    )
+    new_drink = jnp.where(
         is_drinking_water,
         jnp.minimum(get_max_drink(state), state.player_drink + 1),
         state.player_drink,
     )
-    new_thirst = jax.lax.select(is_drinking_water, 0.0, state.player_thirst)
-    new_achievements = state.achievements.at[Achievement.COLLECT_DRINK.value].set(
+    new_thirst = jnp.where(
+        is_drinking_water, 
+        0.0, 
+        state.player_thirst
+    )
+    new_achievements = state.achievements.at[:, Achievement.COLLECT_DRINK.value].set(
         jnp.logical_or(
-            state.achievements[Achievement.COLLECT_DRINK.value], is_drinking_water
+            state.achievements[:, Achievement.COLLECT_DRINK.value], is_drinking_water
         )
     )
 
     # Plant
-    is_eating_plant = (
-        state.map[state.player_level][block_position[0], block_position[1]]
+    is_block_plant = (
+        state.map[state.player_level, block_position[:, 0], block_position[:, 1]]
         == BlockType.RIPE_PLANT.value
     )
-    new_plant = jax.lax.select(
-        is_eating_plant,
-        BlockType.PLANT.value,
-        new_map[block_position[0], block_position[1]],
+    is_eating_plant = jnp.logical_and(
+        is_block_plant,
+        doing_action
     )
-    new_map = new_map.at[block_position[0], block_position[1]].set(new_plant)
-    new_food = jax.lax.select(
+    is_any_player_eating_plant = jnp.logical_and(
+        equal_block_placement,
+        is_eating_plant[:, None]
+    ).any(axis=0)
+    new_plant = jnp.where(
+        is_any_player_eating_plant,
+        BlockType.PLANT.value,
+        new_map[block_position[:, 0], block_position[:, 1]],
+    )
+    new_map = new_map.at[block_position[:, 0], block_position[:, 1]].set(new_plant)
+    new_food = jnp.where(
         is_eating_plant,
         jnp.minimum(get_max_food(state), state.player_food + 4),
         state.player_food,
     )
-    new_hunger = jax.lax.select(is_eating_plant, 0.0, state.player_hunger)
-    new_achievements = new_achievements.at[Achievement.EAT_PLANT.value].set(
-        jnp.logical_or(new_achievements[Achievement.EAT_PLANT.value], is_eating_plant)
+    new_hunger = jnp.where(is_eating_plant, 0.0, state.player_hunger)
+    new_achievements = new_achievements.at[:, Achievement.EAT_PLANT.value].set(
+        jnp.logical_or(new_achievements[:, Achievement.EAT_PLANT.value], is_eating_plant)
     )
+    
     new_growing_plants_age = update_plants_with_eat(
-        state, block_position, static_params
+        state, block_position, is_any_player_eating_plant
     )
 
     # Stalagmite
     can_mine_stalagmite = state.inventory.pickaxe >= 1
+    is_block_stalagmite = (
+        state.map[state.player_level, block_position[:, 0], block_position[:, 1]]
+        == BlockType.STALAGMITE.value
+    )
     is_mining_stalagmite = jnp.logical_and(
-        state.map[state.player_level][block_position[0], block_position[1]]
-        == BlockType.STALAGMITE.value,
-        can_mine_stalagmite,
+        jnp.logical_and(
+            is_block_stalagmite,
+            can_mine_stalagmite
+        ),
+        doing_action,
     )
-    mined_stalagmite_block = jax.lax.select(
-        is_mining_stalagmite,
+    is_any_player_mining_stalagmite = jnp.logical_and(
+        equal_block_placement,
+        is_mining_stalagmite[:, None]
+    ).any(axis=0)
+    mined_stalagmite_block = jnp.where(
+        is_any_player_mining_stalagmite,
         BlockType.PATH.value,
-        new_map[block_position[0], block_position[1]],
+        new_map[block_position[:, 0], block_position[:, 1]],
     )
-    new_map = new_map.at[block_position[0], block_position[1]].set(
-        mined_stalagmite_block
-    )
+    new_map = new_map.at[block_position[:, 0], block_position[:, 1]].set(mined_stalagmite_block)
     new_inventory = new_inventory.replace(
         stone=new_inventory.stone + 1 * is_mining_stalagmite
     )
 
     # Chest
-    is_opening_chest = (
-        state.map[state.player_level][block_position[0], block_position[1]]
+    is_block_chest = (
+        state.map[state.player_level, block_position[:, 0], block_position[:, 1]]
         == BlockType.CHEST.value
     )
-    mined_chest_block = jax.lax.select(
-        is_opening_chest,
-        BlockType.PATH.value,
-        new_map[block_position[0], block_position[1]],
+    is_opening_chest = jnp.logical_and(
+        is_block_chest,
+        doing_action,
     )
-    new_map = new_map.at[block_position[0], block_position[1]].set(mined_chest_block)
+    is_any_player_opening_chest = jnp.logical_and(
+        equal_block_placement,
+        is_opening_chest[:, None]
+    ).any(axis=0)
+
+    mined_chest_block = jnp.where(
+        is_any_player_opening_chest,
+        BlockType.PATH.value,
+        new_map[block_position[:, 0], block_position[:, 1]],
+    )
+    new_map = new_map.at[block_position[:, 0], block_position[:, 1]].set(mined_chest_block)
     rng, _rng = jax.random.split(rng)
     new_inventory = add_items_from_chest(_rng, state, new_inventory, is_opening_chest)
 
     new_chests_opened = state.chests_opened.at[state.player_level].set(
-        jnp.logical_or(state.chests_opened[state.player_level], is_opening_chest)
+        jnp.logical_or(state.chests_opened[state.player_level], is_opening_chest.any())
     )
 
-    new_achievements = new_achievements.at[Achievement.OPEN_CHEST.value].set(
+    new_achievements = new_achievements.at[:, Achievement.OPEN_CHEST.value].set(
         jnp.logical_or(
-            state.achievements[Achievement.OPEN_CHEST.value], is_opening_chest
+            state.achievements[:, Achievement.OPEN_CHEST.value], is_opening_chest
         )
     )
 
     # Boss
-    is_attacking_boss = (
-        state.map[state.player_level][block_position[0], block_position[1]]
-        == BlockType.NECROMANCER.value
+    is_attacking_boss = jnp.logical_and(
+        state.map[state.player_level, block_position[:, 0], block_position[:, 1]]
+        == BlockType.NECROMANCER.value,
+        doing_action,
     )
-
+    can_damage_boss = jnp.logical_and(
+        is_boss_vulnerable(state), is_fighting_boss(state, static_params)
+    )
     is_damaging_boss = jnp.logical_and(
         is_attacking_boss,
-        jnp.logical_and(
-            is_boss_vulnerable(state), is_fighting_boss(state, static_params)
-        ),
+        can_damage_boss,
     )
 
-    new_boss_progress = state.boss_progress + 1 * is_damaging_boss
+    new_boss_progress = state.boss_progress + 1 * is_damaging_boss.any()
     new_boss_timesteps_to_spawn_this_round = (
-        BOSS_FIGHT_SPAWN_TURNS * is_damaging_boss
-        + state.boss_timesteps_to_spawn_this_round * (1 - is_damaging_boss)
+        BOSS_FIGHT_SPAWN_TURNS * is_damaging_boss.any()
+        + state.boss_timesteps_to_spawn_this_round * (1 - is_damaging_boss.any())
     )
 
-    new_achievements = new_achievements.at[Achievement.DAMAGE_NECROMANCER.value].set(
+    new_achievements = new_achievements.at[:, Achievement.DAMAGE_NECROMANCER.value].set(
         jnp.logical_or(
-            new_achievements[Achievement.DAMAGE_NECROMANCER.value], is_damaging_boss
+            new_achievements[:, Achievement.DAMAGE_NECROMANCER.value], is_damaging_boss
         )
-    )
-
-    # Action mining
-    action_block_in_bounds = in_bounds(block_position, static_params)
-    action_block_in_bounds = jnp.logical_and(
-        action_block_in_bounds, jnp.logical_not(did_attack_mob)
-    )
-    new_map = jax.lax.select(
-        action_block_in_bounds, new_map, state.map[state.player_level]
-    )
-    new_inventory = jax.tree_map(
-        lambda x, y: jax.lax.select(action_block_in_bounds, x, y),
-        new_inventory,
-        state.inventory,
-    )
-    new_drink = jax.lax.select(action_block_in_bounds, new_drink, state.player_drink)
-    new_thirst = jax.lax.select(action_block_in_bounds, new_thirst, state.player_thirst)
-    new_food = jax.lax.select(action_block_in_bounds, new_food, state.player_food)
-    new_hunger = jax.lax.select(action_block_in_bounds, new_hunger, state.player_hunger)
-    new_growing_plants_age = jax.lax.select(
-        action_block_in_bounds, new_growing_plants_age, state.growing_plants_age
-    )
-
-    new_achievements = jax.lax.select(
-        action_block_in_bounds, new_achievements, state.achievements
     )
 
     new_whole_map = state.map.at[state.player_level].set(new_map)
@@ -503,14 +620,6 @@ def do_action(rng, state, action, static_params):
         chests_opened=new_chests_opened,
         boss_progress=new_boss_progress,
         boss_timesteps_to_spawn_this_round=new_boss_timesteps_to_spawn_this_round,
-    )
-
-    # Do?
-    doing_mining = action == Action.DO.value
-    state = jax.tree_map(
-        lambda x, y: jax.lax.select(doing_mining, x, y),
-        state,
-        old_state,
     )
 
     return state
@@ -970,7 +1079,7 @@ def place_block(state, action, static_params):
         )
     )
 
-    # Torch (TODO)
+    # Torch
     # TODO: Make more parallelized
     def _player_place_torch(action_info, player_index):
         (
@@ -1844,7 +1953,7 @@ def update_mobs(rng, state, params, static_params):
             ),
         )  # Arrows can go over water
 
-        deal_damage = jnp.array([Action.DO.value]) * projectiles.mask[state.player_level, projectile_index]
+        deal_damage = projectiles.mask[state.player_level, projectile_index]
         state, did_attack_mob0, did_kill_mob0 = attack_mob(
             state,
             deal_damage,
@@ -3192,7 +3301,7 @@ def craftax_step(
     state = change_floor(state, actions, params, static_params)
 
     # Crafting
-    state = do_crafting(state, actions)
+    state = do_crafting(state, actions, static_params)
 
     # Interact (mining, melee attacking, eating plants, drinking water)
     rng, _rng = jax.random.split(rng)

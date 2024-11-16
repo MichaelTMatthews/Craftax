@@ -33,14 +33,13 @@ def has_beaten_boss(state, static_params):
 
 def attack_mob_class(
     state,
-    action,
+    doing_attack,
     mobs,
     position,
     damage_vector,
     can_get_achievement,
     mob_class_index,
 ):
-    doing_attack = action == Action.DO.value
 
     def is_attacking_mob_at_index(mob_index):
         in_mob = (mobs.position[state.player_level, mob_index] == position).all(axis=1)
@@ -102,7 +101,7 @@ def attack_mob_class(
     return mobs, did_kill_mob, is_attacking_mob, mobs_killed, new_achievements
 
 
-def attack_mob(state, action, position, damage_vector, can_eat):
+def attack_mob(state, doing_attack, position, damage_vector, can_eat):
     monsters_killed = state.monsters_killed
 
     # Melee
@@ -114,7 +113,7 @@ def attack_mob(state, action, position, damage_vector, can_eat):
         new_achievements,
     ) = attack_mob_class(
         state,
-        action,
+        doing_attack,
         state.melee_mobs,
         position,
         damage_vector,
@@ -137,7 +136,7 @@ def attack_mob(state, action, position, damage_vector, can_eat):
         new_achievements,
     ) = attack_mob_class(
         state,
-        action,
+        doing_attack,
         state.passive_mobs,
         position,
         damage_vector,
@@ -172,7 +171,7 @@ def attack_mob(state, action, position, damage_vector, can_eat):
         new_achievements,
     ) = attack_mob_class(
         state,
-        action,
+        doing_attack,
         state.ranged_mobs,
         position,
         damage_vector,
@@ -188,7 +187,6 @@ def attack_mob(state, action, position, damage_vector, can_eat):
     )
 
     # Update mob map on kill
-
     did_attack_mob = jnp.logical_or(
         jnp.logical_or(is_attacking_melee_mob, is_attacking_passive_mob),
         is_attacking_ranged_mob,
