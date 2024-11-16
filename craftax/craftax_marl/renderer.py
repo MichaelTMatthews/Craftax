@@ -356,18 +356,6 @@ def render_craftax_pixels(state, block_pixel_size, do_night_noise=True):
     )
 
     # Render player
-    player_texture_index = jnp.where(
-        state.is_sleeping,
-        4,
-        state.player_direction - 1
-    )
-    map_pixels = (
-        map_pixels
-        * (1 - textures["full_map_player_textures_alpha"][player_texture_index])
-        + textures["full_map_player_textures"][player_texture_index]
-        * textures["full_map_player_textures_alpha"][player_texture_index]
-    )
-
     # Helper functions to display and update slice
     def _slice_pixel_map(player_pixels, local_position):
         return jax.lax.dynamic_slice(
@@ -401,7 +389,6 @@ def render_craftax_pixels(state, block_pixel_size, do_night_noise=True):
         on_screen = jnp.logical_and(
             local_position >= 0, local_position < obs_dim_array
         ).all(axis=-1)
-        on_screen *= state.player_health[player_index] > 0
 
         player_texture_index = jax.lax.select(
             state.is_sleeping[player_index], 4, state.player_direction[player_index] - 1
