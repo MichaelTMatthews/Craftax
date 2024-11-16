@@ -3325,7 +3325,7 @@ def craftax_step(
 
     # Enchant
     rng, _rng = jax.random.split(rng)
-    state = enchant(_rng, state, actions)
+    state = enchant(_rng, state, actions, static_params)
 
     # Boss
     state = boss_logic(state, static_params)
@@ -3334,7 +3334,7 @@ def craftax_step(
     state = level_up_attributes(state, actions, params)
 
     # Movement
-    state = move_player(state, actions, params)
+    state = move_player(state, actions, params, static_params)
 
     # Mobs
     rng, _rng = jax.random.split(rng)
