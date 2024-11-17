@@ -18,18 +18,12 @@ def revive_player(state, block_position, is_doing_action, static_params):
         ),
         axis=-1
     )
-    new_player_alive = jnp.where(
-        is_player_being_revived,
-        True,
-        state.player_alive,
-    )
     new_player_health = jnp.where(
         is_player_being_revived,
         get_max_health(state) / 2,
         state.player_health,
     )
     state = state.replace(
-        player_alive=new_player_alive,
         player_health=new_player_health,
     )
     return state
@@ -3399,7 +3393,14 @@ def craftax_step(
         (state.achievements.astype(int) - init_achievements.astype(int))
         * achievement_coefficients
     ).sum(axis=1)
-    health_reward = (state.player_health - init_health) * 0.1
+
+    # Stops players who were just revived from gaining reward
+    health_reward = jnp.where(
+        state.player_alive,
+        (state.player_health - init_health) * 0.1,
+        0.0
+    )
+
     reward = achievement_reward + health_reward
 
     player_alive = state.player_health > 0.0
