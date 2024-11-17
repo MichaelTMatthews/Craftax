@@ -81,7 +81,7 @@ class CraftaxMARLSymbolicEnvNoAutoReset(EnvironmentNoAutoReset):
 
     @property
     def name(self) -> str:
-        return "Craftax-Symbolic-v1"
+        return "Craftax-MARL-Symbolic-v1"
 
     @property
     def num_actions(self) -> int:
@@ -174,27 +174,24 @@ class CraftaxMARLSymbolicEnv(environment.Environment):
         self, rng: chex.PRNGKey, params: EnvParams
     ) -> Tuple[chex.Array, EnvState]:
         state = generate_world(rng, params, self.static_env_params)
-
         return self.get_obs(state), state
 
     def get_obs(self, state: EnvState) -> chex.Array:
         pixels = render_craftax_symbolic(state, self.static_env_params)
-        obs = {player: pixels[i] for i, player in enumerate(self.player_names)}
+        obs = {agent: pixels[i] for i, agent in enumerate(self.player_names)}
         return obs
 
     def is_terminal(self, state: EnvState, params: EnvParams) -> bool:
         done_steps = state.timestep >= params.max_timesteps
-        is_dead = (state.player_health <= 0).all()
+        is_dead = jnp.logical_not(state.player_alive).all()
         defeated_boss = has_beaten_boss(state, self.static_env_params)
-
         is_terminal = jnp.logical_or(is_dead, done_steps)
         is_terminal = jnp.logical_or(is_terminal, defeated_boss)
-
         return is_terminal
 
     @property
     def name(self) -> str:
-        return "Craftax-Symbolic-v1"
+        return "Craftax-MARL-Symbolic-v1"
 
     @property
     def num_actions(self) -> int:

@@ -3317,7 +3317,6 @@ def craftax_step(
     init_achievements = state.achievements
     init_health = state.player_health
 
-    # TODO: modify any function (e.g. is_in_other_players) for dead players
     # Interrupt action if dead, sleeping or resting
     cant_do_action = jnp.logical_or(
         jnp.logical_not(state.player_alive),

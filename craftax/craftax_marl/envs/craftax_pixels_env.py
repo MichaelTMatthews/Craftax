@@ -65,12 +65,10 @@ class CraftaxMARLPixelsEnvNoAutoReset(EnvironmentNoAutoReset):
 
     def is_terminal(self, state: EnvState, params: EnvParams) -> bool:
         done_steps = state.timestep >= params.max_timesteps
-        is_dead = (state.player_health <= 0).all()
+        is_dead = jnp.logical_not(state.player_alive).all()
         defeated_boss = has_beaten_boss(state, self.static_env_params)
-
         is_terminal = jnp.logical_or(is_dead, done_steps)
         is_terminal = jnp.logical_or(is_terminal, defeated_boss)
-
         return is_terminal
 
     @property
@@ -156,7 +154,7 @@ class CraftaxMARLPixelsEnv(environment.Environment):
 
     @property
     def name(self) -> str:
-        return "Craftax-Pixels-v1"
+        return "Craftax-MARL-Pixels-v1"
 
     @property
     def num_actions(self) -> int:
