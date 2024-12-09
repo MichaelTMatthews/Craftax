@@ -7,6 +7,7 @@ import numpy as np
 from PIL import Image
 from craftax_marl.util.maths_utils import get_distance_map
 from environment_base.util import load_compressed_pickle, save_compressed_pickle
+from seaborn import husl_palette
 
 # GAME CONSTANTS
 OBS_DIM = (9, 11)
@@ -622,6 +623,16 @@ def apply_alpha(texture):
     return texture[:, :, :3] * jnp.repeat(
         jnp.expand_dims(texture[:, :, 3], axis=-1), 3, axis=-1
     )
+
+
+def load_multiplayer_textures(base_player_textures, player_count):
+    color_palette = (jnp.array(husl_palette(player_count, h=0.5, l=0.5)) * 255).astype(jnp.uint32)
+    color_palette = jnp.concatenate([color_palette, jnp.ones((player_count, 1))], axis=-1)
+    multiplayer_textures = base_player_textures[None, :].repeat(player_count, 0)
+    mask = (multiplayer_textures == jnp.array([0, 0, 0, 1])).all(axis=-1)[..., None]
+    colors_broadcasted = color_palette[:, None, None, None, :]
+    multiplayer_textures_colored = jnp.where(mask, colors_broadcasted, multiplayer_textures)
+    return multiplayer_textures_colored
 
 
 def load_mob_texture_set(filenames, block_pixel_size):

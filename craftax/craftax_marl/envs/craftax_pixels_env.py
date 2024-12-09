@@ -59,7 +59,7 @@ class CraftaxMARLPixelsEnvNoAutoReset(EnvironmentNoAutoReset):
         return self.get_obs(state), state
 
     def get_obs(self, state: EnvState) -> chex.Array:
-        pixels = render_craftax_pixels(state, BLOCK_PIXEL_SIZE_HUMAN) / 255.0
+        pixels = render_craftax_pixels(state, BLOCK_PIXEL_SIZE_HUMAN, self.static_env_params) / 255.0
         obs = {player: pixels[i] for i, player in enumerate(self.player_names)}
         return obs
 
@@ -140,7 +140,7 @@ class CraftaxMARLPixelsEnv(environment.Environment):
         return self.get_obs(state), state
 
     def get_obs(self, state: EnvState) -> chex.Array:
-        pixels = render_craftax_pixels(state, BLOCK_PIXEL_SIZE_HUMAN) / 255.0
+        pixels = render_craftax_pixels(state, BLOCK_PIXEL_SIZE_HUMAN, self.static_env_params) / 255.0
         obs = {player: pixels[i] for i, player in enumerate(self.player_names)}
         return obs
 

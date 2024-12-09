@@ -250,8 +250,12 @@ def render_craftax_symbolic(state: EnvState, static_params: StaticEnvParams):
         2,
     ),
 )
-def render_craftax_pixels(state, block_pixel_size, do_night_noise=True):
+def render_craftax_pixels(state, block_pixel_size, static_params, do_night_noise=True):
     textures = TEXTURES[block_pixel_size]
+    player_textures = load_multiplayer_textures(
+        textures["player_textures"], 
+        static_params.player_count
+    )
     obs_dim_array = jnp.array([OBS_DIM[0], OBS_DIM[1]], dtype=jnp.int32)
 
     # RENDER MAP
@@ -396,16 +400,16 @@ def render_craftax_pixels(state, block_pixel_size, do_night_noise=True):
         player_texture_index = jax.lax.select(
             state.player_alive[player_index], player_texture_index, 5
         )
-        player_texture = textures["player_textures"][player_texture_index]
+        player_texture = player_textures[:, player_texture_index]
         player_texture, player_texture_alpha = (
-            player_texture[:, :, :3],
-            player_texture[:, :, 3:],
+            player_texture[:, :, :, :3],
+            player_texture[:, :, :, 3:],
         )
 
-        player_texture = jax.vmap(jnp.multiply, in_axes=(None, 0))(
+        player_texture = jax.vmap(jnp.multiply, in_axes=(0, 0))(
             player_texture, on_screen
         )
-        player_texture_with_background = 1 - jax.vmap(jnp.multiply, in_axes=(None, 0))(
+        player_texture_with_background = 1 - jax.vmap(jnp.multiply, in_axes=(0, 0))(
             player_texture_alpha, on_screen
         )
         player_texture_with_background = player_texture_with_background * jax.vmap(
