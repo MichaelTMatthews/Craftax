@@ -400,16 +400,16 @@ def render_craftax_pixels(state, block_pixel_size, static_params, do_night_noise
         player_texture_index = jax.lax.select(
             state.player_alive[player_index], player_texture_index, 5
         )
-        player_texture = player_textures[:, player_texture_index]
+        player_texture = player_textures[player_index, player_texture_index]
         player_texture, player_texture_alpha = (
-            player_texture[:, :, :, :3],
-            player_texture[:, :, :, 3:],
+            player_texture[:, :, :3],
+            player_texture[:, :, 3:],
         )
 
-        player_texture = jax.vmap(jnp.multiply, in_axes=(0, 0))(
+        player_texture = jax.vmap(jnp.multiply, in_axes=(None, 0))(
             player_texture, on_screen
         )
-        player_texture_with_background = 1 - jax.vmap(jnp.multiply, in_axes=(0, 0))(
+        player_texture_with_background = 1 - jax.vmap(jnp.multiply, in_axes=(None, 0))(
             player_texture_alpha, on_screen
         )
         player_texture_with_background = player_texture_with_background * jax.vmap(
@@ -425,7 +425,7 @@ def render_craftax_pixels(state, block_pixel_size, static_params, do_night_noise
         return pixels, None
 
     map_pixels, _ = jax.lax.scan(
-        _render_friends, map_pixels, jnp.arange(map_pixels.shape[0])
+        _render_friends, map_pixels, jnp.arange(static_params.player_count)
     )
 
     # Render mobs

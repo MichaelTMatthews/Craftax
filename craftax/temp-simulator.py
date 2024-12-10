@@ -90,7 +90,7 @@ class CraftaxRenderer:
         # Clear
         self.screen_surface.fill((0, 0, 0))
 
-        pixels = self._render(env_state, block_pixel_size=BLOCK_PIXEL_SIZE_HUMAN)[0]
+        pixels = self._render(env_state, BLOCK_PIXEL_SIZE_HUMAN, env.static_env_params)[0]
         pixels = jnp.repeat(pixels, repeats=self.pixel_render_size, axis=0)
         pixels = jnp.repeat(pixels, repeats=self.pixel_render_size, axis=1)
 
