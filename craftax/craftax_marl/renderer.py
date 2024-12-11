@@ -7,8 +7,6 @@ from craftax_marl.util.game_logic_utils import is_boss_vulnerable
 
 
 def render_craftax_symbolic(state: EnvState, static_params: StaticEnvParams):
-    # TODO: ADD OTHER PLAYERS ONTO THE SAME MAP
-
     map = state.map[state.player_level]
 
     obs_dim_array = jnp.array([OBS_DIM[0], OBS_DIM[1]], dtype=jnp.int32)
@@ -109,8 +107,41 @@ def render_craftax_symbolic(state: EnvState, static_params: StaticEnvParams):
     
     
     # Teammate map (0th index for alive, 1th for dead)
-    teammate_map = jnp.zeros(
-        (static_params.player_count, *OBS_DIM, 2), dtype=jnp.int32
+    def _add_teammate(player_index):
+        """Creates teammate map for each player"""
+        teammate_map = jnp.zeros(
+            (static_params.player_count, *OBS_DIM, 2), dtype=jnp.int32
+        )
+        local_position = (
+            -1 * state.player_position[player_index]
+            + state.player_position
+            + jnp.array([OBS_DIM[0], OBS_DIM[1]]) // 2
+        )
+        on_screen = jnp.logical_and(
+            local_position >= 0, local_position < jnp.array([OBS_DIM[0], OBS_DIM[1]])
+        ).all(axis=-1)
+        teammate_map = teammate_map.at[
+            jnp.arange(static_params.player_count), local_position[:, 0], local_position[:, 1], 0
+        ].set(
+            jnp.logical_and(
+                on_screen,
+                state.player_alive
+            )
+        )
+        teammate_map = teammate_map.at[
+            jnp.arange(static_params.player_count), local_position[:, 0], local_position[:, 1], 1
+        ].set(
+            jnp.logical_and(
+                on_screen,
+                jnp.logical_not(state.player_alive)
+            )
+        )
+        return teammate_map
+    teammate_map = jax.vmap(_add_teammate, in_axes=0)(jnp.arange(static_params.player_count))
+
+    # Teammate direction for off-screen teammates (0th index for alive, 1th for dead)
+    teammate_direction = jnp.zeros(
+        (static_params.player_count, 8, 2)
     )
     local_position = (
         -1 * state.player_position[:, None]
@@ -120,27 +151,6 @@ def render_craftax_symbolic(state: EnvState, static_params: StaticEnvParams):
     on_screen = jnp.logical_and(
         local_position >= 0, local_position < jnp.array([OBS_DIM[0], OBS_DIM[1]])
     ).all(axis=-1)
-    teammate_map = teammate_map.at[
-        jnp.arange(static_params.player_count)[:, None], local_position[:, :, 0], local_position[:, :, 1], 0
-    ].set(
-        jnp.logical_and(
-            on_screen,
-            state.player_alive
-        )
-    )
-    teammate_map = teammate_map.at[
-        jnp.arange(static_params.player_count)[:, None], local_position[:, :, 0], local_position[:, :, 1], 1
-    ].set(
-        jnp.logical_and(
-            on_screen,
-            jnp.logical_not(state.player_alive)
-        )
-    )
-
-    # Teammate direction for off-screen teammates (0th index for alive, 1th for dead)
-    teammate_direction = jnp.zeros(
-        (static_params.player_count, 8, 2)
-    )
     direction_index_2d = jnp.where(
         local_position < 0, 1,
         jnp.where(local_position >= jnp.array([OBS_DIM[0], OBS_DIM[1]]), 2, 0)
