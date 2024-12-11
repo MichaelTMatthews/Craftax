@@ -113,8 +113,8 @@ def render_craftax_symbolic(state: EnvState, static_params: StaticEnvParams):
         (static_params.player_count, *OBS_DIM, 2), dtype=jnp.int32
     )
     local_position = (
-        -1 * state.player_position
-        + state.player_position[:, None]
+        -1 * state.player_position[:, None]
+        + state.player_position
         + jnp.array([OBS_DIM[0], OBS_DIM[1]]) // 2
     )
     on_screen = jnp.logical_and(
