@@ -143,7 +143,7 @@ def render_craftax_symbolic(state: EnvState, static_params: StaticEnvParams):
     )
     direction_index_2d = jnp.where(
         local_position < 0, 1,
-        jnp.where(local_position > jnp.array([OBS_DIM[0], OBS_DIM[1]]), 2, 0)
+        jnp.where(local_position >= jnp.array([OBS_DIM[0], OBS_DIM[1]]), 2, 0)
     )
     direction_index = direction_index_2d[:, :, 0]*3 + direction_index_2d[:, :, 1] - 1
     teammate_direction = teammate_direction.at[
@@ -410,7 +410,7 @@ def render_craftax_pixels(state, block_pixel_size, static_params, do_night_noise
             ),
         )
 
-    # Render other players
+    # Render each player on the map of other players
     def _render_friends(pixels, player_index):
         local_position = (
             state.player_position[player_index]
@@ -671,19 +671,99 @@ def render_craftax_pixels(state, block_pixel_size, static_params, do_night_noise
     sleep_level = 1.0 - state.is_sleeping * 0.5
     map_pixels = jax.vmap(jnp.multiply, in_axes=(0, 0))(sleep_level, map_pixels)
 
-    # Render mob map
-    # mob_map_pixels = (
-    #     jnp.array([[[128, 0, 0]]]).repeat(OBS_DIM[0], axis=0).repeat(OBS_DIM[1], axis=1)
-    # )
-    # padded_mob_map = jnp.pad(
-    #     state.mob_map[state.player_level], MAX_OBS_DIM + 2, constant_values=False
-    # )
-    # mob_map_view = jax.lax.dynamic_slice(padded_mob_map, tl_corner, OBS_DIM)
-    # mob_map_pixels = mob_map_pixels * jnp.expand_dims(mob_map_view, axis=-1)
-    # mob_map_pixels = mob_map_pixels.repeat(block_pixel_size, axis=0).repeat(
-    #     block_pixel_size, axis=1
-    # )
-    # map_pixels = map_pixels + mob_map_pixels
+
+    # Render alive player directions
+    def _overlay_alive_direction(pixels, player_index):
+        local_position = (
+            state.player_position[player_index]
+            - state.player_position
+            + jnp.ones((2,), dtype=jnp.int32) * (obs_dim_array // 2)
+        )
+        on_screen = jnp.logical_and(
+            local_position >= 0, local_position < obs_dim_array
+        ).all(axis=-1)  
+        render_direction = jnp.logical_and(
+            jnp.logical_not(on_screen),
+            state.player_alive[player_index]
+        )
+
+        direction_index_2d = jnp.where(
+            local_position < 0, 0,
+            jnp.where(local_position >= jnp.array([OBS_DIM[0], OBS_DIM[1]]), 2, 1)
+        )
+        direction_texture = textures["alive_direction_textures"][direction_index_2d[:, 0], direction_index_2d[:, 1]]
+        direction_texture, direction_texture_alpha = (
+            direction_texture[:, :, :, :3],
+            direction_texture[:, :, :, 3:]
+        )
+        direction_texture = jax.vmap(jnp.multiply, in_axes=(0, 0))(
+            direction_texture, render_direction
+        )
+        direction_texture_with_background = 1 - jax.vmap(jnp.multiply, in_axes=(0, 0))(
+            direction_texture_alpha, render_direction
+        )
+        pointer_position = direction_index_2d*(jnp.array([OBS_DIM[0], OBS_DIM[1]])//2)
+        direction_texture_with_background = direction_texture_with_background * jax.vmap(
+            _slice_pixel_map, in_axes=(0, 0)
+        )(pixels, pointer_position)
+        direction_texture_with_background = (
+            direction_texture_with_background + direction_texture * direction_texture_alpha
+        )
+        pixels = jax.vmap(_update_slice_pixel_map, in_axes=(0, 0, 0))(
+            pixels, direction_texture_with_background, pointer_position
+        )
+        return pixels, None
+
+    map_pixels, _ = jax.lax.scan(
+        _overlay_alive_direction, map_pixels, jnp.arange(static_params.player_count)
+    )
+
+    # Render dead player directions
+    def _overlay_dead_direction(pixels, player_index):
+        local_position = (
+            state.player_position[player_index]
+            - state.player_position
+            + jnp.ones((2,), dtype=jnp.int32) * (obs_dim_array // 2)
+        )
+        on_screen = jnp.logical_and(
+            local_position >= 0, local_position < obs_dim_array
+        ).all(axis=-1)  
+        render_direction = jnp.logical_and(
+            jnp.logical_not(on_screen),
+            jnp.logical_not(state.player_alive[player_index])
+        )
+
+        direction_index_2d = jnp.where(
+            local_position < 0, 0,
+            jnp.where(local_position >= jnp.array([OBS_DIM[0], OBS_DIM[1]]), 2, 1)
+        )
+        direction_texture = textures["dead_direction_textures"][direction_index_2d[:, 0], direction_index_2d[:, 1]]
+        direction_texture, direction_texture_alpha = (
+            direction_texture[:, :, :, :3],
+            direction_texture[:, :, :, 3:]
+        )
+        direction_texture = jax.vmap(jnp.multiply, in_axes=(0, 0))(
+            direction_texture, render_direction
+        )
+        direction_texture_with_background = 1 - jax.vmap(jnp.multiply, in_axes=(0, 0))(
+            direction_texture_alpha, render_direction
+        )
+        pointer_position = direction_index_2d*(jnp.array([OBS_DIM[0], OBS_DIM[1]])//2)
+        direction_texture_with_background = direction_texture_with_background * jax.vmap(
+            _slice_pixel_map, in_axes=(0, 0)
+        )(pixels, pointer_position)
+        direction_texture_with_background = (
+            direction_texture_with_background + direction_texture * direction_texture_alpha
+        )
+        pixels = jax.vmap(_update_slice_pixel_map, in_axes=(0, 0, 0))(
+            pixels, direction_texture_with_background, pointer_position
+        )
+        return pixels, None
+
+    map_pixels, _ = jax.lax.scan(
+        _overlay_dead_direction, map_pixels, jnp.arange(static_params.player_count)
+    )
+
 
     # RENDER INVENTORY
     inv_pixel_left_space = (block_pixel_size - int(0.8 * block_pixel_size)) // 2

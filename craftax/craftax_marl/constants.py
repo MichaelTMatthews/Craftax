@@ -776,6 +776,30 @@ def load_all_textures(block_pixel_size):
         ]
     )
 
+    # Teammate directions
+    def _generate_all_direction_textures(horizontal_texture_base, diagonal_texture_base):
+        right = horizontal_texture_base
+        up = jnp.rot90(right, k=1)
+        left = jnp.rot90(right, k=2)
+        down = jnp.rot90(right, k=3)
+        top_right = diagonal_texture_base
+        top_left = jnp.rot90(top_right, k=1)
+        bottom_left = jnp.rot90(top_right, k=2)
+        bottom_right = jnp.rot90(top_right, k=3)
+        return jnp.array([
+            [top_left, up, top_right],
+            [left, left, right],
+            [bottom_left, down, bottom_right],
+        ])
+
+    alive_direction_texture_base = load_texture("pointer-right.png", block_pixel_size)
+    alive_direction_diagonal_texture_base = load_texture("pointer-top-right.png", block_pixel_size)
+    alive_direction_textures = _generate_all_direction_textures(alive_direction_texture_base, alive_direction_diagonal_texture_base)
+
+    dead_direction_texture_base = load_texture("pointer-right-dead.png", block_pixel_size)
+    dead_direction_diagonal_texture_base = load_texture("pointer-top-right-dead.png", block_pixel_size)
+    dead_direction_textures = _generate_all_direction_textures(dead_direction_texture_base, dead_direction_diagonal_texture_base)
+
     # inventory
 
     empty_texture = jnp.zeros((block_pixel_size, block_pixel_size, 3), dtype=jnp.int32)
@@ -1104,6 +1128,8 @@ def load_all_textures(block_pixel_size):
         "melee_mob_texture_alphas": melee_mob_texture_alphas,
         "passive_mob_textures": passive_mob_textures,
         "passive_mob_texture_alphas": passive_mob_texture_alphas,
+        "alive_direction_textures": alive_direction_textures,
+        "dead_direction_textures": dead_direction_textures,
         "ranged_mob_textures": ranged_mob_textures,
         "ranged_mob_texture_alphas": ranged_mob_texture_alphas,
         "projectile_textures": projectile_textures,
