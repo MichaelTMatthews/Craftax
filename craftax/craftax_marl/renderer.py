@@ -121,7 +121,7 @@ def render_craftax_symbolic(state: EnvState, static_params: StaticEnvParams):
         local_position >= 0, local_position < jnp.array([OBS_DIM[0], OBS_DIM[1]])
     ).all(axis=-1)
     teammate_map = teammate_map.at[
-        jnp.arange(static_params.player_count), local_position[:, :, 0], local_position[:, :, 1], 0
+        jnp.arange(static_params.player_count)[:, None], local_position[:, :, 0], local_position[:, :, 1], 0
     ].set(
         jnp.logical_and(
             on_screen,
@@ -129,10 +129,36 @@ def render_craftax_symbolic(state: EnvState, static_params: StaticEnvParams):
         )
     )
     teammate_map = teammate_map.at[
-        jnp.arange(static_params.player_count), local_position[:, :, 0], local_position[:, :, 1], 1
+        jnp.arange(static_params.player_count)[:, None], local_position[:, :, 0], local_position[:, :, 1], 1
     ].set(
         jnp.logical_and(
             on_screen,
+            jnp.logical_not(state.player_alive)
+        )
+    )
+
+    # Teammate direction for off-screen teammates (0th index for alive, 1th for dead)
+    teammate_direction = jnp.zeros(
+        (static_params.player_count, 8, 2)
+    )
+    direction_index_2d = jnp.where(
+        local_position < 0, 1,
+        jnp.where(local_position > jnp.array([OBS_DIM[0], OBS_DIM[1]]), 2, 0)
+    )
+    direction_index = direction_index_2d[:, :, 0]*3 + direction_index_2d[:, :, 1] - 1
+    teammate_direction = teammate_direction.at[
+        jnp.arange(static_params.player_count)[:, None], direction_index, 0
+    ].max(
+        jnp.logical_and(
+            jnp.logical_not(on_screen),
+            state.player_alive
+        )
+    )
+    teammate_direction = teammate_direction.at[
+        jnp.arange(static_params.player_count)[:, None], direction_index, 1
+    ].max(
+        jnp.logical_and(
+            jnp.logical_not(on_screen),
             jnp.logical_not(state.player_alive)
         )
     )
@@ -228,6 +254,7 @@ def render_craftax_symbolic(state: EnvState, static_params: StaticEnvParams):
     all_flattened = jnp.concatenate(
         [
             all_map.reshape(all_map.shape[0], -1),
+            teammate_direction.reshape(teammate_direction.shape[0], -1),
             inventory,
             potions,
             intrinsics,
