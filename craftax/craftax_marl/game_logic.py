@@ -2727,14 +2727,10 @@ def change_floor(
         actions == Action.ASCEND.value,
         jnp.logical_or(
             env_params.god_mode,
-            jnp.logical_and(
-                state.item_map[
-                    state.player_level, state.player_position[:, 0], state.player_position[:, 1]
-                ]
-                == ItemType.LADDER_UP.value,
-                state.monsters_killed[state.player_level]
-                >= MONSTERS_KILLED_TO_CLEAR_LEVEL
-            )
+            state.item_map[
+                state.player_level, state.player_position[:, 0], state.player_position[:, 1]
+            ]
+            == ItemType.LADDER_UP.value
         )
     )
     is_moving_up = jnp.logical_and(
