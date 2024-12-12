@@ -61,20 +61,16 @@ def generate_dungeon(rng, static_params, config):
     world_chunk_height = static_params.map_size[1] // chunk_size
     room_occupancy_chunks = jnp.ones(world_chunk_width * world_chunk_height)
 
-    num_rooms = 8
-    min_room_size = 5
-    max_room_size = 10
-
     rng, _rng, __rng = jax.random.split(rng, 3)
     room_sizes = jax.random.randint(
-        __rng, shape=(num_rooms, 2), minval=min_room_size, maxval=max_room_size
+        __rng, shape=(NUM_ROOMS, 2), minval=MIN_ROOM_SIZE, maxval=MAX_ROOM_SIZE
     )
 
     map = jnp.ones(static_params.map_size, dtype=jnp.int32) * BlockType.WALL.value
-    padded_map = jnp.pad(map, max_room_size, constant_values=0)
+    padded_map = jnp.pad(map, MAX_ROOM_SIZE, constant_values=0)
 
     item_map = jnp.zeros(static_params.map_size, dtype=jnp.int32)
-    padded_item_map = jnp.pad(item_map, max_room_size, constant_values=0)
+    padded_item_map = jnp.pad(item_map, MAX_ROOM_SIZE, constant_values=0)
 
     def _add_room(carry, room_index):
         block_map, item_map, room_occupancy_chunks, rng = carry
@@ -92,20 +88,20 @@ def generate_dungeon(rng, static_params, config):
                 (room_chunk % world_chunk_height) * chunk_size,
                 (room_chunk // world_chunk_height) * chunk_size,
             ]
-        ) + jnp.array([max_room_size, max_room_size])
+        ) + jnp.array([MAX_ROOM_SIZE, MAX_ROOM_SIZE])
         rng, _rng = jax.random.split(rng)
         room_position += jax.random.randint(
-            _rng, (2,), minval=0, maxval=chunk_size - min_room_size
+            _rng, (2,), minval=0, maxval=chunk_size - MIN_ROOM_SIZE
         )
 
         slice = jax.lax.dynamic_slice(
-            block_map, room_position, (max_room_size, max_room_size)
+            block_map, room_position, (MAX_ROOM_SIZE, MAX_ROOM_SIZE)
         )
-        xs = jnp.expand_dims(jnp.arange(max_room_size), axis=-1).repeat(
-            max_room_size, axis=-1
+        xs = jnp.expand_dims(jnp.arange(MAX_ROOM_SIZE), axis=-1).repeat(
+            MAX_ROOM_SIZE, axis=-1
         )
-        ys = jnp.expand_dims(jnp.arange(max_room_size), axis=0).repeat(
-            max_room_size, axis=0
+        ys = jnp.expand_dims(jnp.arange(MAX_ROOM_SIZE), axis=0).repeat(
+            MAX_ROOM_SIZE, axis=0
         )
 
         room_mask = jnp.logical_and(
@@ -139,12 +135,12 @@ def generate_dungeon(rng, static_params, config):
         rng, _rng = jax.random.split(rng)
         chest_position = jax.random.randint(
             _rng,
-            shape=(2,),
+            shape=(static_params.player_count, 2),
             minval=jnp.ones(2),
             maxval=room_sizes[room_index] - jnp.ones(2),
         )
         block_map = block_map.at[
-            room_position[0] + chest_position[0], room_position[1] + chest_position[1]
+            room_position[0] + chest_position[:, 0], room_position[1] + chest_position[:, 1]
         ].set(BlockType.CHEST.value)
 
         # Fountain
@@ -169,14 +165,17 @@ def generate_dungeon(rng, static_params, config):
             room_position[1] + fountain_position[1],
         ].set(fountain_block)
 
-        return (block_map, item_map, room_occupancy_chunks, rng), room_position
+        return (block_map, item_map, room_occupancy_chunks, rng), (room_position, room_position+chest_position-MAX_ROOM_SIZE)
 
     rng, _rng = jax.random.split(rng)
-    (padded_map, padded_item_map, _, _), room_positions = jax.lax.scan(
+    (padded_map, padded_item_map, _, _), (room_positions, chest_positions) = jax.lax.scan(
         _add_room,
         (padded_map, padded_item_map, room_occupancy_chunks, _rng),
-        jnp.arange(num_rooms),
+        jnp.arange(NUM_ROOMS),
     )
+
+    # convert from (rooms, players, 2) to (players, rooms, 2)
+    chest_positions = chest_positions.transpose((1, 0, 2))
 
     def _add_path(carry, path_index):
         cmap, included_rooms_mask, rng = carry
@@ -185,13 +184,13 @@ def generate_dungeon(rng, static_params, config):
 
         rng, _rng = jax.random.split(rng)
         sink_index = jax.random.choice(
-            _rng, jnp.arange(num_rooms), p=included_rooms_mask
+            _rng, jnp.arange(NUM_ROOMS), p=included_rooms_mask
         )
         path_sink = room_positions[sink_index]
 
         # Horizontal component
         entire_row = cmap[path_source[0]]
-        path_indexes = jnp.arange(static_params.map_size[0] + 2 * max_room_size)
+        path_indexes = jnp.arange(static_params.map_size[0] + 2 * MAX_ROOM_SIZE)
         path_indexes = path_indexes - path_source[1]
         horizontal_distance = path_sink[1] - path_source[1]
         path_indexes = path_indexes * jnp.sign(horizontal_distance)
@@ -218,7 +217,7 @@ def generate_dungeon(rng, static_params, config):
 
         # Vertical component
         entire_col = cmap[:, path_sink[1]]
-        path_indexes = jnp.arange(static_params.map_size[1] + 2 * max_room_size)
+        path_indexes = jnp.arange(static_params.map_size[1] + 2 * MAX_ROOM_SIZE)
         path_indexes = path_indexes - path_source[0]
         vertical_distance = path_sink[0] - path_source[0]
         path_indexes = path_indexes * jnp.sign(vertical_distance)
@@ -247,12 +246,12 @@ def generate_dungeon(rng, static_params, config):
         return (cmap, included_rooms_mask, _rng), None
 
     rng, _rng = jax.random.split(rng)
-    included_rooms_mask = jnp.zeros(num_rooms, dtype=bool).at[-1].set(True)
+    included_rooms_mask = jnp.zeros(NUM_ROOMS, dtype=bool).at[-1].set(True)
     (
         (padded_map, _, _),
         _,
     ) = jax.lax.scan(
-        _add_path, (padded_map, included_rooms_mask, _rng), jnp.arange(0, num_rooms)
+        _add_path, (padded_map, included_rooms_mask, _rng), jnp.arange(0, NUM_ROOMS)
     )
 
     # Place special block in a random room
@@ -261,9 +260,9 @@ def generate_dungeon(rng, static_params, config):
         special_block_position[0], special_block_position[1]
     ].set(config.special_block)
 
-    map = padded_map[max_room_size:-max_room_size, max_room_size:-max_room_size]
+    map = padded_map[MAX_ROOM_SIZE:-MAX_ROOM_SIZE, MAX_ROOM_SIZE:-MAX_ROOM_SIZE]
     item_map = padded_item_map[
-        max_room_size:-max_room_size, max_room_size:-max_room_size
+        MAX_ROOM_SIZE:-MAX_ROOM_SIZE, MAX_ROOM_SIZE:-MAX_ROOM_SIZE
     ]
 
     # Visual stuff
@@ -313,7 +312,7 @@ def generate_dungeon(rng, static_params, config):
         ItemType.LADDER_UP.value
     )
 
-    return map, item_map, light_map, ladders_down, ladders_up
+    return map, item_map, light_map, ladders_down, ladders_up, chest_positions
 
 
 def generate_smoothworld(rng, static_params, player_position, config, params=None):
@@ -488,7 +487,10 @@ def generate_smoothworld(rng, static_params, player_position, config, params=Non
         + map[ladders_up[:, 0], ladders_up[:, 1]] * (1 - config.ladder_up)
     )
 
-    return map, item_map, light_map, ladders_down, ladders_up
+    # No chests exist in smoothworlds and so we return an empty array here
+    chest_positions = jnp.zeros((static_params.player_count, NUM_ROOMS, 2), dtype=jnp.int32)
+
+    return map, item_map, light_map, ladders_down, ladders_up, chest_positions
 
 
 def generate_world(rng, params, static_params):
@@ -523,7 +525,7 @@ def generate_world(rng, params, static_params):
     # Returns stacked versions of the map, item_map, light_map and ladders
     # 9 elements in each of these stacks representing each of the levels.
     # Splice smoothgens and dungeons in order of levels
-    map, item_map, light_map, ladders_down, ladders_up = jax.tree_map(
+    map, item_map, light_map, ladders_down, ladders_up, chest_positions = jax.tree_map(
         lambda x, y: jnp.stack(
             (x[0], y[0], x[1], y[1], y[2], x[2], x[3], x[4], x[5]), axis=0
         ),
@@ -605,7 +607,8 @@ def generate_world(rng, params, static_params):
         light_map=light_map,
         down_ladders=ladders_down,
         up_ladders=ladders_up,
-        chests_opened=jnp.zeros(static_params.num_levels, dtype=bool),
+        chests_opened=jnp.zeros((static_params.num_levels, static_params.player_count), dtype=bool),
+        chest_positions=chest_positions,
         monsters_killed=jnp.zeros(static_params.num_levels, dtype=jnp.int32)
         .at[0]
         .set(10),  # First ladder starts open

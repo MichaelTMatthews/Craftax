@@ -581,9 +581,15 @@ def do_action(rng, state, action, static_params):
         state.map[state.player_level, block_position[:, 0], block_position[:, 1]]
         == BlockType.CHEST.value
     )
+    is_players_chest = (
+        (state.chest_positions[state.player_level] == block_position[:, None]).all(axis=-1)
+    ).any(axis=-1)
     is_opening_chest = jnp.logical_and(
-        is_block_chest,
-        doing_action,
+        is_players_chest,
+        jnp.logical_and(
+            is_block_chest,
+            doing_action,
+        )
     )
     is_any_player_opening_chest = jnp.logical_and(
         equal_block_placement,
@@ -600,7 +606,7 @@ def do_action(rng, state, action, static_params):
     new_inventory = add_items_from_chest(_rng, state, new_inventory, is_opening_chest)
 
     new_chests_opened = state.chests_opened.at[state.player_level].set(
-        jnp.logical_or(state.chests_opened[state.player_level], is_opening_chest.any())
+        jnp.logical_or(state.chests_opened[state.player_level], is_opening_chest)
     )
 
     new_achievements = new_achievements.at[:, Achievement.OPEN_CHEST.value].set(

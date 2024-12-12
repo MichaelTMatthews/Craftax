@@ -23,6 +23,10 @@ class CraftaxMARLPixelsEnvNoAutoReset(EnvironmentNoAutoReset):
         self.player_names = [
             f"agent_{i}" for i in range(self.static_env_params.player_count)
         ]
+        self.player_specific_textures = load_player_specific_textures(
+            TEXTURES[BLOCK_PIXEL_SIZE_HUMAN],
+            self.static_env_params.player_count
+        )
 
     @property
     def default_params(self) -> EnvParams:
@@ -59,7 +63,12 @@ class CraftaxMARLPixelsEnvNoAutoReset(EnvironmentNoAutoReset):
         return self.get_obs(state), state
 
     def get_obs(self, state: EnvState) -> chex.Array:
-        pixels = render_craftax_pixels(state, BLOCK_PIXEL_SIZE_HUMAN, self.static_env_params) / 255.0
+        pixels = render_craftax_pixels(
+            state, 
+            BLOCK_PIXEL_SIZE_HUMAN, 
+            self.static_env_params,
+            self.player_specific_textures,
+        ) / 255.0
         obs = {player: pixels[i] for i, player in enumerate(self.player_names)}
         return obs
 
@@ -87,8 +96,8 @@ class CraftaxMARLPixelsEnvNoAutoReset(EnvironmentNoAutoReset):
             0.0,
             1.0,
             (
-                OBS_DIM[1] * BLOCK_PIXEL_SIZE_AGENT,
-                (OBS_DIM[0] + INVENTORY_OBS_HEIGHT) * BLOCK_PIXEL_SIZE_AGENT,
+                OBS_DIM[1] * BLOCK_PIXEL_SIZE_HUMAN,
+                (OBS_DIM[0] + INVENTORY_OBS_HEIGHT) * BLOCK_PIXEL_SIZE_HUMAN,
                 3,
             ),
             dtype=jnp.int32,
@@ -105,6 +114,10 @@ class CraftaxMARLPixelsEnv(environment.Environment):
         self.player_names = [
             f"agent_{i}" for i in range(self.static_env_params.player_count)
         ]
+        self.player_specific_textures = load_player_specific_textures(
+            TEXTURES[BLOCK_PIXEL_SIZE_HUMAN],
+            self.static_env_params.player_count
+        )
 
     @property
     def default_params(self) -> EnvParams:
@@ -140,7 +153,12 @@ class CraftaxMARLPixelsEnv(environment.Environment):
         return self.get_obs(state), state
 
     def get_obs(self, state: EnvState) -> chex.Array:
-        pixels = render_craftax_pixels(state, BLOCK_PIXEL_SIZE_HUMAN, self.static_env_params) / 255.0
+        pixels = render_craftax_pixels(
+            state, 
+            BLOCK_PIXEL_SIZE_HUMAN, 
+            self.static_env_params,
+            self.player_specific_textures
+        ) / 255.0
         obs = {player: pixels[i] for i, player in enumerate(self.player_names)}
         return obs
 
@@ -168,8 +186,8 @@ class CraftaxMARLPixelsEnv(environment.Environment):
             0.0,
             1.0,
             (
-                OBS_DIM[1] * BLOCK_PIXEL_SIZE_AGENT,
-                (OBS_DIM[0] + INVENTORY_OBS_HEIGHT) * BLOCK_PIXEL_SIZE_AGENT,
+                OBS_DIM[1] * BLOCK_PIXEL_SIZE_HUMAN,
+                (OBS_DIM[0] + INVENTORY_OBS_HEIGHT) * BLOCK_PIXEL_SIZE_HUMAN,
                 3,
             ),
             dtype=jnp.int32,

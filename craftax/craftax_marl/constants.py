@@ -7,6 +7,7 @@ import numpy as np
 from PIL import Image
 from craftax_marl.util.maths_utils import get_distance_map
 from environment_base.util import load_compressed_pickle, save_compressed_pickle
+from flax import struct
 from seaborn import husl_palette
 
 # GAME CONSTANTS
@@ -20,6 +21,11 @@ INVENTORY_OBS_HEIGHT = 4
 TEXTURE_CACHE_FILE = os.path.join(
     pathlib.Path(__file__).parent.resolve(), "assets", "texture_cache.pbz2"
 )
+
+# DUNGEON ROOM CONSTANTS
+NUM_ROOMS = 8
+MIN_ROOM_SIZE = 5
+MAX_ROOM_SIZE = 10
 
 
 # ENUMS
@@ -593,6 +599,12 @@ TORCH_LIGHT_MAP = jnp.clip(1 - TORCH_LIGHT_MAP, 0.0, 1.0)
 
 
 # TEXTURES
+@struct.dataclass
+class PlayerSpecificTextures:
+    player_textures: jnp.ndarray
+    chest_textures: jnp.ndarray
+
+
 def load_texture(filename, block_pixel_size):
     filename = os.path.join(pathlib.Path(__file__).parent.resolve(), "assets", filename)
     img = iio.imread(filename)
@@ -624,13 +636,33 @@ def apply_alpha(texture):
         jnp.expand_dims(texture[:, :, 3], axis=-1), 3, axis=-1
     )
 
-
-def load_multiplayer_textures(base_player_textures, player_count):
+def load_player_specific_textures(texture_set, player_count) -> PlayerSpecificTextures:
     color_palette = (jnp.array(husl_palette(player_count, h=0.5, l=0.5)) * 255).astype(jnp.uint32)
+    return PlayerSpecificTextures(
+        player_textures=load_multiplayer_textures(
+            texture_set["player_textures"], 
+            color_palette, 
+            player_count
+        ),
+        chest_textures=load_colored_block_textures(
+            texture_set["full_map_block_textures"][BlockType.CHEST.value], 
+            color_palette, 
+            player_count
+        )
+    )
+
+def load_multiplayer_textures(base_textures, color_palette, player_count):
     color_palette = jnp.concatenate([color_palette, jnp.ones((player_count, 1))], axis=-1)
-    multiplayer_textures = base_player_textures[None, :].repeat(player_count, 0)
-    mask = (multiplayer_textures == jnp.array([0, 0, 0, 1])).all(axis=-1)[..., None]
     colors_broadcasted = color_palette[:, None, None, None, :]
+    multiplayer_textures = base_textures[None, :].repeat(player_count, 0)
+    mask = (multiplayer_textures == jnp.array([0, 0, 0, 1])).all(axis=-1)[..., None]
+    multiplayer_textures_colored = jnp.where(mask, colors_broadcasted, multiplayer_textures)
+    return multiplayer_textures_colored
+
+def load_colored_block_textures(base_textures, color_palette, player_count):
+    colors_broadcasted = color_palette[:, None, None, :]
+    multiplayer_textures = base_textures[None, :].repeat(player_count, 0)
+    mask = (multiplayer_textures == jnp.array([0, 0, 0])).all(axis=-1)[..., None]
     multiplayer_textures_colored = jnp.where(mask, colors_broadcasted, multiplayer_textures)
     return multiplayer_textures_colored
 
