@@ -25,6 +25,35 @@ def render_craftax_symbolic(state: EnvState, static_params: StaticEnvParams):
     )
     map_view_one_hot = jax.nn.one_hot(map_view, num_classes=len(BlockType))
 
+    # Chest
+    def _create_chest_map(player_index):
+        local_position = (
+            state.chest_positions[static_params.player_level]
+            - state.player_position[player_index, None]
+            + jnp.ones((2,), dtype=jnp.int32) * (obs_dim_array // 2)
+        )
+        in_bounds = jnp.logical_and(local_position >= 0, local_position < obs_dim_array).all(axis=-1)
+        is_still_chest = state.map[
+            static_params.player_level, 
+            state.chest_positions[static_params.player_level, :, :, 0], 
+            state.chest_positions[static_params.player_level, :, :, 1]
+        ] == BlockType.CHEST.value
+        placed_chest = jnp.logical_and(in_bounds, is_still_chest)
+        row_indices = jnp.arange(placed_chest.shape[0]).reshape(-1, 1)
+        row_indices_array = jnp.tile(row_indices, (1, placed_chest.shape[1]))
+
+        player_chest_map = jnp.zeros((static_params.player_count, *OBS_DIM))
+        player_chest_map = player_chest_map.at[
+            row_indices_array, 
+            local_position[..., 0], 
+            local_position[..., 1]
+        ].max(placed_chest)
+        return player_chest_map
+
+    chest_map_view = jax.vmap(_create_chest_map)(
+        jnp.arange(static_params.player_count)
+    )
+
     # Items
     padded_items_map = jnp.pad(
         state.item_map[state.player_level],
