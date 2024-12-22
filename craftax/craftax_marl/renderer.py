@@ -203,7 +203,7 @@ def render_craftax_symbolic(state: EnvState, static_params: StaticEnvParams):
 
     # Concat all maps
     all_map = jnp.concatenate(
-        [map_view_one_hot, item_map_view_one_hot, mob_map, teammate_map], axis=-1
+        [map_view_one_hot, item_map_view_one_hot, mob_map, teammate_map, chest_map_view], axis=-1
     )
 
     # Light map
