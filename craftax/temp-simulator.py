@@ -1,3 +1,4 @@
+# %%
 import jax
 import jax.numpy as jnp
 import pygame
@@ -66,7 +67,7 @@ class CraftaxRenderer:
 
         self.screen_size = (
             OBS_DIM[1] * BLOCK_PIXEL_SIZE_HUMAN * pixel_render_size,
-            (OBS_DIM[0] + INVENTORY_OBS_HEIGHT)
+            (OBS_DIM[0] + INVENTORY_OBS_HEIGHT*env.static_env_params.player_count)
             * BLOCK_PIXEL_SIZE_HUMAN
             * pixel_render_size,
         )
@@ -114,6 +115,7 @@ class CraftaxRenderer:
                     else:
                         return Action.NOOP.value
 
+# %%
 rng = jax.random.PRNGKey(0)
 env = CraftaxEnv(CraftaxEnv.default_static_params())
 renderer = CraftaxRenderer(env, env.default_params)
@@ -128,6 +130,7 @@ state = state.replace(
 )
 
 
+# %%
 print("Ready to play!")
 while True:
     if renderer.is_quit_requested():
@@ -145,3 +148,5 @@ while True:
     )
     renderer.render(state)
     renderer.update()
+
+# %%
