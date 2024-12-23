@@ -67,7 +67,7 @@ class CraftaxRenderer:
 
         self.screen_size = (
             OBS_DIM[1] * BLOCK_PIXEL_SIZE_HUMAN * pixel_render_size,
-            (OBS_DIM[0] + INVENTORY_OBS_HEIGHT*env.static_env_params.player_count)
+            (2 + OBS_DIM[0] + INVENTORY_OBS_HEIGHT)
             * BLOCK_PIXEL_SIZE_HUMAN
             * pixel_render_size,
         )

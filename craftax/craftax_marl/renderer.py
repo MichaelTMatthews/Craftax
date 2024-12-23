@@ -3,7 +3,7 @@ from functools import partial
 
 from craftax_marl.constants import *
 from craftax_marl.craftax_state import EnvState, StaticEnvParams
-from craftax_marl.util.game_logic_utils import is_boss_vulnerable
+from craftax_marl.util.game_logic_utils import is_boss_vulnerable, get_player_icon_positions
 
 
 def render_craftax_symbolic(state: EnvState, static_params: StaticEnvParams):
@@ -950,6 +950,25 @@ def render_craftax_pixels(state, block_pixel_size, static_params, player_specifi
             - inv_pixel_right_space,
         ].set(new_slice)
 
+    def _render_icons(pixels, textures, locs):
+        def _render_single_icon(carry, idx):
+            pixels, textures, locs = carry
+            icon_slice = textures[idx]
+            pixels = jax.lax.dynamic_update_slice(
+                pixels,
+                icon_slice,
+                (
+                    block_pixel_size * locs[idx, 0] + inv_pixel_left_space,
+                    block_pixel_size * locs[idx, 1] + inv_pixel_left_space,
+                    0,
+                ),
+            )
+            return (pixels, textures, locs), None
+        (pixels, _, _), _ = jax.lax.scan(
+            _render_single_icon, (pixels, textures, locs), jnp.arange(locs.shape[0])
+        )
+        return pixels
+
     def _render_dashboard(inv_pixels, player_index):
         # Render player stats
         player_health = jnp.maximum(
@@ -1228,15 +1247,42 @@ def render_craftax_pixels(state, block_pixel_size, static_params, player_specifi
     inv_pixels = jax.vmap(_render_dashboard, in_axes=(0, 0))(
         inv_pixels, jnp.arange(static_params.player_count)
     )
-    all_inventory = jnp.concatenate(inv_pixels)
-    all_players_inventory = jnp.repeat(
-        all_inventory[None, ...],
-        static_params.player_count,
-        axis=0
+
+    def _render_teammate_info(player_index):
+        info_pixels = jnp.zeros(
+            (
+                (static_params.player_count//2 + 1) * block_pixel_size,
+                OBS_DIM[1] * block_pixel_size,
+                3,
+            ),
+            dtype=jnp.float32,
+        )
+
+        # quick icon location calc
+        icon_locations = jnp.array([
+            [0, 1],
+            [0, 6],
+            [1, 1],
+            [1, 6],
+        ])
+
+        # Render players icons
+        player_icon_to_render = jnp.where(
+            state.player_alive[:, None, None, None],
+            player_specific_textures.player_icon_textures[:, 0],
+            player_specific_textures.player_icon_textures[:, 1],
+        )
+
+        info_pixels = _render_icons(info_pixels, player_icon_to_render, icon_locations)
+        
+        return info_pixels
+
+    teammate_info_pixels = jax.vmap(_render_teammate_info)(
+        jnp.arange(static_params.player_count)
     )
 
     # Combine map and inventory
-    pixels = jnp.concatenate([map_pixels, all_players_inventory], axis=1)
+    pixels = jnp.concatenate([teammate_info_pixels, map_pixels, inv_pixels], axis=1)
 
     # # Downscale by 2
     # pixels = pixels[::downscale, ::downscale]
