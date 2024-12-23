@@ -602,6 +602,7 @@ TORCH_LIGHT_MAP = jnp.clip(1 - TORCH_LIGHT_MAP, 0.0, 1.0)
 @struct.dataclass
 class PlayerSpecificTextures:
     player_textures: jnp.ndarray
+    player_icon_textures: jnp.ndarray
     chest_textures: jnp.ndarray
 
 
@@ -644,6 +645,11 @@ def load_player_specific_textures(texture_set, player_count) -> PlayerSpecificTe
             color_palette, 
             player_count
         ),
+        player_icon_textures=load_multiplayer_icon_textures(
+            texture_set["player_icon_texture"], 
+            color_palette, 
+            player_count
+        ),
         chest_textures=load_colored_block_textures(
             texture_set["full_map_block_textures"][BlockType.CHEST.value], 
             color_palette, 
@@ -658,6 +664,14 @@ def load_multiplayer_textures(base_textures, color_palette, player_count):
     mask = (multiplayer_textures == jnp.array([0, 0, 0, 1])).all(axis=-1)[..., None]
     multiplayer_textures_colored = jnp.where(mask, colors_broadcasted, multiplayer_textures)
     return multiplayer_textures_colored
+
+def load_multiplayer_icon_textures(base_textures, color_palette, player_count):
+    color_palette = jnp.concatenate([color_palette, jnp.ones((player_count, 1))], axis=-1)
+    colors_broadcasted = color_palette[:, None, None, :]
+    multiplayer_textures = base_textures[None, :].repeat(player_count, 0)
+    mask = (multiplayer_textures == jnp.array([0, 0, 0, 1])).all(axis=-1)[..., None]
+    multiplayer_textures_colored = jnp.where(mask, colors_broadcasted, multiplayer_textures)
+    return multiplayer_textures_colored[:, :, :, :3]
 
 def load_colored_block_textures(base_textures, color_palette, player_count):
     colors_broadcasted = color_palette[:, None, None, :]
@@ -786,6 +800,8 @@ def load_all_textures(block_pixel_size):
             load_texture("player-dead.png", block_pixel_size),
         ]
     )
+
+    player_icon_texture = load_texture("player.png", small_block_pixel_size)
 
     full_map_player_textures_rgba = [
         jnp.pad(
@@ -1139,6 +1155,7 @@ def load_all_textures(block_pixel_size):
         "player_textures": player_textures,
         "full_map_player_textures": full_map_player_textures,
         "full_map_player_textures_alpha": full_map_player_textures_alpha,
+        "player_icon_texture": player_icon_texture,
         "empty_texture": empty_texture,
         "smaller_empty_texture": smaller_empty_texture,
         "ones_texture": ones_texture,
