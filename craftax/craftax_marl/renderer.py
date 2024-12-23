@@ -1223,14 +1223,26 @@ def render_craftax_pixels(state, block_pixel_size, static_params, player_specifi
             inv_pixels, state.player_intelligence[player_index], 9, 3
         )
 
+        # Render Player Icon
+        player_texture = player_specific_textures.player_icon_textures[
+            player_index
+        ]
+        inv_pixels = _render_icon(inv_pixels, player_texture, 10, 0)
+
         return inv_pixels
 
     inv_pixels = jax.vmap(_render_dashboard, in_axes=(0, 0))(
-        inv_pixels, jnp.arange(inv_pixels.shape[0])
+        inv_pixels, jnp.arange(static_params.player_count)
+    )
+    all_inventory = jnp.concatenate(inv_pixels)
+    all_players_inventory = jnp.repeat(
+        all_inventory[None, ...],
+        static_params.player_count,
+        axis=0
     )
 
     # Combine map and inventory
-    pixels = jnp.concatenate([map_pixels, inv_pixels], axis=1)
+    pixels = jnp.concatenate([map_pixels, all_players_inventory], axis=1)
 
     # # Downscale by 2
     # pixels = pixels[::downscale, ::downscale]
