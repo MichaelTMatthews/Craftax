@@ -56,6 +56,14 @@ KEY_MAPPING = {
     pygame.K_MINUS: Action.LEVEL_UP_STRENGTH,
     pygame.K_EQUALS: Action.LEVEL_UP_INTELLIGENCE,
     pygame.K_SEMICOLON: Action.ENCHANT_BOW,
+    pygame.K_BACKSPACE: Action.GIVE_FOOD,
+    pygame.K_BACKSLASH: Action.GIVE_DRINK,
+    pygame.K_RETURN: Action.GIVE_WOOD,
+    pygame.K_RSHIFT: Action.GIVE_STONE,
+    pygame.K_UP: Action.GIVE_IRON,
+    pygame.K_DOWN: Action.GIVE_COAL,
+    pygame.K_LEFT: Action.GIVE_DIAMOND,
+    pygame.K_RIGHT: Action.BROADCAST,
 }
 
 class CraftaxRenderer:

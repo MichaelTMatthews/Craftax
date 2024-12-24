@@ -9,11 +9,14 @@
   - [x] Game Logic
   - [x] Symbolic
   - [x] Pixels
-- [] Trading
-  - [] Display Other Player Inventory
-    - [] Pixels
-    - [] Symbolic
-  - [] Exchange Items
+- [] Dashboard
+  - [] Pixels
+    - [x] Player Textures
+    - [x] Health
+    - [x] Direction
+    - [] Message
+- [] Messaging
+- [x] Trading
 
 # Legacy
 - (Fixed) Passive mobs don't moves

@@ -121,13 +121,14 @@ class Action(Enum):
     LEVEL_UP_STRENGTH = 40  # -
     LEVEL_UP_INTELLIGENCE = 41  # =
     ENCHANT_BOW = 42  # ;
-    GIVE_FOOD = 43
-    GIVE_DRINK = 44
-    GIVE_WOOD = 45
-    GIVE_STONE = 46
-    GIVE_IRON = 47
-    GIVE_COAL = 48
-    GIVE_DIAMOND = 49
+    GIVE_FOOD = 43 # Backspace
+    GIVE_DRINK = 44 # Back slash
+    GIVE_WOOD = 45 # Return
+    GIVE_STONE = 46 # Right Shift
+    GIVE_IRON = 47 # Up Arrow
+    GIVE_COAL = 48 # Down Arrow
+    GIVE_DIAMOND = 49 # Left Arrow
+    BROADCAST = 50 # Right Arrow
 
 
 class MobType(Enum):
