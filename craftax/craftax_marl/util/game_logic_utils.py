@@ -502,14 +502,14 @@ def get_ladder_positions(rng, static_params, config, map):
     return ladder_positions
 
 
-def get_player_icon_positions(static_params):
-    col2 = jnp.arange((static_params.player_count+1) // 2)
+def get_player_icon_positions(player_count):
+    col1 = jnp.arange((player_count+1) // 2)
     
-    col1_values = jnp.array([1, 6]) 
+    col2_values = jnp.array([1, 6]) 
     
-    col1 = jnp.tile(col1_values, (static_params.player_count+1) // len(col1_values))
-    col2 = jnp.repeat(col2, len(col1_values))[:static_params.player_count]
+    col2 = jnp.tile(col2_values, (player_count+1) // len(col2_values))
+    col1 = jnp.repeat(col1, len(col2_values))[:player_count]
     
-    result = jnp.stack((col1[:static_params.player_count], col2), axis=-1)
+    result = jnp.stack((col1, col2[:player_count]), axis=-1)
     
     return result

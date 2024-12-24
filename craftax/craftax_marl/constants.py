@@ -759,7 +759,7 @@ def load_all_textures(block_pixel_size):
 
     smaller_block_textures = jnp.array(
         [
-            load_texture(fname, int(block_pixel_size * 0.8))[:, :, :3]
+            load_texture(fname, small_block_pixel_size)[:, :, :3]
             for fname in block_texture_names
         ]
     )
@@ -845,19 +845,15 @@ def load_all_textures(block_pixel_size):
             [bottom_left, down, bottom_right],
         ])
 
-    alive_direction_texture_base = load_texture("pointer-right.png", block_pixel_size)
-    alive_direction_diagonal_texture_base = load_texture("pointer-top-right.png", block_pixel_size)
-    alive_direction_textures = _generate_all_direction_textures(alive_direction_texture_base, alive_direction_diagonal_texture_base)
-
-    dead_direction_texture_base = load_texture("pointer-right-dead.png", block_pixel_size)
-    dead_direction_diagonal_texture_base = load_texture("pointer-top-right-dead.png", block_pixel_size)
-    dead_direction_textures = _generate_all_direction_textures(dead_direction_texture_base, dead_direction_diagonal_texture_base)
+    direction_texture_base = load_texture("pointer-right.png", small_block_pixel_size)
+    direction_diagonal_texture_base = load_texture("pointer-top-right.png", small_block_pixel_size)
+    direction_textures = _generate_all_direction_textures(direction_texture_base, direction_diagonal_texture_base)
 
     # inventory
 
     empty_texture = jnp.zeros((block_pixel_size, block_pixel_size, 3), dtype=jnp.int32)
     smaller_empty_texture = jnp.zeros(
-        (int(block_pixel_size * 0.8), int(block_pixel_size * 0.8), 3), dtype=jnp.int32
+        (small_block_pixel_size, small_block_pixel_size, 3), dtype=jnp.int32
     )
 
     ones_texture = jnp.ones((block_pixel_size, block_pixel_size, 3), dtype=jnp.int32)
@@ -1160,7 +1156,7 @@ def load_all_textures(block_pixel_size):
         "player_textures": player_textures,
         "full_map_player_textures": full_map_player_textures,
         "full_map_player_textures_alpha": full_map_player_textures_alpha,
-        "player_icon_texture": player_icon_texture,
+        "player_icon_textures": player_icon_textures,
         "empty_texture": empty_texture,
         "smaller_empty_texture": smaller_empty_texture,
         "ones_texture": ones_texture,
@@ -1182,8 +1178,7 @@ def load_all_textures(block_pixel_size):
         "melee_mob_texture_alphas": melee_mob_texture_alphas,
         "passive_mob_textures": passive_mob_textures,
         "passive_mob_texture_alphas": passive_mob_texture_alphas,
-        "alive_direction_textures": alive_direction_textures,
-        "dead_direction_textures": dead_direction_textures,
+        "direction_textures": direction_textures,
         "ranged_mob_textures": ranged_mob_textures,
         "ranged_mob_texture_alphas": ranged_mob_texture_alphas,
         "projectile_textures": projectile_textures,
