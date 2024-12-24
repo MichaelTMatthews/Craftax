@@ -634,12 +634,6 @@ def load_texture(filename, block_pixel_size):
 
     return jnp_img
 
-    # melee_mob_texture_rgba = jnp.array(load_texture("melee_mob.png", block_pixel_size))
-    # melee_mob_texture = apply_alpha(melee_mob_texture_rgba)
-    # melee_mob_texture_alpha = jnp.repeat(
-    #     jnp.expand_dims(melee_mob_texture_rgba[:, :, 3], axis=-1), repeats=3, axis=2
-    # )
-
 
 def apply_alpha(texture):
     return texture[:, :, :3] * jnp.repeat(
@@ -698,6 +692,51 @@ def load_mob_texture_set(filenames, block_pixel_size):
         texture_alphas[file_index] = texture_alpha
 
     return jnp.array(textures), jnp.array(texture_alphas)
+
+def load_request_message_textures(block_pixel_size):
+    icon_pixel_size = int(block_pixel_size * 0.6)
+    start_loc_x = (block_pixel_size - icon_pixel_size) // 2
+    start_loc_y = (block_pixel_size - icon_pixel_size) // 3
+    message_bubble_texture = load_texture("message_bubble.png", block_pixel_size)
+
+    def _overlay_item(icon_texture):
+        combined_message_texture = message_bubble_texture
+        
+        # Only for areas where the icon is not transparent overlay the icon
+        if icon_texture.shape[-1] == 4:
+            original_slice = combined_message_texture[
+                start_loc_y:start_loc_y + icon_pixel_size, 
+                start_loc_x:start_loc_x + icon_pixel_size, 
+                :3
+            ]
+            updated_slice = jnp.where(
+                (icon_texture[:, :, 3] == 1)[:, :, None], 
+                icon_texture[:, :, :3], 
+                original_slice
+            )
+        else:
+            updated_slice = icon_texture
+
+        combined_message_texture = combined_message_texture.at[
+            start_loc_y:start_loc_y + icon_pixel_size, 
+            start_loc_x:start_loc_x + icon_pixel_size, 
+            :3
+        ].set(updated_slice)
+        return combined_message_texture
+    
+    item_name_list = [
+        "food.png",
+        "drink.png",
+        "wood.png",
+        "stone.png",
+        "iron.png",
+        "coal.png",
+        "diamond.png"
+    ]
+    return jnp.array([
+        _overlay_item(load_texture(f, icon_pixel_size))
+        for f in item_name_list
+    ])
 
 
 def load_all_textures(block_pixel_size):
@@ -1150,6 +1189,8 @@ def load_all_textures(block_pixel_size):
         ]
     )
 
+    request_message_textures = load_request_message_textures(small_block_pixel_size)
+
     return {
         "block_textures": block_textures,
         "smaller_block_textures": smaller_block_textures,
@@ -1200,6 +1241,7 @@ def load_all_textures(block_pixel_size):
         "dex_texture": dex_texture,
         "str_texture": str_texture,
         "int_texture": int_texture,
+        "request_message_textures": request_message_textures,
     }
 
 

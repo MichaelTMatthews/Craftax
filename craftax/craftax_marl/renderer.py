@@ -1293,8 +1293,17 @@ def render_craftax_pixels(state, block_pixel_size, static_params, player_specifi
             direction_texture, render_direction
         ).astype(float)
         info_pixels = _render_icons(info_pixels, direction_texture, direction_icon_locations)
-            
 
+        # Render Teammate Messages
+        message_icon_locations = player_icon_locations + jnp.array([0, 3])
+        message_texture_index = state.request_type - Action.REQUEST_FOOD.value # Hacky
+        message_texture = jnp.where(
+            state.request_duration[:, None, None, None] > 0,
+            textures["request_message_textures"][message_texture_index][:, :, :, :3],
+            textures["smaller_empty_texture"][None, :],
+        ).astype(float)
+        info_pixels = _render_icons(info_pixels, message_texture, message_icon_locations)
+            
         return info_pixels
 
     teammate_info_pixels = jax.vmap(_render_teammate_info)(
