@@ -636,6 +636,8 @@ def generate_world(rng, params, static_params):
         player_dexterity=jnp.full((static_params.player_count,), 1, dtype=jnp.int32),
         player_strength=jnp.full((static_params.player_count,), 1, dtype=jnp.int32),
         player_intelligence=jnp.full((static_params.player_count,), 1, dtype=jnp.int32),
+        request_duration=jnp.full((static_params.player_count,), 0, dtype=jnp.int32),
+        request_type=jnp.full((static_params.player_count,), 0, dtype=jnp.int32),
         inventory=inventory,
         sword_enchantment=jnp.full((static_params.player_count,), 0, dtype=jnp.int32),
         bow_enchantment=jnp.full((static_params.player_count,), 0, dtype=jnp.int32),

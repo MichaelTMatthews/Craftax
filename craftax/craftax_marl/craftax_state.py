@@ -80,6 +80,10 @@ class EnvState:
     player_strength: jnp.ndarray
     player_intelligence: jnp.ndarray
 
+    # Request Info
+    request_duration: jnp.ndarray
+    request_type: jnp.ndarray
+
     inventory: Inventory
 
     melee_mobs: Mobs

@@ -22,6 +22,8 @@ TEXTURE_CACHE_FILE = os.path.join(
     pathlib.Path(__file__).parent.resolve(), "assets", "texture_cache.pbz2"
 )
 
+REQUEST_MAX_DURATION = 10
+
 # DUNGEON ROOM CONSTANTS
 NUM_ROOMS = 8
 MIN_ROOM_SIZE = 5
@@ -121,14 +123,14 @@ class Action(Enum):
     LEVEL_UP_STRENGTH = 40  # -
     LEVEL_UP_INTELLIGENCE = 41  # =
     ENCHANT_BOW = 42  # ;
-    GIVE_FOOD = 43 # Backspace
-    GIVE_DRINK = 44 # Back slash
-    GIVE_WOOD = 45 # Return
-    GIVE_STONE = 46 # Right Shift
-    GIVE_IRON = 47 # Up Arrow
-    GIVE_COAL = 48 # Down Arrow
-    GIVE_DIAMOND = 49 # Left Arrow
-    BROADCAST = 50 # Right Arrow
+    REQUEST_FOOD = 43 # Backspace
+    REQUEST_DRINK = 44 # Back slash
+    REQUEST_WOOD = 45 # Return
+    REQUEST_STONE = 46 # Right Shift
+    REQUEST_IRON = 47 # Up Arrow
+    REQUEST_COAL = 48 # Down Arrow
+    REQUEST_DIAMOND = 49 # Left Arrow
+    GIVE = 50 # Right Arrow
 
 
 class MobType(Enum):
@@ -147,7 +149,6 @@ class ProjectileType(Enum):
     SLIMEBALL = 5
     FIREBALL2 = 6
     ICEBALL2 = 7
-
 
 # FLOOR MECHANICS
 

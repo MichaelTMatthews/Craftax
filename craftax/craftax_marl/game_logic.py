@@ -266,11 +266,6 @@ def do_action(rng, state, action, static_params):
     new_inventory = state.inventory.replace(
         wood=state.inventory.wood + 1 * is_mining_tree
     )
-    achievements = state.achievements.at[:, Achievement.COLLECT_WOOD.value].set(
-        jnp.logical_or(
-            state.achievements[:, Achievement.COLLECT_WOOD.value], is_mining_tree
-        )
-    )
 
     # Stone
     can_mine_stone = state.inventory.pickaxe >= 1
@@ -297,11 +292,6 @@ def do_action(rng, state, action, static_params):
     new_map = new_map.at[block_position[:, 0], block_position[:, 1]].set(mined_stone_block)
     new_inventory = new_inventory.replace(
         stone=new_inventory.stone + 1 * is_mining_stone
-    )
-    achievements = achievements.at[:, Achievement.COLLECT_STONE.value].set(
-        jnp.logical_or(
-            achievements[:, Achievement.COLLECT_STONE.value], is_mining_stone
-        )
     )
 
     # Furnace
@@ -372,11 +362,6 @@ def do_action(rng, state, action, static_params):
     new_inventory = new_inventory.replace(
         coal=new_inventory.coal + 1 * is_mining_coal
     )
-    achievements = achievements.at[:, Achievement.COLLECT_COAL.value].set(
-        jnp.logical_or(
-            achievements[:, Achievement.COLLECT_COAL.value], is_mining_coal
-        )
-    )
 
     # Iron
     can_mine_iron = state.inventory.pickaxe >= 2
@@ -404,11 +389,6 @@ def do_action(rng, state, action, static_params):
     new_inventory = new_inventory.replace(
         iron=new_inventory.iron + 1 * is_mining_iron
     )
-    achievements = achievements.at[:, Achievement.COLLECT_IRON.value].set(
-        jnp.logical_or(
-            achievements[:, Achievement.COLLECT_IRON.value], is_mining_iron
-        )
-    )
 
     # Diamond  
     can_mine_diamond = state.inventory.pickaxe >= 3
@@ -435,11 +415,6 @@ def do_action(rng, state, action, static_params):
     new_map = new_map.at[block_position[:, 0], block_position[:, 1]].set(mined_diamond_block)
     new_inventory = new_inventory.replace(
         diamond=new_inventory.diamond + 1 * is_mining_diamond
-    )
-    achievements = achievements.at[:, Achievement.COLLECT_DIAMOND.value].set(
-        jnp.logical_or(
-            achievements[:, Achievement.COLLECT_DIAMOND.value], is_mining_diamond
-        )
     )
 
     # Sapphire
@@ -3181,6 +3156,36 @@ def calculate_inventory_achievements(state):
     # Some achievements (e.g. make_diamond_pickaxe) can be achieved in multiple ways (finding in chest or crafting)
     # Rather than duplicating achievement code, we simply look in the inventory for these types of achievements
     # at the end of each timestep
+    # Wood
+    achievements = state.achievements.at[:, Achievement.COLLECT_WOOD.value].set(
+        jnp.logical_or(
+            state.achievements[:, Achievement.COLLECT_WOOD.value], state.inventory.wood > 0
+        )
+    )
+    # Stone
+    achievements = achievements.at[:, Achievement.COLLECT_STONE.value].set(
+        jnp.logical_or(
+            achievements[:, Achievement.COLLECT_STONE.value], state.inventory.stone > 0
+        )
+    )
+    # Coal
+    achievements = achievements.at[:, Achievement.COLLECT_COAL.value].set(
+        jnp.logical_or(
+            achievements[:, Achievement.COLLECT_COAL.value], state.inventory.coal > 0
+        )
+    )
+    # Iron
+    achievements = achievements.at[:, Achievement.COLLECT_IRON.value].set(
+        jnp.logical_or(
+            achievements[:, Achievement.COLLECT_IRON.value], state.inventory.iron > 0
+        )
+    )
+    # Diamond
+    achievements = achievements.at[:, Achievement.COLLECT_DIAMOND.value].set(
+        jnp.logical_or(
+            achievements[:, Achievement.COLLECT_DIAMOND.value], state.inventory.diamond > 0
+        )
+    )
     # Ruby
     achievements = achievements.at[:, Achievement.COLLECT_RUBY.value].set(
         jnp.logical_or(
@@ -3272,122 +3277,92 @@ def calculate_inventory_achievements(state):
 
 
 def trade_materials(state, action):
-    # Block
     block_position = state.player_position + DIRECTIONS[state.player_direction]
     in_other_player = (jnp.expand_dims(state.player_position, axis=1) == jnp.expand_dims(block_position, axis=0)).all(axis=2).T
     player_trading_to = jnp.argmax(in_other_player, axis=-1)
+    is_giving = jnp.logical_and(in_other_player.any(axis=-1), action == Action.GIVE.value)
+    other_player_is_requesting = state.request_duration[player_trading_to] > 0
+
+    def _new_material_value(material_type, current_material_stock, material_max_value):
+        other_player_is_requesting_material = jnp.logical_and(
+            other_player_is_requesting,
+            state.request_type[player_trading_to] == material_type
+        )
+        is_giving_material = jnp.logical_and(
+            jnp.logical_and( # Checks that other player is requesting and can take materials
+                other_player_is_requesting_material,
+                current_material_stock[player_trading_to] < material_max_value
+            ),
+            jnp.logical_and( # Checks that player has materials and is giving
+                is_giving,
+                current_material_stock > 0
+            )
+        )
+        new_material = current_material_stock - 1 * is_giving_material
+        new_material = new_material.at[player_trading_to].add(is_giving_material)
+        return new_material
     
     # Food
-    other_player_can_take_food = jnp.logical_and(
-        in_other_player.any(axis=-1),
-        state.player_food[player_trading_to] < get_max_food(state)[player_trading_to]
+    new_food = _new_material_value(
+        Action.REQUEST_FOOD.value, state.player_food, get_max_food(state)
     )
-    is_giving_food = jnp.logical_and(
-        other_player_can_take_food,
-        jnp.logical_and(
-            action == Action.GIVE_FOOD.value, 
-            state.player_food > 0
-        )
-    )
-    new_food = state.player_food - 1 * is_giving_food
-    new_food = new_food.at[player_trading_to].add(is_giving_food)
-    state = state.replace(player_food=new_food)
     
     # Drink
-    other_player_can_take_drink = jnp.logical_and(
-        in_other_player.any(axis=-1),
-        state.player_drink[player_trading_to] < get_max_drink(state)[player_trading_to]
+    new_drink = _new_material_value(
+        Action.REQUEST_DRINK.value, state.player_drink, get_max_drink(state)
     )
-    is_giving_drink = jnp.logical_and(
-        other_player_can_take_drink,
-        jnp.logical_and(
-            action == Action.GIVE_DRINK.value, 
-            state.player_drink > 0
+
+    # Inventory Materials
+    new_wood = _new_material_value(
+        Action.REQUEST_WOOD.value, state.inventory.wood, 99
+    )
+    new_stone = _new_material_value(
+        Action.REQUEST_STONE.value, state.inventory.stone, 99
+    )
+    new_iron = _new_material_value(
+        Action.REQUEST_IRON.value, state.inventory.iron, 99
+    )
+    new_coal = _new_material_value(
+        Action.REQUEST_COAL.value, state.inventory.coal, 99
+    )
+    new_diamond = _new_material_value(
+        Action.REQUEST_DIAMOND.value, state.inventory.diamond, 99
+    )
+
+    # Update State
+    state = state.replace(
+        player_food=new_food,
+        player_drink=new_drink,
+        inventory=state.inventory.replace(
+            wood=new_wood,
+            stone=new_stone,
+            iron=new_iron,
+            coal=new_coal,
+            diamond=new_diamond,
         )
     )
-    new_drink = state.player_drink - 1 * is_giving_drink
-    new_drink = new_drink.at[player_trading_to].add(is_giving_drink)
-    state = state.replace(player_drink=new_drink)
-    
-    # Wood
-    other_player_can_take_wood = jnp.logical_and(
-        in_other_player.any(axis=-1),
-        state.inventory.wood[player_trading_to] < 99
+    return state
+
+
+def make_request(state, action):
+    # Decrease Request Duration
+    state = state.replace(
+        request_duration=jnp.maximum(0, state.request_duration - 1)
     )
-    is_giving_wood = jnp.logical_and(
-        other_player_can_take_wood,
-        jnp.logical_and(
-            action == Action.GIVE_WOOD.value, 
-            state.inventory.wood > 0
-        )
+
+    # Initialize New Request
+    is_making_request = jnp.logical_and( # Hacky
+        action >= Action.REQUEST_FOOD.value, action <= Action.REQUEST_DIAMOND.value
     )
-    new_wood = state.inventory.wood - 1 * is_giving_wood
-    new_wood = new_wood.at[player_trading_to].add(is_giving_wood)
-    state = state.replace(inventory=state.inventory.replace(wood=new_wood))
-    
-    # Stone
-    other_player_can_take_stone = jnp.logical_and(
-        in_other_player.any(axis=-1),
-        state.inventory.stone[player_trading_to] < 99
+    new_request_type = jnp.where(
+        is_making_request,
+        action,
+        state.request_type
     )
-    is_giving_stone = jnp.logical_and(
-        other_player_can_take_stone,
-        jnp.logical_and(
-            action == Action.GIVE_STONE.value, 
-            state.inventory.stone > 0
-        )
+    state = state.replace(
+        request_duration=jnp.maximum(state.request_duration, is_making_request * REQUEST_MAX_DURATION),
+        request_type=new_request_type
     )
-    new_stone = state.inventory.stone - 1 * is_giving_stone
-    new_stone = new_stone.at[player_trading_to].add(is_giving_stone)
-    state = state.replace(inventory=state.inventory.replace(stone=new_stone))
-    
-    # Iron
-    other_player_can_take_iron = jnp.logical_and(
-        in_other_player.any(axis=-1),
-        state.inventory.iron[player_trading_to] < 99
-    )
-    is_giving_iron = jnp.logical_and(
-        other_player_can_take_iron,
-        jnp.logical_and(
-            action == Action.GIVE_IRON.value, 
-            state.inventory.iron > 0
-        )
-    )
-    new_iron = state.inventory.iron - 1 * is_giving_iron
-    new_iron = new_iron.at[player_trading_to].add(is_giving_iron)
-    state = state.replace(inventory=state.inventory.replace(iron=new_iron))
-    
-    # Coal
-    other_player_can_take_coal = jnp.logical_and(
-        in_other_player.any(axis=-1),
-        state.inventory.coal[player_trading_to] < 99
-    )
-    is_giving_coal = jnp.logical_and(
-        other_player_can_take_coal,
-        jnp.logical_and(
-            action == Action.GIVE_COAL.value, 
-            state.inventory.coal > 0
-        )
-    )
-    new_coal = state.inventory.coal - 1 * is_giving_coal
-    new_coal = new_coal.at[player_trading_to].add(is_giving_coal)
-    state = state.replace(inventory=state.inventory.replace(coal=new_coal))
-    
-    # Diamond
-    other_player_can_take_diamond = jnp.logical_and(
-        in_other_player.any(axis=-1),
-        state.inventory.diamond[player_trading_to] < 99
-    )
-    is_giving_diamond = jnp.logical_and(
-        other_player_can_take_diamond,
-        jnp.logical_and(
-            action == Action.GIVE_DIAMOND.value, 
-            state.inventory.diamond > 0
-        )
-    )
-    new_diamond = state.inventory.diamond - 1 * is_giving_diamond
-    new_diamond = new_diamond.at[player_trading_to].add(is_giving_diamond)
-    state = state.replace(inventory=state.inventory.replace(diamond=new_diamond))
     return state
 
 
@@ -3482,6 +3457,9 @@ def craftax_step(
 
     # Trade
     state = trade_materials(state, actions)
+
+    # Request Materials
+    state = make_request(state, actions)
 
     # Movement
     state = move_player(state, actions, params, static_params)
