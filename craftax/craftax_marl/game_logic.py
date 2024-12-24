@@ -266,6 +266,11 @@ def do_action(rng, state, action, static_params):
     new_inventory = state.inventory.replace(
         wood=state.inventory.wood + 1 * is_mining_tree
     )
+    achievements = state.achievements.at[:, Achievement.COLLECT_WOOD.value].set(
+        jnp.logical_or(
+            state.achievements[:, Achievement.COLLECT_WOOD.value], is_mining_tree
+        )
+    )
 
     # Stone
     can_mine_stone = state.inventory.pickaxe >= 1
@@ -292,6 +297,11 @@ def do_action(rng, state, action, static_params):
     new_map = new_map.at[block_position[:, 0], block_position[:, 1]].set(mined_stone_block)
     new_inventory = new_inventory.replace(
         stone=new_inventory.stone + 1 * is_mining_stone
+    )
+    achievements = achievements.at[:, Achievement.COLLECT_STONE.value].set(
+        jnp.logical_or(
+            achievements[:, Achievement.COLLECT_STONE.value], is_mining_stone
+        )
     )
 
     # Furnace
@@ -362,6 +372,11 @@ def do_action(rng, state, action, static_params):
     new_inventory = new_inventory.replace(
         coal=new_inventory.coal + 1 * is_mining_coal
     )
+    achievements = achievements.at[:, Achievement.COLLECT_COAL.value].set(
+        jnp.logical_or(
+            achievements[:, Achievement.COLLECT_COAL.value], is_mining_coal
+        )
+    )
 
     # Iron
     can_mine_iron = state.inventory.pickaxe >= 2
@@ -389,6 +404,11 @@ def do_action(rng, state, action, static_params):
     new_inventory = new_inventory.replace(
         iron=new_inventory.iron + 1 * is_mining_iron
     )
+    achievements = achievements.at[:, Achievement.COLLECT_IRON.value].set(
+        jnp.logical_or(
+            achievements[:, Achievement.COLLECT_IRON.value], is_mining_iron
+        )
+    )
 
     # Diamond  
     can_mine_diamond = state.inventory.pickaxe >= 3
@@ -415,6 +435,11 @@ def do_action(rng, state, action, static_params):
     new_map = new_map.at[block_position[:, 0], block_position[:, 1]].set(mined_diamond_block)
     new_inventory = new_inventory.replace(
         diamond=new_inventory.diamond + 1 * is_mining_diamond
+    )
+    achievements = achievements.at[:, Achievement.COLLECT_DIAMOND.value].set(
+        jnp.logical_or(
+            achievements[:, Achievement.COLLECT_DIAMOND.value], is_mining_diamond
+        )
     )
 
     # Sapphire
@@ -3156,37 +3181,6 @@ def calculate_inventory_achievements(state):
     # Some achievements (e.g. make_diamond_pickaxe) can be achieved in multiple ways (finding in chest or crafting)
     # Rather than duplicating achievement code, we simply look in the inventory for these types of achievements
     # at the end of each timestep
-
-    # Wood
-    achievements = state.achievements.at[:, Achievement.COLLECT_WOOD.value].set(
-        jnp.logical_or(
-            state.achievements[:, Achievement.COLLECT_WOOD.value], state.inventory.wood > 0
-        )
-    )
-    # Stone
-    achievements = achievements.at[:, Achievement.COLLECT_STONE.value].set(
-        jnp.logical_or(
-            achievements[:, Achievement.COLLECT_STONE.value], state.inventory.stone > 0
-        )
-    )
-    # Coal
-    achievements = achievements.at[:, Achievement.COLLECT_COAL.value].set(
-        jnp.logical_or(
-            achievements[:, Achievement.COLLECT_COAL.value], state.inventory.coal > 0
-        )
-    )
-    # Iron
-    achievements = achievements.at[:, Achievement.COLLECT_IRON.value].set(
-        jnp.logical_or(
-            achievements[:, Achievement.COLLECT_IRON.value], state.inventory.iron > 0
-        )
-    )
-    # Diamond
-    achievements = achievements.at[:, Achievement.COLLECT_DIAMOND.value].set(
-        jnp.logical_or(
-            achievements[:, Achievement.COLLECT_DIAMOND.value], state.inventory.diamond > 0
-        )
-    )
     # Ruby
     achievements = achievements.at[:, Achievement.COLLECT_RUBY.value].set(
         jnp.logical_or(
