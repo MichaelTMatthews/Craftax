@@ -5,8 +5,10 @@ import jax.numpy as jnp
 import imageio.v3 as iio
 import numpy as np
 from PIL import Image
-from craftax.craftax.util.maths_utils import get_distance_map
-from craftax.environment_base.util import load_compressed_pickle, save_compressed_pickle
+from craftax_marl.util.maths_utils import get_distance_map
+from environment_base.util import load_compressed_pickle, save_compressed_pickle
+from flax import struct
+from seaborn import husl_palette
 
 # GAME CONSTANTS
 OBS_DIM = (9, 11)
@@ -14,11 +16,18 @@ assert OBS_DIM[0] % 2 == 1 and OBS_DIM[1] % 2 == 1
 MAX_OBS_DIM = max(OBS_DIM)
 BLOCK_PIXEL_SIZE_HUMAN = 64
 BLOCK_PIXEL_SIZE_IMG = 16
-BLOCK_PIXEL_SIZE_AGENT = 10
+BLOCK_PIXEL_SIZE_AGENT = 7
 INVENTORY_OBS_HEIGHT = 4
 TEXTURE_CACHE_FILE = os.path.join(
     pathlib.Path(__file__).parent.resolve(), "assets", "texture_cache.pbz2"
 )
+
+REQUEST_MAX_DURATION = 10
+
+# DUNGEON ROOM CONSTANTS
+NUM_ROOMS = 8
+MIN_ROOM_SIZE = 5
+MAX_ROOM_SIZE = 10
 
 
 # ENUMS
@@ -114,6 +123,14 @@ class Action(Enum):
     LEVEL_UP_STRENGTH = 40  # -
     LEVEL_UP_INTELLIGENCE = 41  # =
     ENCHANT_BOW = 42  # ;
+    REQUEST_FOOD = 43 # Backspace
+    REQUEST_DRINK = 44 # Back slash
+    REQUEST_WOOD = 45 # Return
+    REQUEST_STONE = 46 # Right Shift
+    REQUEST_IRON = 47 # Up Arrow
+    REQUEST_COAL = 48 # Down Arrow
+    REQUEST_DIAMOND = 49 # Left Arrow
+    GIVE = 50 # Right Arrow
 
 
 class MobType(Enum):
@@ -132,7 +149,6 @@ class ProjectileType(Enum):
     SLIMEBALL = 5
     FIREBALL2 = 6
     ICEBALL2 = 7
-
 
 # FLOOR MECHANICS
 
@@ -592,6 +608,13 @@ TORCH_LIGHT_MAP = jnp.clip(1 - TORCH_LIGHT_MAP, 0.0, 1.0)
 
 
 # TEXTURES
+@struct.dataclass
+class PlayerSpecificTextures:
+    player_textures: jnp.ndarray
+    player_icon_textures: jnp.ndarray
+    chest_textures: jnp.ndarray
+
+
 def load_texture(filename, block_pixel_size):
     filename = os.path.join(pathlib.Path(__file__).parent.resolve(), "assets", filename)
     img = iio.imread(filename)
@@ -611,17 +634,47 @@ def load_texture(filename, block_pixel_size):
 
     return jnp_img
 
-    # melee_mob_texture_rgba = jnp.array(load_texture("melee_mob.png", block_pixel_size))
-    # melee_mob_texture = apply_alpha(melee_mob_texture_rgba)
-    # melee_mob_texture_alpha = jnp.repeat(
-    #     jnp.expand_dims(melee_mob_texture_rgba[:, :, 3], axis=-1), repeats=3, axis=2
-    # )
-
 
 def apply_alpha(texture):
     return texture[:, :, :3] * jnp.repeat(
         jnp.expand_dims(texture[:, :, 3], axis=-1), 3, axis=-1
     )
+
+def load_player_specific_textures(texture_set, player_count) -> PlayerSpecificTextures:
+    color_palette = (jnp.array(husl_palette(player_count, h=0.5, l=0.5)) * 255).astype(jnp.uint32)
+    return PlayerSpecificTextures(
+        player_textures=load_multiplayer_textures(
+            texture_set["player_textures"], 
+            color_palette, 
+            player_count
+        ),
+        player_icon_textures=load_multiplayer_textures(
+            texture_set["player_icon_textures"], 
+            color_palette, 
+            player_count
+        )[:, :, :, :, :3],
+        chest_textures=load_colored_block_textures(
+            texture_set["full_map_block_textures"][BlockType.CHEST.value], 
+            color_palette, 
+            player_count
+        )
+    )
+
+def load_multiplayer_textures(base_textures, color_palette, player_count):
+    color_palette = jnp.concatenate([color_palette, jnp.ones((player_count, 1))], axis=-1)
+    colors_broadcasted = color_palette[:, None, None, None, :]
+    multiplayer_textures = base_textures[None, :].repeat(player_count, 0)
+    mask = (multiplayer_textures == jnp.array([0, 0, 0, 1])).all(axis=-1)[..., None]
+    multiplayer_textures_colored = jnp.where(mask, colors_broadcasted, multiplayer_textures)
+    return multiplayer_textures_colored
+
+
+def load_colored_block_textures(base_textures, color_palette, player_count):
+    colors_broadcasted = color_palette[:, None, None, :]
+    multiplayer_textures = base_textures[None, :].repeat(player_count, 0)
+    mask = (multiplayer_textures == jnp.array([0, 0, 0])).all(axis=-1)[..., None]
+    multiplayer_textures_colored = jnp.where(mask, colors_broadcasted, multiplayer_textures)
+    return multiplayer_textures_colored
 
 
 def load_mob_texture_set(filenames, block_pixel_size):
@@ -639,6 +692,51 @@ def load_mob_texture_set(filenames, block_pixel_size):
         texture_alphas[file_index] = texture_alpha
 
     return jnp.array(textures), jnp.array(texture_alphas)
+
+def load_request_message_textures(block_pixel_size):
+    icon_pixel_size = int(block_pixel_size * 0.6)
+    start_loc_x = (block_pixel_size - icon_pixel_size) // 2
+    start_loc_y = (block_pixel_size - icon_pixel_size) // 3
+    message_bubble_texture = load_texture("message_bubble.png", block_pixel_size)
+
+    def _overlay_item(icon_texture):
+        combined_message_texture = message_bubble_texture
+        
+        # Only for areas where the icon is not transparent overlay the icon
+        if icon_texture.shape[-1] == 4:
+            original_slice = combined_message_texture[
+                start_loc_y:start_loc_y + icon_pixel_size, 
+                start_loc_x:start_loc_x + icon_pixel_size, 
+                :3
+            ]
+            updated_slice = jnp.where(
+                (icon_texture[:, :, 3] == 1)[:, :, None], 
+                icon_texture[:, :, :3], 
+                original_slice
+            )
+        else:
+            updated_slice = icon_texture
+
+        combined_message_texture = combined_message_texture.at[
+            start_loc_y:start_loc_y + icon_pixel_size, 
+            start_loc_x:start_loc_x + icon_pixel_size, 
+            :3
+        ].set(updated_slice)
+        return combined_message_texture
+    
+    item_name_list = [
+        "food.png",
+        "drink.png",
+        "wood.png",
+        "stone.png",
+        "iron.png",
+        "coal.png",
+        "diamond.png"
+    ]
+    return jnp.array([
+        _overlay_item(load_texture(f, icon_pixel_size))
+        for f in item_name_list
+    ])
 
 
 def load_all_textures(block_pixel_size):
@@ -702,7 +800,7 @@ def load_all_textures(block_pixel_size):
 
     smaller_block_textures = jnp.array(
         [
-            load_texture(fname, int(block_pixel_size * 0.8))[:, :, :3]
+            load_texture(fname, small_block_pixel_size)[:, :, :3]
             for fname in block_texture_names
         ]
     )
@@ -733,13 +831,23 @@ def load_all_textures(block_pixel_size):
         (OBS_DIM[1] // 2) * block_pixel_size,
     )
 
-    player_textures = [
-        load_texture("player-left.png", block_pixel_size),
-        load_texture("player-right.png", block_pixel_size),
-        load_texture("player-up.png", block_pixel_size),
-        load_texture("player-down.png", block_pixel_size),
-        load_texture("player-sleep.png", block_pixel_size),
-    ]
+    player_textures = jnp.array(
+        [
+            load_texture("player-left.png", block_pixel_size),
+            load_texture("player-right.png", block_pixel_size),
+            load_texture("player-up.png", block_pixel_size),
+            load_texture("player-down.png", block_pixel_size),
+            load_texture("player-sleep.png", block_pixel_size),
+            load_texture("player-dead.png", block_pixel_size),
+        ]
+    )
+
+    player_icon_textures = jnp.array(
+        [
+            load_texture("player.png", small_block_pixel_size),
+            load_texture("player-dead.png", small_block_pixel_size),
+        ]
+    )
 
     full_map_player_textures_rgba = [
         jnp.pad(
@@ -762,11 +870,31 @@ def load_all_textures(block_pixel_size):
         ]
     )
 
+    # Teammate directions
+    def _generate_all_direction_textures(horizontal_texture_base, diagonal_texture_base):
+        right = horizontal_texture_base
+        up = jnp.rot90(right, k=1)
+        left = jnp.rot90(right, k=2)
+        down = jnp.rot90(right, k=3)
+        top_right = diagonal_texture_base
+        top_left = jnp.rot90(top_right, k=1)
+        bottom_left = jnp.rot90(top_right, k=2)
+        bottom_right = jnp.rot90(top_right, k=3)
+        return jnp.array([
+            [top_left, up, top_right],
+            [left, left, right],
+            [bottom_left, down, bottom_right],
+        ])
+
+    direction_texture_base = load_texture("pointer-right.png", small_block_pixel_size)
+    direction_diagonal_texture_base = load_texture("pointer-top-right.png", small_block_pixel_size)
+    direction_textures = _generate_all_direction_textures(direction_texture_base, direction_diagonal_texture_base)
+
     # inventory
 
     empty_texture = jnp.zeros((block_pixel_size, block_pixel_size, 3), dtype=jnp.int32)
     smaller_empty_texture = jnp.zeros(
-        (int(block_pixel_size * 0.8), int(block_pixel_size * 0.8), 3), dtype=jnp.int32
+        (small_block_pixel_size, small_block_pixel_size, 3), dtype=jnp.int32
     )
 
     ones_texture = jnp.ones((block_pixel_size, block_pixel_size, 3), dtype=jnp.int32)
@@ -1061,6 +1189,8 @@ def load_all_textures(block_pixel_size):
         ]
     )
 
+    request_message_textures = load_request_message_textures(small_block_pixel_size)
+
     return {
         "block_textures": block_textures,
         "smaller_block_textures": smaller_block_textures,
@@ -1069,6 +1199,7 @@ def load_all_textures(block_pixel_size):
         "player_textures": player_textures,
         "full_map_player_textures": full_map_player_textures,
         "full_map_player_textures_alpha": full_map_player_textures_alpha,
+        "player_icon_textures": player_icon_textures,
         "empty_texture": empty_texture,
         "smaller_empty_texture": smaller_empty_texture,
         "ones_texture": ones_texture,
@@ -1090,6 +1221,7 @@ def load_all_textures(block_pixel_size):
         "melee_mob_texture_alphas": melee_mob_texture_alphas,
         "passive_mob_textures": passive_mob_textures,
         "passive_mob_texture_alphas": passive_mob_texture_alphas,
+        "direction_textures": direction_textures,
         "ranged_mob_textures": ranged_mob_textures,
         "ranged_mob_texture_alphas": ranged_mob_texture_alphas,
         "projectile_textures": projectile_textures,
@@ -1109,38 +1241,21 @@ def load_all_textures(block_pixel_size):
         "dex_texture": dex_texture,
         "str_texture": str_texture,
         "int_texture": int_texture,
+        "request_message_textures": request_message_textures,
     }
 
 
-load_cached_textures_success = True
 if os.path.exists(TEXTURE_CACHE_FILE) and not os.environ.get(
     "CRAFTAX_RELOAD_TEXTURES", False
 ):
-    print("Loading textures from cache.")
+    print("Loading textures from cache")
     TEXTURES = load_compressed_pickle(TEXTURE_CACHE_FILE)
-    # Check validity of texture cache
-    for ts in (BLOCK_PIXEL_SIZE_AGENT, BLOCK_PIXEL_SIZE_IMG, BLOCK_PIXEL_SIZE_HUMAN):
-        tex_shape = TEXTURES[ts]["full_map_block_textures"].shape
-        if (
-            tex_shape[0] != len(BlockType)
-            or tex_shape[1] != OBS_DIM[0] * ts
-            or tex_shape[2] != OBS_DIM[1] * ts
-            or tex_shape[3] != 3
-        ):
-            load_cached_textures_success = False
-            print("Invalid texture cache, going to reload textures.")
-            break
-    print("Textures successfully loaded from cache.")
 else:
-    load_cached_textures_success = False
-
-if not load_cached_textures_success:
-    print("Processing textures.")
+    print("Processing textures")
     TEXTURES = {
         BLOCK_PIXEL_SIZE_AGENT: load_all_textures(BLOCK_PIXEL_SIZE_AGENT),
         BLOCK_PIXEL_SIZE_IMG: load_all_textures(BLOCK_PIXEL_SIZE_IMG),
         BLOCK_PIXEL_SIZE_HUMAN: load_all_textures(BLOCK_PIXEL_SIZE_HUMAN),
     }
-
     save_compressed_pickle(TEXTURE_CACHE_FILE, TEXTURES)
-    print("Textures loaded and saved to cache.")
+    print("Textures saved to cache")
