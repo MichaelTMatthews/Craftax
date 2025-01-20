@@ -434,14 +434,37 @@ def load_all_textures(block_pixel_size):
     }
 
 
+load_cached_textures_success = True
 if os.path.exists(TEXTURE_CACHE_FILE) and not os.environ.get(
     "CRAFTAX_RELOAD_TEXTURES", False
 ):
+    print("Loading Craftax-Classic textures from cache.")
     TEXTURES = load_compressed_pickle(TEXTURE_CACHE_FILE)
+    # Check validity of texture cache
+    for ts in (BLOCK_PIXEL_SIZE_AGENT, BLOCK_PIXEL_SIZE_IMG, BLOCK_PIXEL_SIZE_HUMAN):
+        tex_shape = TEXTURES[ts]["full_map_block_textures"].shape
+        if (
+            tex_shape[0] != len(BlockType)
+            or tex_shape[1] != OBS_DIM[0] * ts
+            or tex_shape[2] != OBS_DIM[1] * ts
+            or tex_shape[3] != 3
+        ):
+            load_cached_textures_success = False
+            print("Invalid texture cache, going to reload textures.")
+            break
+    print("Textures successfully loaded from cache.")
 else:
+    load_cached_textures_success = False
+
+if not load_cached_textures_success:
+    print(
+        "Processing Craftax-Classic textures. This will take a minute but will be cached for future use."
+    )
     TEXTURES = {
         BLOCK_PIXEL_SIZE_AGENT: load_all_textures(BLOCK_PIXEL_SIZE_AGENT),
         BLOCK_PIXEL_SIZE_IMG: load_all_textures(BLOCK_PIXEL_SIZE_IMG),
         BLOCK_PIXEL_SIZE_HUMAN: load_all_textures(BLOCK_PIXEL_SIZE_HUMAN),
     }
+
     save_compressed_pickle(TEXTURE_CACHE_FILE, TEXTURES)
+    print("Textures loaded and saved to cache.")
