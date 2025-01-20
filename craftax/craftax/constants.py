@@ -1115,7 +1115,7 @@ load_cached_textures_success = True
 if os.path.exists(TEXTURE_CACHE_FILE) and not os.environ.get(
     "CRAFTAX_RELOAD_TEXTURES", False
 ):
-    print("Loading textures from cache.")
+    print("Loading Craftax textures from cache.")
     TEXTURES = load_compressed_pickle(TEXTURE_CACHE_FILE)
     # Check validity of texture cache
     for ts in (BLOCK_PIXEL_SIZE_AGENT, BLOCK_PIXEL_SIZE_IMG, BLOCK_PIXEL_SIZE_HUMAN):
@@ -1134,7 +1134,9 @@ else:
     load_cached_textures_success = False
 
 if not load_cached_textures_success:
-    print("Processing textures.")
+    print(
+        "Processing Craftax textures. This will take a minute but will be cached for future use."
+    )
     TEXTURES = {
         BLOCK_PIXEL_SIZE_AGENT: load_all_textures(BLOCK_PIXEL_SIZE_AGENT),
         BLOCK_PIXEL_SIZE_IMG: load_all_textures(BLOCK_PIXEL_SIZE_IMG),
