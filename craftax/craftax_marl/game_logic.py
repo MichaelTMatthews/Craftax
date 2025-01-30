@@ -3306,11 +3306,13 @@ def trade_materials(state, action):
     new_food = _new_material_value(
         Action.REQUEST_FOOD.value, state.player_food, get_max_food(state)
     )
+    new_hunger = jnp.where(new_food>state.player_food, 0.0, state.player_hunger)
     
     # Drink
     new_drink = _new_material_value(
         Action.REQUEST_DRINK.value, state.player_drink, get_max_drink(state)
     )
+    new_thirst = jnp.where(new_drink>state.player_drink, 0.0, state.player_thirst)
 
     # Inventory Materials
     new_wood = _new_material_value(
