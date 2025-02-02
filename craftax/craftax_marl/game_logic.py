@@ -522,7 +522,7 @@ def do_action(rng, state, action, static_params):
     )
     new_drink = jnp.where(
         is_drinking_water,
-        jnp.minimum(get_max_drink(state), state.player_drink + 2),
+        jnp.minimum(get_max_drink(state), state.player_drink + 3),
         state.player_drink,
     )
     new_thirst = jnp.where(
