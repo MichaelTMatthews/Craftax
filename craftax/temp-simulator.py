@@ -13,57 +13,54 @@ from craftax_marl.util.game_logic_utils import *
 from craftax_marl.util.maths_utils import *
 
 KEY_MAPPING = {
-    pygame.K_q: Action.NOOP,
-    pygame.K_w: Action.UP,
-    pygame.K_d: Action.RIGHT,
-    pygame.K_s: Action.DOWN,
-    pygame.K_a: Action.LEFT,
-    pygame.K_SPACE: Action.DO,
-    pygame.K_1: Action.MAKE_WOOD_PICKAXE,
-    pygame.K_2: Action.MAKE_STONE_PICKAXE,
-    pygame.K_3: Action.MAKE_IRON_PICKAXE,
-    pygame.K_4: Action.MAKE_DIAMOND_PICKAXE,
-    pygame.K_5: Action.MAKE_WOOD_SWORD,
-    pygame.K_6: Action.MAKE_STONE_SWORD,
-    pygame.K_7: Action.MAKE_IRON_SWORD,
-    pygame.K_8: Action.MAKE_DIAMOND_SWORD,
-    pygame.K_t: Action.PLACE_TABLE,
-    pygame.K_TAB: Action.SLEEP,
-    pygame.K_r: Action.PLACE_STONE,
-    pygame.K_f: Action.PLACE_FURNACE,
-    pygame.K_p: Action.PLACE_PLANT,
-    pygame.K_e: Action.REST,
-    pygame.K_COMMA: Action.ASCEND,
-    pygame.K_PERIOD: Action.DESCEND,
-    pygame.K_y: Action.MAKE_IRON_ARMOUR,
-    pygame.K_u: Action.MAKE_DIAMOND_ARMOUR,
-    pygame.K_i: Action.SHOOT_ARROW,
-    pygame.K_o: Action.MAKE_ARROW,
-    pygame.K_g: Action.CAST_FIREBALL,
-    pygame.K_h: Action.CAST_ICEBALL,
-    pygame.K_j: Action.PLACE_TORCH,
-    pygame.K_z: Action.DRINK_POTION_RED,
-    pygame.K_x: Action.DRINK_POTION_GREEN,
-    pygame.K_c: Action.DRINK_POTION_BLUE,
-    pygame.K_v: Action.DRINK_POTION_PINK,
-    pygame.K_b: Action.DRINK_POTION_CYAN,
-    pygame.K_n: Action.DRINK_POTION_YELLOW,
-    pygame.K_m: Action.READ_BOOK,
-    pygame.K_k: Action.ENCHANT_SWORD,
-    pygame.K_l: Action.ENCHANT_ARMOUR,
-    pygame.K_LEFTBRACKET: Action.MAKE_TORCH,
-    pygame.K_RIGHTBRACKET: Action.LEVEL_UP_DEXTERITY,
-    pygame.K_MINUS: Action.LEVEL_UP_STRENGTH,
-    pygame.K_EQUALS: Action.LEVEL_UP_INTELLIGENCE,
-    pygame.K_SEMICOLON: Action.ENCHANT_BOW,
-    pygame.K_BACKSPACE: Action.REQUEST_FOOD,
-    pygame.K_BACKSLASH: Action.REQUEST_DRINK,
-    pygame.K_RETURN: Action.REQUEST_WOOD,
-    pygame.K_RSHIFT: Action.REQUEST_STONE,
-    pygame.K_UP: Action.REQUEST_IRON,
-    pygame.K_DOWN: Action.REQUEST_COAL,
-    pygame.K_LEFT: Action.REQUEST_DIAMOND,
-    pygame.K_RIGHT: Action.GIVE,
+    pygame.K_q: Action.NOOP.value,
+    pygame.K_w: Action.UP.value,
+    pygame.K_d: Action.RIGHT.value,
+    pygame.K_s: Action.DOWN.value,
+    pygame.K_a: Action.LEFT.value,
+    pygame.K_SPACE: Action.DO.value,
+    pygame.K_5: Action.MAKE_WOOD_SWORD.value,
+    pygame.K_6: Action.MAKE_STONE_SWORD.value,
+    pygame.K_7: Action.MAKE_IRON_SWORD.value,
+    pygame.K_8: Action.MAKE_DIAMOND_SWORD.value,
+    pygame.K_t: Action.PLACE_TABLE.value,
+    pygame.K_TAB: Action.SLEEP.value,
+    pygame.K_r: Action.PLACE_STONE.value,
+    pygame.K_f: Action.PLACE_FURNACE.value,
+    pygame.K_p: Action.PLACE_PLANT.value,
+    pygame.K_e: Action.REST.value,
+    pygame.K_COMMA: Action.ASCEND.value,
+    pygame.K_PERIOD: Action.DESCEND.value,
+    pygame.K_y: Action.MAKE_IRON_ARMOUR.value,
+    pygame.K_u: Action.MAKE_DIAMOND_ARMOUR.value,
+    pygame.K_i: Action.SHOOT_ARROW.value,
+    pygame.K_o: Action.MAKE_ARROW.value,
+    pygame.K_g: Action.CAST_SPELL.value,
+    pygame.K_j: Action.PLACE_TORCH.value,
+    pygame.K_z: Action.DRINK_POTION_RED.value,
+    pygame.K_x: Action.DRINK_POTION_GREEN.value,
+    pygame.K_c: Action.DRINK_POTION_BLUE.value,
+    pygame.K_v: Action.DRINK_POTION_PINK.value,
+    pygame.K_b: Action.DRINK_POTION_CYAN.value,
+    pygame.K_n: Action.DRINK_POTION_YELLOW.value,
+    pygame.K_m: Action.READ_BOOK.value,
+    pygame.K_k: Action.SELECT_FORAGER.value,
+    pygame.K_l: Action.SELECT_WARRIOR.value,
+    pygame.K_LEFT: Action.SELECT_MINER.value,
+    pygame.K_LEFTBRACKET: Action.MAKE_TORCH.value,
+    pygame.K_RIGHTBRACKET: Action.LEVEL_UP_DEXTERITY.value,
+    pygame.K_MINUS: Action.LEVEL_UP_STRENGTH.value,
+    pygame.K_EQUALS: Action.LEVEL_UP_INTELLIGENCE.value,
+    pygame.K_SEMICOLON: Action.ENCHANT_BOW.value,
+    pygame.K_BACKSPACE: Action.REQUEST_FOOD.value,
+    pygame.K_BACKSLASH: Action.REQUEST_DRINK.value,
+    pygame.K_RETURN: Action.REQUEST_WOOD.value,
+    pygame.K_RSHIFT: Action.REQUEST_STONE.value,
+    pygame.K_DOWN: Action.REQUEST_COAL.value,
+    pygame.K_1: Action.GIVE.value,
+    pygame.K_2: Action.GIVE.value + 1,
+    pygame.K_3: Action.GIVE.value + 2,
+    pygame.K_4: Action.GIVE.value + 3,
 }
 
 class CraftaxRenderer:
@@ -119,7 +116,7 @@ class CraftaxRenderer:
                 if event.type == pygame.KEYDOWN:
                     key = event.key
                     if key in KEY_MAPPING:
-                        return KEY_MAPPING[key].value
+                        return KEY_MAPPING[key]
                     else:
                         return Action.NOOP.value
 
@@ -133,20 +130,22 @@ jitted_step = jax.jit(craftax_step, static_argnames=("static_params", ))
 obs, state = jitted_reset(rng+2, env.default_params)
 state = state.replace(
     inventory=state.inventory.replace(
-        pickaxe=jnp.array([1,1,1,1])
-    )
+        pickaxe=jnp.array([1,1,1,1]),
+        books=jnp.array([1,1,1,1]),
+    ),
 )
 
 
 # %%
+players_controlled = 1
 print("Ready to play!")
 while True:
     if renderer.is_quit_requested():
         break
 
-    actions = [renderer.register_press()]
+    actions = [renderer.register_press() for _ in range(players_controlled)]
     actions.extend([
-        randint(1,4) for _ in range(env.static_env_params.player_count-1)
+        randint(1,4) for _ in range(env.static_env_params.player_count-players_controlled)
     ])
     actions = jnp.array(actions)
 
@@ -156,5 +155,6 @@ while True:
     )
     renderer.render(state)
     renderer.update()
+
 
 # %%
