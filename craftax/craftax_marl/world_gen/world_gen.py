@@ -636,6 +636,7 @@ def generate_world(rng, params, static_params):
         player_dexterity=jnp.full((static_params.player_count,), 1, dtype=jnp.int32),
         player_strength=jnp.full((static_params.player_count,), 1, dtype=jnp.int32),
         player_intelligence=jnp.full((static_params.player_count,), 1, dtype=jnp.int32),
+        player_specialization=jnp.full((static_params.player_count,), Specialization.UNASSIGNED.value, dtype=jnp.int32),
         request_duration=jnp.full((static_params.player_count,), 0, dtype=jnp.int32),
         request_type=jnp.full((static_params.player_count,), 0, dtype=jnp.int32),
         inventory=inventory,
@@ -657,7 +658,7 @@ def generate_world(rng, params, static_params):
         growing_plants_age=growing_plants_age,
         growing_plants_mask=growing_plants_mask,
         potion_mapping=potion_mapping,
-        learned_spells=jnp.full((static_params.player_count, 2), False, dtype=jnp.bool),
+        learned_spells=jnp.full((static_params.player_count,), False, dtype=jnp.bool),
         boss_progress=jnp.asarray(0, dtype=jnp.int32),
         boss_timesteps_to_spawn_this_round=jnp.asarray(
             BOSS_FIGHT_SPAWN_TURNS, dtype=jnp.int32

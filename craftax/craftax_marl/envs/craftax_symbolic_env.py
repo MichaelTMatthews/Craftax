@@ -85,10 +85,10 @@ class CraftaxMARLSymbolicEnvNoAutoReset(EnvironmentNoAutoReset):
 
     @property
     def num_actions(self) -> int:
-        return len(Action)
+        return len(Action) + (self.static_env_params.player_count - 1)
 
     def action_space(self, params: Optional[EnvParams] = None) -> spaces.Discrete:
-        return spaces.Discrete(len(Action))
+        return spaces.Discrete(len(Action) + (self.static_env_params.player_count - 1))
 
     @staticmethod
     def get_map_obs_shape():
@@ -195,10 +195,10 @@ class CraftaxMARLSymbolicEnv(environment.Environment):
 
     @property
     def num_actions(self) -> int:
-        return len(Action)
+        return len(Action) + (self.static_env_params.player_count - 1)
 
     def action_space(self, params: Optional[EnvParams] = None) -> spaces.Discrete:
-        return spaces.Discrete(len(Action))
+        return spaces.Discrete(len(Action) + (self.static_env_params.player_count - 1))
 
     @staticmethod
     def get_map_obs_shape():

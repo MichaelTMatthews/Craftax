@@ -1161,19 +1161,20 @@ def render_craftax_pixels(state, block_pixel_size, static_params, player_specifi
         )
 
         # Learned spells
-        fireball_texture = jax.lax.select(
-            state.learned_spells[player_index][0],
+        spell_texture = jax.lax.select(
+            state.player_specialization[player_index] == Specialization.FORAGER.value,
+            textures["heal_inv_texture"],
             textures["fireball_inv_texture"],
+        )
+        spell_texture = jax.lax.select(
+            jnp.logical_and(
+                state.player_specialization[player_index] != Specialization.UNASSIGNED.value, 
+                state.learned_spells[player_index]
+            ),
+            spell_texture,
             textures["smaller_empty_texture"],
         )
-        inv_pixels = _render_icon(inv_pixels, fireball_texture, 4, 2)
-
-        iceball_texture = jax.lax.select(
-            state.learned_spells[player_index][1],
-            textures["iceball_inv_texture"],
-            textures["smaller_empty_texture"],
-        )
-        inv_pixels = _render_icon(inv_pixels, iceball_texture, 5, 2)
+        inv_pixels = _render_icon(inv_pixels, spell_texture, 4, 2)
 
         # Enchantments
         sword_enchantment_texture = textures["sword_enchantment_textures"][
@@ -1227,6 +1228,19 @@ def render_craftax_pixels(state, block_pixel_size, static_params, player_specifi
         inv_pixels = _render_digit(
             inv_pixels, state.player_intelligence[player_index], 9, 3
         )
+
+        # Specializations
+        picked_specialization_texture = (
+            (state.player_specialization[player_index] == Specialization.FORAGER.value) * textures["forager_texture"] +
+            (state.player_specialization[player_index] == Specialization.WARRIOR.value) * textures["warrior_texture"] +
+            (state.player_specialization[player_index] == Specialization.MINER.value) * textures["miner_texture"]
+        )
+        spec_texture = jax.lax.select(
+            state.player_specialization[player_index] == Specialization.UNASSIGNED.value,
+            textures["smaller_empty_texture"],
+            picked_specialization_texture,
+        )
+        inv_pixels = _render_icon(inv_pixels, spec_texture, 8, 0)
 
         return inv_pixels
 
@@ -1294,8 +1308,18 @@ def render_craftax_pixels(state, block_pixel_size, static_params, player_specifi
         ).astype(float)
         info_pixels = _render_icons(info_pixels, direction_texture, direction_icon_locations)
 
+        # Render Teammate Specializations
+        spec_icon_locations = player_icon_locations + jnp.array([0, 3])
+        spec_texture = (
+            (state.player_specialization == Specialization.FORAGER.value)[:, None, None, None] * textures["forager_texture"] +
+            (state.player_specialization == Specialization.WARRIOR.value)[:, None, None, None] * textures["warrior_texture"] +
+            (state.player_specialization == Specialization.MINER.value)[:, None, None, None] * textures["miner_texture"] + 
+            (state.player_specialization == Specialization.UNASSIGNED.value)[:, None, None, None] * textures["smaller_empty_texture"]
+        ).astype(float)
+        info_pixels = _render_icons(info_pixels, spec_texture, spec_icon_locations)
+
         # Render Teammate Messages
-        message_icon_locations = player_icon_locations + jnp.array([0, 3])
+        message_icon_locations = player_icon_locations + jnp.array([0, 4])
         message_texture_index = state.request_type - Action.REQUEST_FOOD.value # Hacky
         message_texture = jnp.where(
             state.request_duration[:, None, None, None] > 0,

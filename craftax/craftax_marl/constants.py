@@ -106,8 +106,7 @@ class Action(Enum):
     MAKE_DIAMOND_ARMOUR = 23  # u
     SHOOT_ARROW = 24  # i
     MAKE_ARROW = 25  # o
-    CAST_FIREBALL = 26  # g
-    CAST_ICEBALL = 27  # h
+    CAST_SPELL = 26  # g
     PLACE_TORCH = 28  # j
     DRINK_POTION_RED = 29  # z
     DRINK_POTION_GREEN = 30  # x
@@ -122,15 +121,21 @@ class Action(Enum):
     LEVEL_UP_DEXTERITY = 39  # ]
     LEVEL_UP_STRENGTH = 40  # -
     LEVEL_UP_INTELLIGENCE = 41  # =
-    ENCHANT_BOW = 42  # ;
-    REQUEST_FOOD = 43 # Backspace
-    REQUEST_DRINK = 44 # Back slash
-    REQUEST_WOOD = 45 # Return
-    REQUEST_STONE = 46 # Right Shift
-    REQUEST_IRON = 47 # Up Arrow
-    REQUEST_COAL = 48 # Down Arrow
-    REQUEST_DIAMOND = 49 # Left Arrow
-    GIVE = 50 # Right Arrow
+    SELECT_FORAGER = 43
+    SELECT_WARRIOR = 44
+    SELECT_MINER = 45
+    ENCHANT_BOW = 46  # ;
+    REQUEST_FOOD = 47  # Backspace
+    REQUEST_DRINK = 48  # Back slash
+    REQUEST_WOOD = 49  # Return
+    REQUEST_STONE = 50  # Right Shift
+    REQUEST_IRON = 51  # Up Arrow
+    REQUEST_COAL = 52  # Down Arrow
+    REQUEST_DIAMOND = 53  # Left Arrow
+    REQUEST_RUBY = 54  # Left Arrow
+    REQUEST_SAPPHIRE = 55  # Left Arrow
+    GIVE = 56  # Right Arrow
+    # Player can give to all other players. (Action - GIVE) represents which player to give to.
 
 
 class MobType(Enum):
@@ -149,6 +154,14 @@ class ProjectileType(Enum):
     SLIMEBALL = 5
     FIREBALL2 = 6
     ICEBALL2 = 7
+
+
+class Specialization(Enum):
+    UNASSIGNED = 0
+    FORAGER = 1
+    WARRIOR = 2
+    MINER = 3
+
 
 # FLOOR MECHANICS
 
@@ -426,76 +439,75 @@ class Achievement(Enum):
     EAT_COW = 2
     COLLECT_SAPLING = 3
     COLLECT_DRINK = 4
-    MAKE_WOOD_PICKAXE = 5
-    MAKE_WOOD_SWORD = 6
-    PLACE_PLANT = 7
-    DEFEAT_ZOMBIE = 8
-    COLLECT_STONE = 9
-    PLACE_STONE = 10
-    EAT_PLANT = 11
-    DEFEAT_SKELETON = 12
-    MAKE_STONE_PICKAXE = 13
-    MAKE_STONE_SWORD = 14
-    WAKE_UP = 15
-    PLACE_FURNACE = 16
-    COLLECT_COAL = 17
-    COLLECT_IRON = 18
-    COLLECT_DIAMOND = 19
-    MAKE_IRON_PICKAXE = 20
-    MAKE_IRON_SWORD = 21
+    COLLECT_FOOD = 5
+    MAKE_WOOD_PICKAXE = 6
+    MAKE_WOOD_SWORD = 7
+    PLACE_PLANT = 8
+    DEFEAT_ZOMBIE = 9
+    COLLECT_STONE = 10
+    PLACE_STONE = 11
+    EAT_PLANT = 12
+    DEFEAT_SKELETON = 13
+    MAKE_STONE_PICKAXE = 14
+    MAKE_STONE_SWORD = 15
+    WAKE_UP = 16
+    PLACE_FURNACE = 17
+    COLLECT_COAL = 18
+    COLLECT_IRON = 19
+    COLLECT_DIAMOND = 20
+    MAKE_IRON_PICKAXE = 21
+    MAKE_IRON_SWORD = 22
 
-    MAKE_ARROW = 22
-    MAKE_TORCH = 23
-    PLACE_TORCH = 24
+    MAKE_ARROW = 23
+    MAKE_TORCH = 24
+    PLACE_TORCH = 25
 
-    COLLECT_SAPPHIRE = 54
-    COLLECT_RUBY = 59
-    MAKE_DIAMOND_PICKAXE = 60
-    MAKE_DIAMOND_SWORD = 25
-    MAKE_IRON_ARMOUR = 26
-    MAKE_DIAMOND_ARMOUR = 27
+    COLLECT_SAPPHIRE = 55
+    COLLECT_RUBY = 60
+    MAKE_DIAMOND_PICKAXE = 61
+    MAKE_DIAMOND_SWORD = 26
+    MAKE_IRON_ARMOUR = 27
+    MAKE_DIAMOND_ARMOUR = 28
 
-    ENTER_GNOMISH_MINES = 28
-    ENTER_DUNGEON = 29
-    ENTER_SEWERS = 30
-    ENTER_VAULT = 31
-    ENTER_TROLL_MINES = 32
-    ENTER_FIRE_REALM = 33
-    ENTER_ICE_REALM = 34
-    ENTER_GRAVEYARD = 35
+    ENTER_GNOMISH_MINES = 29
+    ENTER_DUNGEON = 30
+    ENTER_SEWERS = 31
+    ENTER_VAULT = 32
+    ENTER_TROLL_MINES = 33
+    ENTER_FIRE_REALM = 34
+    ENTER_ICE_REALM = 35
+    ENTER_GRAVEYARD = 36
 
-    DEFEAT_GNOME_WARRIOR = 36
-    DEFEAT_GNOME_ARCHER = 37
-    DEFEAT_ORC_SOLIDER = 38
-    DEFEAT_ORC_MAGE = 39
-    DEFEAT_LIZARD = 40
-    DEFEAT_KOBOLD = 41
-    DEFEAT_KNIGHT = 65
-    DEFEAT_ARCHER = 66
-    DEFEAT_TROLL = 42
-    DEFEAT_DEEP_THING = 43
-    DEFEAT_PIGMAN = 44
-    DEFEAT_FIRE_ELEMENTAL = 45
-    DEFEAT_FROST_TROLL = 46
-    DEFEAT_ICE_ELEMENTAL = 47
-    DAMAGE_NECROMANCER = 48
-    DEFEAT_NECROMANCER = 49
+    DEFEAT_GNOME_WARRIOR = 37
+    DEFEAT_GNOME_ARCHER = 38
+    DEFEAT_ORC_SOLIDER = 39
+    DEFEAT_ORC_MAGE = 40
+    DEFEAT_LIZARD = 41
+    DEFEAT_KOBOLD = 42
+    DEFEAT_KNIGHT = 66
+    DEFEAT_ARCHER = 67
+    DEFEAT_TROLL = 43
+    DEFEAT_DEEP_THING = 44
+    DEFEAT_PIGMAN = 45
+    DEFEAT_FIRE_ELEMENTAL = 46
+    DEFEAT_FROST_TROLL = 47
+    DEFEAT_ICE_ELEMENTAL = 48
+    DAMAGE_NECROMANCER = 49
+    DEFEAT_NECROMANCER = 50
 
-    EAT_BAT = 50
-    EAT_SNAIL = 51
+    EAT_BAT = 51
+    EAT_SNAIL = 52
 
-    FIND_BOW = 52
-    FIRE_BOW = 53
+    FIND_BOW = 53
+    FIRE_BOW = 54
 
-    LEARN_FIREBALL = 55
-    CAST_FIREBALL = 56
-    LEARN_ICEBALL = 57
-    CAST_ICEBALL = 58
+    LEARN_SPELL = 56
+    CAST_SPELL = 57
 
-    OPEN_CHEST = 61
-    DRINK_POTION = 62
-    ENCHANT_SWORD = 63
-    ENCHANT_ARMOUR = 64
+    OPEN_CHEST = 62
+    DRINK_POTION = 63
+    ENCHANT_SWORD = 64
+    ENCHANT_ARMOUR = 65
 
 
 INTERMEDIATE_ACHIEVEMENTS = [
@@ -534,7 +546,7 @@ VERY_ADVANCED_ACHIEVEMENTS = [
 
 
 def achievement_mapping(achievement_value):
-    if achievement_value <= 24:
+    if achievement_value <= 25:
         return 1
     elif achievement_value in INTERMEDIATE_ACHIEVEMENTS:
         return 3
@@ -731,7 +743,9 @@ def load_request_message_textures(block_pixel_size):
         "stone.png",
         "iron.png",
         "coal.png",
-        "diamond.png"
+        "diamond.png",
+        "ruby.png",
+        "sapphire.png",
     ]
     return jnp.array([
         _overlay_item(load_texture(f, icon_pixel_size))
@@ -1143,12 +1157,18 @@ def load_all_textures(block_pixel_size):
         :, :, :3
     ]
     iceball_inv_texture = load_texture("iceball.png", small_block_pixel_size)[:, :, :3]
+    heal_inv_texture = load_texture("heal_cross.png", small_block_pixel_size)[:, :, :3]
 
     # Attributes
     xp_texture = load_texture("xp.png", small_block_pixel_size)[:, :, :3]
     dex_texture = load_texture("dexterity.png", small_block_pixel_size)[:, :, :3]
     str_texture = load_texture("strength.png", small_block_pixel_size)[:, :, :3]
     int_texture = load_texture("intelligence.png", small_block_pixel_size)[:, :, :3]
+
+    # Specializations
+    forager_texture = load_texture("forager.png", small_block_pixel_size)[:, :, :3]
+    warrior_texture = load_texture("warrior.png", small_block_pixel_size)[:, :, :3]
+    miner_texture = load_texture("miner.png", small_block_pixel_size)[:, :, :3]
 
     armour_enchantment_textures = jnp.array(
         [
@@ -1234,6 +1254,7 @@ def load_all_textures(block_pixel_size):
         "book_texture": book_texture,
         "fireball_inv_texture": fireball_inv_texture,
         "iceball_inv_texture": iceball_inv_texture,
+        "heal_inv_texture": heal_inv_texture,
         "armour_enchantment_textures": armour_enchantment_textures,
         "sword_enchantment_textures": sword_enchantment_textures,
         "arrow_enchantment_textures": arrow_enchantment_textures,
@@ -1241,6 +1262,9 @@ def load_all_textures(block_pixel_size):
         "dex_texture": dex_texture,
         "str_texture": str_texture,
         "int_texture": int_texture,
+        "forager_texture": forager_texture,
+        "warrior_texture": warrior_texture,
+        "miner_texture": miner_texture,
         "request_message_textures": request_message_textures,
     }
 

@@ -79,6 +79,7 @@ class EnvState:
     player_dexterity: jnp.ndarray
     player_strength: jnp.ndarray
     player_intelligence: jnp.ndarray
+    player_specialization: jnp.ndarray
 
     # Request Info
     request_duration: jnp.ndarray

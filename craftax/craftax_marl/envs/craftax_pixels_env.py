@@ -86,10 +86,10 @@ class CraftaxMARLPixelsEnvNoAutoReset(EnvironmentNoAutoReset):
 
     @property
     def num_actions(self) -> int:
-        return len(Action)
+        return len(Action) + (self.static_env_params.player_count - 1)
 
     def action_space(self, params: Optional[EnvParams] = None) -> spaces.Discrete:
-        return spaces.Discrete(len(Action))
+        return spaces.Discrete(len(Action) + (self.static_env_params.player_count - 1))
 
     def observation_space(self, params: EnvParams) -> spaces.Box:
         return spaces.Box(
@@ -176,10 +176,10 @@ class CraftaxMARLPixelsEnv(environment.Environment):
 
     @property
     def num_actions(self) -> int:
-        return len(Action)
+        return len(Action) + (self.static_env_params.player_count - 1)
 
     def action_space(self, params: Optional[EnvParams] = None) -> spaces.Discrete:
-        return spaces.Discrete(len(Action))
+        return spaces.Discrete(len(Action) + (self.static_env_params.player_count - 1))
 
     def observation_space(self, params: EnvParams) -> spaces.Box:
         return spaces.Box(

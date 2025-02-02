@@ -154,6 +154,12 @@ def attack_mob(state, doing_attack, position, damage_vector, can_eat):
         0.0,
         state.player_hunger,
     )
+    new_achievements = new_achievements.at[:, Achievement.COLLECT_FOOD.value].set(
+        jnp.logical_or(
+            state.achievements[:, Achievement.COLLECT_FOOD.value],
+            jnp.logical_and(did_kill_passive_mob, can_eat),
+        )
+    )
 
     state = state.replace(
         passive_mobs=new_passive_mobs,
@@ -425,11 +431,11 @@ def get_max_health(state):
 
 
 def get_max_food(state):
-    return 7 + 2 * state.player_dexterity
+    return (7 + 2 * state.player_dexterity) * (1 + (state.player_specialization == Specialization.FORAGER.value) * 1)
 
 
 def get_max_drink(state):
-    return 7 + 2 * state.player_dexterity
+    return (7 + 2 * state.player_dexterity) * (1 + (state.player_specialization == Specialization.FORAGER.value) * 1)
 
 
 def get_max_energy(state):
@@ -505,7 +511,7 @@ def get_ladder_positions(rng, static_params, config, map):
 def get_player_icon_positions(player_count):
     col1 = jnp.arange((player_count+1) // 2)
     
-    col2_values = jnp.array([1, 6]) 
+    col2_values = jnp.array([0, 6]) 
     
     col2 = jnp.tile(col2_values, (player_count+1) // len(col2_values))
     col1 = jnp.repeat(col1, len(col2_values))[:player_count]
