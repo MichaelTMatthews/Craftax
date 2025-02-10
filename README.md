@@ -115,6 +115,7 @@ export CRAFTAX_RELOAD_TEXTURES=true
 # 📋 Scoreboard
 If you would like to add an algorithm please open a PR and provide a reference to the source of the results.
 We report reward as a % of the maximum (226).
+Note that all scores from outside the original Craftax paper are reported and have not been verified.
 
 ## Craftax-1B
 | Algorithm | Reward (% max) |                                              Code                                               |                  Paper                  |
@@ -130,6 +131,7 @@ We report reward as a % of the maximum (226).
 ## Craftax-1M
 | Algorithm | Reward (% max) |                                              Code                                               |                  Paper                  |
 |:----------|---------------:|:-----------------------------------------------------------------------------------------------:|:---------------------------------------:|
+| Efficient MBRL   |            5.4 | - | [Efficient MBRL](https://arxiv.org/abs/2502.01591) |
 | PPO-RNN   |            2.3 | [Craftax_Baselines](https://github.com/MichaelTMatthews/Craftax_Baselines/blob/main/ppo_rnn.py) | [PPO](https://arxiv.org/abs/1707.06347) |
 | RND       |            2.2 | [Craftax_Baselines](https://github.com/MichaelTMatthews/Craftax_Baselines/blob/main/ppo_rnd.py) | [RND](https://arxiv.org/abs/1810.12894) |
 | PPO       |            2.2 |   [Craftax_Baselines](https://github.com/MichaelTMatthews/Craftax_Baselines/blob/main/ppo.py)   | [PPO](https://arxiv.org/abs/1707.06347) |
