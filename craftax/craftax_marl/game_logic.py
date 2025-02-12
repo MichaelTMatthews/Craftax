@@ -1,27 +1,37 @@
 from craftax_marl.util.game_logic_utils import *
 from craftax_marl.util.maths_utils import *
 
-def revive_player(state, block_position, is_doing_action, static_params):
+def interplayer_interaction(state, block_position, is_doing_action, env_params, static_params):
+    # If other player is down revive them, otherwise damage (if friendly fire is enabled)
+
     in_other_player = (jnp.expand_dims(state.player_position, axis=1) == jnp.expand_dims(block_position, axis=0)).all(axis=2).T
-    player_revived = jnp.argmax(in_other_player, axis=-1)
-    is_reviving_player = jnp.logical_and(
-        jnp.logical_and(
-            is_doing_action,
-            in_other_player.any(axis=-1),
-        ),
-        jnp.logical_not(state.player_alive[player_revived]),
+    player_interacting_with = jnp.argmax(in_other_player, axis=-1)
+
+    is_interacting_with_other_player = jnp.logical_and(
+        in_other_player.any(axis=-1),
+        is_doing_action,
     )
-    is_player_being_revived = jnp.any(
+    is_player_being_interacted_with = jnp.any(
         jnp.logical_and(
-            jnp.arange(static_params.player_count)[:, None] == player_revived,
-            is_reviving_player[None, :]
+            jnp.arange(static_params.player_count)[:, None] == player_interacting_with,
+            is_interacting_with_other_player[None, :]
         ),
         axis=-1
     )
+    is_player_being_revived = jnp.logical_and(
+        is_player_being_interacted_with,
+        jnp.logical_not(state.player_alive),
+    )
+
+    damage_taken = jnp.zeros(static_params.player_count).at[player_interacting_with].add(
+        is_interacting_with_other_player * get_damage_between_players(state, player_interacting_with)
+    )
+    damage_taken *= env_params.friendly_fire
+
     new_player_health = jnp.where(
         is_player_being_revived,
-        get_max_health(state) / 2,
-        state.player_health,
+        1.0,
+        state.player_health - damage_taken,
     )
     state = state.replace(
         player_health=new_player_health,
@@ -215,7 +225,7 @@ def add_items_from_chest(rng, state, inventory, is_opening_chest):
     )
 
 
-def do_action(rng, state, action, static_params):
+def do_action(rng, state, action, env_params, static_params):
     is_forager = state.player_specialization == Specialization.FORAGER.value
 
     block_position = state.player_position + DIRECTIONS[state.player_direction]
@@ -230,8 +240,8 @@ def do_action(rng, state, action, static_params):
         state, doing_action, block_position, get_player_damage_vector(state), is_forager
     )
     
-    # Revive player
-    state = revive_player(state, block_position, doing_action, static_params)
+    # Interact with other players (Damage/Revive)
+    state = interplayer_interaction(state, block_position, doing_action, env_params, static_params)
     
     # BLOCKS
     # Tree
@@ -1339,7 +1349,7 @@ def place_block(state, action, static_params):
     return state
 
 
-def update_mobs(rng, state, params, static_params):
+def update_mobs(rng, state, params, env_params, static_params):
 
     # Move melee_mobs
     def _move_melee_mob(rng_and_state, melee_mob_index):
@@ -2019,10 +2029,7 @@ def update_mobs(rng, state, params, static_params):
         )
 
         projectile_damage_vector *= jax.lax.select(
-            jnp.logical_or(
-                projectile_type == ProjectileType.FIREBALL.value,
-                projectile_type == ProjectileType.ICEBALL.value,
-            ),
+            projectile_type == ProjectileType.FIREBALL.value,
             magic_damage_coeff,
             1.0,
         )
@@ -2044,7 +2051,17 @@ def update_mobs(rng, state, params, static_params):
             ),
         )  # Arrows can go over water
 
+        # Check if we hit a player
         deal_damage = projectiles.mask[state.player_level, projectile_index]
+
+        per_player_contact = (state.player_position == proposed_position[None, :]).all(axis=-1)
+        did_attack_player = per_player_contact.any()    
+        player_attack_index = jnp.argmax(per_player_contact)
+
+        player_defense_vector = get_player_defense_vector(state)[player_attack_index]
+        player_damage_dealt = get_damage(projectile_damage_vector, player_defense_vector) * did_attack_player * env_params.friendly_fire
+        new_player_health = state.player_health.at[player_attack_index].subtract(player_damage_dealt)
+        
         state, did_attack_mob0, did_kill_mob0 = attack_mob(
             state,
             deal_damage,
@@ -2053,6 +2070,8 @@ def update_mobs(rng, state, params, static_params):
             jnp.array([False]),
         )
         did_attack_mob0 = did_attack_mob0[0]
+
+        did_attack_mob = jnp.logical_or(did_attack_player, did_attack_mob0)
 
         projectile_damage_vector = projectile_damage_vector * (1 - did_attack_mob0)
 
@@ -2065,7 +2084,7 @@ def update_mobs(rng, state, params, static_params):
         )
         did_attack_mob1 = did_attack_mob1[0]
 
-        did_attack_mob = jnp.logical_or(did_attack_mob0, did_attack_mob1)
+        did_attack_mob = jnp.logical_or(did_attack_mob, did_attack_mob1)
 
         continue_move = jnp.logical_and(
             proposed_position_in_bounds, jnp.logical_not(in_wall)
@@ -2079,6 +2098,7 @@ def update_mobs(rng, state, params, static_params):
         )
 
         state = state.replace(
+            player_health=new_player_health,
             player_projectiles=state.player_projectiles.replace(
                 position=state.player_projectiles.position.at[
                     state.player_level, projectile_index
@@ -3533,7 +3553,7 @@ def craftax_step(
 
     # Interact (mining, melee attacking, eating plants, drinking water, reviving)
     rng, _rng = jax.random.split(rng)
-    state = do_action(_rng, state, actions, static_params)
+    state = do_action(_rng, state, actions, params, static_params)
 
     # Placing
     state = place_block(state, actions, static_params)
@@ -3571,7 +3591,7 @@ def craftax_step(
 
     # Mobs
     rng, _rng = jax.random.split(rng)
-    state = update_mobs(_rng, state, params, static_params)
+    state = update_mobs(_rng, state, params, params, static_params)
 
     rng, _rng = jax.random.split(rng)
     state = spawn_mobs(state, _rng, params, static_params)

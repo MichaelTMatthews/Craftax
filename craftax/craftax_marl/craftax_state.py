@@ -141,6 +141,7 @@ class EnvParams:
     # Game Mode Parameters
     god_mode: bool = False
     shared_reward: bool = True
+    friendly_fire: bool = True
 
 @struct.dataclass
 class StaticEnvParams:

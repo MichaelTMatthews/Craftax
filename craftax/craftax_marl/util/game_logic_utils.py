@@ -276,20 +276,18 @@ def spawn_projectile(
 
 
 def get_damage_done_to_player(state, static_params, damage_vector):
-    scaled_defenses = jnp.stack(
-        [
-            state.inventory.armour * 0.1,
-            (state.armour_enchantments == 1) * 0.2,
-            (state.armour_enchantments == 2) * 0.2,
-        ],
-        axis=1,
-    )
-
-    defense_vector = scaled_defenses.sum(axis=2)
-
     damage_vector *= (
         1 + is_fighting_boss(state, static_params) * BOSS_FIGHT_EXTRA_DAMAGE
     )
+    defense_vector = get_player_defense_vector(state)
+    return get_damage(damage_vector, defense_vector)
+
+def get_damage_between_players(state, other_player_index):
+    # Damage player inflicts on other player
+    damage_vector = get_player_damage_vector(state) * (1 + 2.5 * state.is_sleeping[other_player_index, None])
+
+    # Defense of damaged player
+    defense_vector = get_player_defense_vector(state)[other_player_index]
 
     return get_damage(damage_vector, defense_vector)
 
@@ -316,9 +314,22 @@ def get_player_damage_vector(state):
     return jnp.stack([physical_damage, fire_damage, ice_damage], axis=1)
 
 
+def get_player_defense_vector(state):
+    scaled_defenses = jnp.stack(
+        [
+            state.inventory.armour * 0.1,
+            (state.armour_enchantments == 1) * 0.2,
+            (state.armour_enchantments == 2) * 0.2,
+        ],
+        axis=1,
+    )
+    defense_vector = scaled_defenses.sum(axis=2)
+    return defense_vector
+
+
 def get_damage(damage_vector, defense_vector):
     damages = (1.0 - defense_vector) * damage_vector
-    return damages.sum(axis=1)
+    return damages.sum(axis=-1)
 
 
 def in_bounds(position, static_params):
