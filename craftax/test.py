@@ -11,93 +11,123 @@ env = CraftaxEnv(CraftaxEnv.default_static_params())
 obs, state = env.reset(rng, env.default_params)
 
 # %%
-state = state.replace(
-    player_position=jnp.array([
-        [11,11],
-        [13,13],
-        [15,15],
-        [17,17],
-    ])
-)
-block_position = jnp.array([
-    [10,10],
-    [11,11],
-    [13,13],
-    [11,11],
-])
-is_doing_action = jnp.array([True, True, True, True])
 env_params = env.default_params
 static_params = env.default_static_params()
 
 
-# %%
-in_other_player = (jnp.expand_dims(state.player_position, axis=1) == jnp.expand_dims(block_position, axis=0)).all(axis=2).T
-player_interacting_with = jnp.argmax(in_other_player, axis=-1)
-
-is_interacting_with_other_player = jnp.logical_and(
-    in_other_player.any(axis=-1),
-    is_doing_action,
-)
-is_player_being_interacted_with = jnp.any(
-    jnp.logical_and(
-        jnp.arange(static_params.player_count)[:, None] == player_interacting_with,
-        is_interacting_with_other_player[None, :]
-    ),
-    axis=-1
-)
-is_player_being_revived = jnp.logical_and(
-    is_player_being_interacted_with,
-    jnp.logical_not(state.player_alive),
-)
-
-damage_taken = jnp.zeros(static_params.player_count).at[player_interacting_with].add(
-    is_interacting_with_other_player * get_damage_between_players(state, player_interacting_with)
-)
-damage_taken *= env_params.friendly_fire
-
-new_player_health = jnp.where(
-    is_player_being_revived,
-    1.0,
-    state.player_health - damage_taken,
-)
-
 
 # %%
-def interact_player(state, block_position, is_doing_action, env_params, static_params):
-    # If other player dead revive, otherwise damage.
-
-    in_other_player = (jnp.expand_dims(state.player_position, axis=1) == jnp.expand_dims(block_position, axis=0)).all(axis=2).T
-    player_interacting_with = jnp.argmax(in_other_player, axis=-1)
-
-    is_interacting_with_other_player = jnp.logical_and(
-        in_other_player.any(axis=-1),
-        is_doing_action,
+def enchant(rng, state: EnvState, action, static_params: StaticEnvParams):
+    target_block_position = state.player_position + DIRECTIONS[state.player_direction]
+    target_block = state.map[
+        state.player_level, target_block_position[:, 0], target_block_position[:, 1]
+    ]
+    target_block_is_enchantment_table = jnp.logical_or(
+        target_block == BlockType.ENCHANTMENT_TABLE_FIRE.value,
+        target_block == BlockType.ENCHANTMENT_TABLE_ICE.value,
     )
-    is_player_being_interacted_with = jnp.any(
+
+    enchantment_type = jnp.where(
+        target_block == BlockType.ENCHANTMENT_TABLE_FIRE.value, 
+        1, 
+        2
+    )
+
+    num_gems = jnp.where(
+        target_block == BlockType.ENCHANTMENT_TABLE_FIRE.value,
+        state.inventory.ruby,
+        state.inventory.sapphire,
+    )
+
+    could_enchant = jnp.logical_and(
+        state.player_mana >= 9,
+        jnp.logical_and(target_block_is_enchantment_table, num_gems >= 1),
+    )
+    could_enchant_warrior = jnp.logical_and(
+        state.player_specialization == Specialization.WARRIOR.value,
+        could_enchant
+    )
+
+    is_enchanting_bow = jnp.logical_and(
+        could_enchant_warrior,
+        jnp.logical_and(action == Action.ENCHANT_BOW.value, state.inventory.bow > 0),
+    )
+
+    is_enchanting_sword = jnp.logical_and(
+        could_enchant_warrior,
         jnp.logical_and(
-            jnp.arange(static_params.player_count)[:, None] == player_interacting_with,
-            is_interacting_with_other_player[None, :]
+            action == Action.ENCHANT_SWORD.value, state.inventory.sword > 0
         ),
-        axis=-1
     )
 
-    # Revive other players
-    is_player_being_revived = jnp.logical_and(
-        is_player_being_interacted_with,
-        jnp.logical_not(state.player_alive),
+    is_enchanting_armour = jnp.logical_and(
+        could_enchant,
+        jnp.logical_and(
+            action == Action.ENCHANT_ARMOUR.value, state.inventory.armour.sum(axis=1) > 0
+        ),
     )
 
-    # Damage other players
-    damage_taken = jnp.zeros(static_params.player_count).at[player_interacting_with].add(
-        is_interacting_with_other_player * get_player_damage_vector(state)
+    rng, _rng = jax.random.split(rng)
+    unenchanted_armour = state.armour_enchantments == 0
+    opposite_enchanted_armour = jnp.logical_and(
+        state.armour_enchantments != 0, state.armour_enchantments != enchantment_type[:, None]
     )
 
-    new_player_health = jnp.where(
-        is_player_being_revived,
-        1.0,
-        state.player_health - damage_taken,
+    armour_targets = (
+        unenchanted_armour + (unenchanted_armour.sum(axis=1) == 0)[:, None] * opposite_enchanted_armour
     )
-    state = state.replace(
-        player_health=new_player_health,
+
+    _rngs = jax.random.split(rng, static_params.player_count+1)
+    rng, _rng = _rngs[0], _rngs[1:]
+    armour_target = jax.vmap(jax.random.choice, in_axes=(0, None, None, None, 0))(
+        _rng, jnp.arange(4), (), True, armour_targets
     )
-    return state
+
+    is_enchanting = jnp.logical_or(
+        is_enchanting_sword, jnp.logical_or(is_enchanting_bow, is_enchanting_armour)
+    )
+
+    new_sword_enchantment = (
+        is_enchanting_sword * enchantment_type
+        + (1 - is_enchanting_sword) * state.sword_enchantment
+    )
+    new_bow_enchantment = (
+        is_enchanting_bow * enchantment_type
+        + (1 - is_enchanting_bow) * state.bow_enchantment
+    )
+
+    new_armour_enchantments = state.armour_enchantments.at[jnp.arange(static_params.player_count), armour_target].set(
+        is_enchanting_armour * enchantment_type
+        + (1 - is_enchanting_armour) * state.armour_enchantments[jnp.arange(static_params.player_count), armour_target]
+    )
+
+    new_sapphire = state.inventory.sapphire - 1 * is_enchanting * (
+        enchantment_type == 2
+    )
+    new_ruby = state.inventory.ruby - 1 * is_enchanting * (enchantment_type == 1)
+    new_mana = state.player_mana - 9 * is_enchanting
+
+    new_achievements = state.achievements.at[:, Achievement.ENCHANT_SWORD.value].set(
+        jnp.logical_or(
+            state.achievements[:, Achievement.ENCHANT_SWORD.value], is_enchanting_sword
+        )
+    )
+
+    new_achievements = new_achievements.at[:, Achievement.ENCHANT_ARMOUR.value].set(
+        jnp.logical_or(
+            new_achievements[:, Achievement.ENCHANT_ARMOUR.value], is_enchanting_armour
+        )
+    )
+
+    return state.replace(
+        sword_enchantment=new_sword_enchantment,
+        bow_enchantment=new_bow_enchantment,
+        armour_enchantments=new_armour_enchantments,
+        inventory=state.inventory.replace(
+            sapphire=new_sapphire,
+            ruby=new_ruby,
+        ),
+        player_mana=new_mana,
+        achievements=new_achievements,
+    )
+# %%

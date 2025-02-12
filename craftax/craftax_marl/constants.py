@@ -121,20 +121,17 @@ class Action(Enum):
     LEVEL_UP_DEXTERITY = 39  # ]
     LEVEL_UP_STRENGTH = 40  # -
     LEVEL_UP_INTELLIGENCE = 41  # =
-    SELECT_FORAGER = 43
-    SELECT_WARRIOR = 44
-    SELECT_MINER = 45
-    ENCHANT_BOW = 46  # ;
-    REQUEST_FOOD = 47  # Backspace
-    REQUEST_DRINK = 48  # Back slash
-    REQUEST_WOOD = 49  # Return
-    REQUEST_STONE = 50  # Right Shift
-    REQUEST_IRON = 51  # Up Arrow
-    REQUEST_COAL = 52  # Down Arrow
-    REQUEST_DIAMOND = 53  # Left Arrow
-    REQUEST_RUBY = 54  # Left Arrow
-    REQUEST_SAPPHIRE = 55  # Left Arrow
-    GIVE = 56  # Right Arrow
+    ENCHANT_BOW = 42  # ;
+    REQUEST_FOOD = 43  # Backspace
+    REQUEST_DRINK = 44  # Back slash
+    REQUEST_WOOD = 45  # Return
+    REQUEST_STONE = 46  # Right Shift
+    REQUEST_IRON = 47  # Up Arrow
+    REQUEST_COAL = 48  # Down Arrow
+    REQUEST_DIAMOND = 49  # Left Arrow
+    REQUEST_RUBY = 50  # Left Arrow
+    REQUEST_SAPPHIRE = 51  # Left Arrow
+    GIVE = 52  # Right Arrow
     # Player can give to all other players. (Action - GIVE) represents which player to give to.
 
 

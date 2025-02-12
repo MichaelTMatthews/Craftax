@@ -3158,11 +3158,11 @@ def enchant(rng, state: EnvState, action, static_params: StaticEnvParams):
     rng, _rng = jax.random.split(rng)
     unenchanted_armour = state.armour_enchantments == 0
     opposite_enchanted_armour = jnp.logical_and(
-        state.armour_enchantments != 0, state.armour_enchantments != enchantment_type
+        state.armour_enchantments != 0, state.armour_enchantments != enchantment_type[:, None]
     )
 
     armour_targets = (
-        unenchanted_armour + (unenchanted_armour.sum(axis=1) == 0) * opposite_enchanted_armour
+        unenchanted_armour + (unenchanted_armour.sum(axis=1) == 0)[:, None] * opposite_enchanted_armour
     )
 
     _rngs = jax.random.split(rng, static_params.player_count+1)
@@ -3485,14 +3485,6 @@ def make_request(state, action):
 def level_up_attributes(state: EnvState, action: jnp.array, params: EnvParams) -> EnvState:
     can_level_up = state.player_xp >= 1
 
-    # Specializing
-    can_specialize = (state.player_specialization == Specialization.UNASSIGNED.value)
-    new_specialization = can_specialize * (
-        (action == Action.SELECT_FORAGER.value) * Specialization.FORAGER.value +
-        (action == Action.SELECT_WARRIOR.value) * Specialization.WARRIOR.value +
-        (action == Action.SELECT_MINER.value) * Specialization.MINER.value
-    ) + (1-can_specialize) * state.player_specialization
-
     # Levelling up attributes
     is_levelling_up_dex = jnp.logical_and(
         can_level_up,
@@ -3523,7 +3515,6 @@ def level_up_attributes(state: EnvState, action: jnp.array, params: EnvParams) -
         player_dexterity=state.player_dexterity + 1 * is_levelling_up_dex,
         player_strength=state.player_strength + 1 * is_levelling_up_str,
         player_intelligence=state.player_intelligence + 1 * is_levelling_up_int,
-        player_specialization=new_specialization,
         player_xp=state.player_xp - 1 * is_levelling_up,
     )
 

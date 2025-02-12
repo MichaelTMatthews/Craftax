@@ -508,6 +508,10 @@ def generate_world(rng, params, static_params):
         jnp.arange(0, static_params.player_count)
     )
 
+    # Fix player specializations
+    player_specialization_order = jnp.array([Specialization.WARRIOR.value, Specialization.FORAGER.value, Specialization.MINER.value])
+    player_specializations = player_specialization_order[jnp.arange(static_params.player_count) % 3]
+
     # Generate smoothgens (overworld, caves, elemental levels, boss level)
     rngs = jax.random.split(rng, 7)
     rng, _rng = rngs[0], rngs[1:]
@@ -636,7 +640,7 @@ def generate_world(rng, params, static_params):
         player_dexterity=jnp.full((static_params.player_count,), 1, dtype=jnp.int32),
         player_strength=jnp.full((static_params.player_count,), 1, dtype=jnp.int32),
         player_intelligence=jnp.full((static_params.player_count,), 1, dtype=jnp.int32),
-        player_specialization=jnp.full((static_params.player_count,), Specialization.UNASSIGNED.value, dtype=jnp.int32),
+        player_specialization=player_specializations,
         request_duration=jnp.full((static_params.player_count,), 0, dtype=jnp.int32),
         request_type=jnp.full((static_params.player_count,), 0, dtype=jnp.int32),
         inventory=inventory,

@@ -147,7 +147,7 @@ class EnvParams:
 class StaticEnvParams:
     map_size: Tuple[int, int] = (48, 48)
     num_levels: int = 9
-    player_count: int = 4
+    player_count: int = 3
 
     # Mobs Per Player
     max_melee_mobs: int = 3

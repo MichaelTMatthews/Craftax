@@ -44,9 +44,6 @@ KEY_MAPPING = {
     pygame.K_b: Action.DRINK_POTION_CYAN.value,
     pygame.K_n: Action.DRINK_POTION_YELLOW.value,
     pygame.K_m: Action.READ_BOOK.value,
-    pygame.K_k: Action.SELECT_FORAGER.value,
-    pygame.K_l: Action.SELECT_WARRIOR.value,
-    pygame.K_LEFT: Action.SELECT_MINER.value,
     pygame.K_LEFTBRACKET: Action.MAKE_TORCH.value,
     pygame.K_RIGHTBRACKET: Action.LEVEL_UP_DEXTERITY.value,
     pygame.K_MINUS: Action.LEVEL_UP_STRENGTH.value,
@@ -130,10 +127,10 @@ jitted_step = jax.jit(craftax_step, static_argnames=("static_params", ))
 obs, state = jitted_reset(rng+2, env.default_params)
 state = state.replace(
     inventory=state.inventory.replace(
-        bow=jnp.array([1,1,1,1]),
-        arrows=jnp.array([9,9,9,9]),
-        pickaxe=jnp.array([1,1,1,1]),
-        books=jnp.array([1,1,1,1]),
+        bow=jnp.array([1,1,1]),
+        arrows=jnp.array([9,9,9]),
+        pickaxe=jnp.array([1,1,1]),
+        books=jnp.array([1,1,1]),
     ),
 )
 
