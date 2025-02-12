@@ -25,35 +25,6 @@ def render_craftax_symbolic(state: EnvState, static_params: StaticEnvParams):
     )
     map_view_one_hot = jax.nn.one_hot(map_view, num_classes=len(BlockType))
 
-    # Chest
-    def _create_chest_map(player_index):
-        local_position = (
-            state.chest_positions[static_params.player_level]
-            - state.player_position[player_index, None]
-            + jnp.ones((2,), dtype=jnp.int32) * (obs_dim_array // 2)
-        )
-        in_bounds = jnp.logical_and(local_position >= 0, local_position < obs_dim_array).all(axis=-1)
-        is_still_chest = state.map[
-            static_params.player_level, 
-            state.chest_positions[static_params.player_level, :, :, 0], 
-            state.chest_positions[static_params.player_level, :, :, 1]
-        ] == BlockType.CHEST.value
-        placed_chest = jnp.logical_and(in_bounds, is_still_chest)
-        row_indices = jnp.arange(placed_chest.shape[0]).reshape(-1, 1)
-        row_indices_array = jnp.tile(row_indices, (1, placed_chest.shape[1]))
-
-        player_chest_map = jnp.zeros((static_params.player_count, *OBS_DIM))
-        player_chest_map = player_chest_map.at[
-            row_indices_array, 
-            local_position[..., 0], 
-            local_position[..., 1]
-        ].max(placed_chest)
-        return player_chest_map
-
-    chest_map_view = jax.vmap(_create_chest_map)(
-        jnp.arange(static_params.player_count)
-    )
-
     # Items
     padded_items_map = jnp.pad(
         state.item_map[state.player_level],
@@ -203,7 +174,7 @@ def render_craftax_symbolic(state: EnvState, static_params: StaticEnvParams):
 
     # Concat all maps
     all_map = jnp.concatenate(
-        [map_view_one_hot, item_map_view_one_hot, mob_map, teammate_map, chest_map_view], axis=-1
+        [map_view_one_hot, item_map_view_one_hot, mob_map, teammate_map], axis=-1
     )
 
     # Light map
@@ -367,47 +338,47 @@ def render_craftax_pixels(state, block_pixel_size, static_params, player_specifi
         _add_block_type_to_pixels, map_pixels, jnp.arange(len(BlockType))
     )
 
-    # Render Colored Chests
-    def _add_player_chests(chest_map_view, player_index):
-        """Adds players chest position to other players"""
-        local_position = (
-            state.chest_positions[state.player_level, player_index]
-            - state.player_position[:, None]
-            + jnp.ones((2,), dtype=jnp.int32) * (obs_dim_array // 2)
-        )
-        def _single_batch_index(data_slice, row_idx, col_idx):
-            return data_slice.at[row_idx, col_idx].set(player_index)
-        chest_map_view = jax.vmap(_single_batch_index, in_axes=(0,0,0))(
-            chest_map_view, local_position[..., 0], local_position[..., 1]
-        )
-        return chest_map_view, None
+    # # Render Colored Chests
+    # def _add_player_chests(chest_map_view, player_index):
+    #     """Adds players chest position to other players"""
+    #     local_position = (
+    #         state.chest_positions[state.player_level, player_index]
+    #         - state.player_position[:, None]
+    #         + jnp.ones((2,), dtype=jnp.int32) * (obs_dim_array // 2)
+    #     )
+    #     def _single_batch_index(data_slice, row_idx, col_idx):
+    #         return data_slice.at[row_idx, col_idx].set(player_index)
+    #     chest_map_view = jax.vmap(_single_batch_index, in_axes=(0,0,0))(
+    #         chest_map_view, local_position[..., 0], local_position[..., 1]
+    #     )
+    #     return chest_map_view, None
 
-    chest_map_view = jnp.full_like(map_view, fill_value=-1)
-    chest_map_view, _ = jax.lax.scan(
-        _add_player_chests,
-        chest_map_view,
-        jnp.arange(static_params.player_count),
-    )
-    chest_map_pixels_indexes = jnp.repeat(
-        jnp.repeat(chest_map_view, repeats=block_pixel_size, axis=1),
-        repeats=block_pixel_size,
-        axis=2,
-    )
-    chest_map_pixels_indexes = jnp.expand_dims(chest_map_pixels_indexes, axis=-1)
-    chest_map_pixels_indexes = jnp.repeat(chest_map_pixels_indexes, repeats=3, axis=-1)
+    # chest_map_view = jnp.full_like(map_view, fill_value=-1)
+    # chest_map_view, _ = jax.lax.scan(
+    #     _add_player_chests,
+    #     chest_map_view,
+    #     jnp.arange(static_params.player_count),
+    # )
+    # chest_map_pixels_indexes = jnp.repeat(
+    #     jnp.repeat(chest_map_view, repeats=block_pixel_size, axis=1),
+    #     repeats=block_pixel_size,
+    #     axis=2,
+    # )
+    # chest_map_pixels_indexes = jnp.expand_dims(chest_map_pixels_indexes, axis=-1)
+    # chest_map_pixels_indexes = jnp.repeat(chest_map_pixels_indexes, repeats=3, axis=-1)
 
-    def _add_player_chest_to_pixels(pixels, player_index):
-        return (
-            pixels
-            + (player_specific_textures.chest_textures[player_index] - pixels)
-            * (chest_map_pixels_indexes == player_index)
-            * (map_pixels_indexes == BlockType.CHEST.value),
-            None,
-        )
+    # def _add_player_chest_to_pixels(pixels, player_index):
+    #     return (
+    #         pixels
+    #         + (player_specific_textures.chest_textures[player_index] - pixels)
+    #         * (chest_map_pixels_indexes == player_index)
+    #         * (map_pixels_indexes == BlockType.CHEST.value),
+    #         None,
+    #     )
 
-    map_pixels, _ = jax.lax.scan(
-        _add_player_chest_to_pixels, map_pixels, jnp.arange(static_params.player_count)
-    )
+    # map_pixels, _ = jax.lax.scan(
+    #     _add_player_chest_to_pixels, map_pixels, jnp.arange(static_params.player_count)
+    # )
 
     # Items
     padded_item_map = jnp.pad(

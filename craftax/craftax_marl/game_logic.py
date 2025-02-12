@@ -611,15 +611,9 @@ def do_action(rng, state, action, env_params, static_params):
         state.map[state.player_level, block_position[:, 0], block_position[:, 1]]
         == BlockType.CHEST.value
     )
-    is_players_chest = (
-        (state.chest_positions[state.player_level] == block_position[:, None]).all(axis=-1)
-    ).any(axis=-1)
     is_opening_chest = jnp.logical_and(
-        is_players_chest,
-        jnp.logical_and(
-            is_block_chest,
-            doing_action,
-        )
+        is_block_chest,
+        doing_action,
     )
     is_any_player_opening_chest = jnp.logical_and(
         equal_block_placement,

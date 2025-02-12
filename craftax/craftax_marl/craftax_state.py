@@ -50,7 +50,6 @@ class EnvState:
     down_ladders: jnp.ndarray
     up_ladders: jnp.ndarray
     chests_opened: jnp.ndarray
-    chest_positions: jnp.ndarray
     monsters_killed: jnp.ndarray
 
     player_position: jnp.ndarray

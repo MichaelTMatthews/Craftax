@@ -165,17 +165,14 @@ def generate_dungeon(rng, static_params, config):
             room_position[1] + fountain_position[1],
         ].set(fountain_block)
 
-        return (block_map, item_map, room_occupancy_chunks, rng), (room_position, room_position+chest_position-MAX_ROOM_SIZE)
+        return (block_map, item_map, room_occupancy_chunks, rng), room_position
 
     rng, _rng = jax.random.split(rng)
-    (padded_map, padded_item_map, _, _), (room_positions, chest_positions) = jax.lax.scan(
+    (padded_map, padded_item_map, _, _), room_positions = jax.lax.scan(
         _add_room,
         (padded_map, padded_item_map, room_occupancy_chunks, _rng),
         jnp.arange(NUM_ROOMS),
     )
-
-    # convert from (rooms, players, 2) to (players, rooms, 2)
-    chest_positions = chest_positions.transpose((1, 0, 2))
 
     def _add_path(carry, path_index):
         cmap, included_rooms_mask, rng = carry
@@ -312,7 +309,7 @@ def generate_dungeon(rng, static_params, config):
         ItemType.LADDER_UP.value
     )
 
-    return map, item_map, light_map, ladders_down, ladders_up, chest_positions
+    return map, item_map, light_map, ladders_down, ladders_up
 
 
 def generate_smoothworld(rng, static_params, player_position, config, params=None):
@@ -487,10 +484,7 @@ def generate_smoothworld(rng, static_params, player_position, config, params=Non
         + map[ladders_up[:, 0], ladders_up[:, 1]] * (1 - config.ladder_up)
     )
 
-    # No chests exist in smoothworlds and so we return an empty array here
-    chest_positions = jnp.zeros((static_params.player_count, NUM_ROOMS, 2), dtype=jnp.int32)
-
-    return map, item_map, light_map, ladders_down, ladders_up, chest_positions
+    return map, item_map, light_map, ladders_down, ladders_up
 
 
 def generate_world(rng, params, static_params):
@@ -529,7 +523,7 @@ def generate_world(rng, params, static_params):
     # Returns stacked versions of the map, item_map, light_map and ladders
     # 9 elements in each of these stacks representing each of the levels.
     # Splice smoothgens and dungeons in order of levels
-    map, item_map, light_map, ladders_down, ladders_up, chest_positions = jax.tree_map(
+    map, item_map, light_map, ladders_down, ladders_up = jax.tree_map(
         lambda x, y: jnp.stack(
             (x[0], y[0], x[1], y[1], y[2], x[2], x[3], x[4], x[5]), axis=0
         ),
@@ -612,7 +606,6 @@ def generate_world(rng, params, static_params):
         down_ladders=ladders_down,
         up_ladders=ladders_up,
         chests_opened=jnp.zeros((static_params.num_levels, static_params.player_count), dtype=bool),
-        chest_positions=chest_positions,
         monsters_killed=jnp.zeros(static_params.num_levels, dtype=jnp.int32)
         .at[0]
         .set(10),  # First ladder starts open
