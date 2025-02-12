@@ -3595,14 +3595,22 @@ def craftax_step(
         * achievement_coefficients
     ).sum(axis=1)
 
-    # Stops players who were just revived from gaining reward
+    # Gain reward if player gained health
+    # Doesn't apply to revived players
     health_reward = jnp.where(
         state.player_alive,
         (state.player_health - init_health) * 0.1,
         0.0
     )
 
-    reward = achievement_reward + health_reward
+    individual_reward = achievement_reward + health_reward
+    shared_reward = individual_reward.sum().repeat(static_params.player_count)
+
+    reward = jax.lax.select(
+        params.shared_reward,
+        shared_reward,
+        individual_reward
+    )
 
     player_alive = state.player_health > 0.0
 

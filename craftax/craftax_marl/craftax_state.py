@@ -135,10 +135,12 @@ class EnvParams:
     mob_despawn_distance: int = 14
     max_attribute: int = 5
 
-    god_mode: bool = False
 
     fractal_noise_angles: tuple[int, int, int, int] = (None, None, None, None)
 
+    # Game Mode Parameters
+    god_mode: bool = False
+    shared_reward: bool = True
 
 @struct.dataclass
 class StaticEnvParams:
