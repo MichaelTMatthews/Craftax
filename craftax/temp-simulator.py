@@ -130,6 +130,8 @@ jitted_step = jax.jit(craftax_step, static_argnames=("static_params", ))
 obs, state = jitted_reset(rng+2, env.default_params)
 state = state.replace(
     inventory=state.inventory.replace(
+        bow=jnp.array([1,1,1,1]),
+        arrows=jnp.array([9,9,9,9]),
         pickaxe=jnp.array([1,1,1,1]),
         books=jnp.array([1,1,1,1]),
     ),
@@ -137,7 +139,7 @@ state = state.replace(
 
 
 # %%
-players_controlled = 1
+players_controlled = 2
 print("Ready to play!")
 while True:
     if renderer.is_quit_requested():
