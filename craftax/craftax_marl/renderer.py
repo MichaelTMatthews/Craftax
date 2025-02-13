@@ -134,8 +134,19 @@ def render_craftax_symbolic(state: EnvState, static_params: StaticEnvParams):
                 state.player_alive
             )
         )
-        return teammate_map
-    teammate_map = jax.vmap(_add_teammate, in_axes=0)(jnp.arange(static_params.player_count))
+
+        """
+        Find direction to teammates
+        """
+        direction_index_2d = jnp.where(
+            local_position < 0, 1,
+            jnp.where(local_position >= jnp.array([OBS_DIM[0], OBS_DIM[1]]), 2, 0)
+        )
+        direction_index = direction_index_2d[:, 0]*3 + direction_index_2d[:, 1] - 1
+        teammate_directions = jax.nn.one_hot(direction_index, num_classes=8)
+
+        return teammate_map, teammate_directions
+    teammate_map, teammate_directions = jax.vmap(_add_teammate, in_axes=0)(jnp.arange(static_params.player_count))
 
     # Concat all maps
     all_map = jnp.concatenate(
@@ -191,7 +202,7 @@ def render_craftax_symbolic(state: EnvState, static_params: StaticEnvParams):
 
     intrinsics = jnp.stack(
         (
-            state.player_health / 10.0,
+            # state.player_health / 10.0, -- Removed and placed as part of the teammate dashboard
             state.player_food / 10.0,
             state.player_drink / 10.0,
             state.player_energy / 10.0,
@@ -224,9 +235,37 @@ def render_craftax_symbolic(state: EnvState, static_params: StaticEnvParams):
         ]
     )
 
+    """
+    Teammate Dashboard
+        Includes:
+            - Player Health
+            - Player Dead or Alive
+            - Specialization
+            - Requested Material
+    Teammate Dashboard appears the same for all players
+    """
+    players_health = state.player_health / 10.0
+    players_alive = state.player_alive
+    players_specialization = jax.nn.one_hot(state.player_specialization - Specialization.FORAGER.value, num_classes=3)
+    requested_material = (
+        jax.nn.one_hot(
+            state.request_type - Action.REQUEST_FOOD.value, 
+            num_classes=(Action.REQUEST_SAPPHIRE.value - Action.REQUEST_FOOD.value + 1)
+        )
+        * (state.request_duration > 0)[:, None]
+    )
+    teammate_dashboard = jnp.concatenate(
+        (players_health[:, None], players_alive[:, None], players_specialization, requested_material),
+        axis=-1
+    ).flatten()
+    teammate_dashboard = jnp.repeat(teammate_dashboard[None, ...], 3, axis=0)
+
+
     all_flattened = jnp.concatenate(
         [
             all_map.reshape(all_map.shape[0], -1),
+            teammate_dashboard,
+            teammate_directions.reshape(teammate_directions.shape[0], -1),
             inventory,
             potions,
             intrinsics,
