@@ -50,11 +50,11 @@ def render_craftax_symbolic(state: EnvState, static_params: StaticEnvParams):
         local_position = (
             -1 * state.player_position
             + mobs.position[mob_index]
-            + jnp.array([OBS_DIM[0], OBS_DIM[1]]) // 2
+            + obs_dim_array // 2
         )
 
         on_screen = jnp.logical_and(
-            local_position >= 0, local_position < jnp.array([OBS_DIM[0], OBS_DIM[1]])
+            local_position >= 0, local_position < obs_dim_array
         ).all(axis=-1)
         on_screen *= mobs.mask[mob_index]
 
@@ -114,10 +114,10 @@ def render_craftax_symbolic(state: EnvState, static_params: StaticEnvParams):
         local_position = (
             -1 * state.player_position[player_index]
             + state.player_position
-            + jnp.array([OBS_DIM[0], OBS_DIM[1]]) // 2
+            + obs_dim_array // 2
         )
         on_screen = jnp.logical_and(
-            local_position >= 0, local_position < jnp.array([OBS_DIM[0], OBS_DIM[1]])
+            local_position >= 0, local_position < obs_dim_array
         ).all(axis=-1)
 
         # Add teammate encoding
@@ -140,7 +140,7 @@ def render_craftax_symbolic(state: EnvState, static_params: StaticEnvParams):
         """
         direction_index_2d = jnp.where(
             local_position < 0, 1,
-            jnp.where(local_position >= jnp.array([OBS_DIM[0], OBS_DIM[1]]), 2, 0)
+            jnp.where(local_position >= obs_dim_array, 2, 0)
         )
         direction_index = direction_index_2d[:, 0]*3 + direction_index_2d[:, 1] - 1
         teammate_directions = jax.nn.one_hot(direction_index, num_classes=8)
@@ -1271,7 +1271,7 @@ def render_craftax_pixels(state, block_pixel_size, static_params, player_specifi
 
         direction_index_2d = jnp.where(
             local_position < 0, 0,
-            jnp.where(local_position >= jnp.array([OBS_DIM[0], OBS_DIM[1]]), 2, 1)
+            jnp.where(local_position >= obs_dim_array, 2, 1)
         )
         direction_texture = textures["direction_textures"][
             direction_index_2d[:, 0], direction_index_2d[:, 1]
@@ -1356,10 +1356,10 @@ def render_craftax_text(state: EnvState):
         local_position = (
             mobs.position[mob_index]
             - state.player_position
-            + jnp.array([OBS_DIM[0], OBS_DIM[1]]) // 2
+            + obs_dim_array // 2
         )
         on_screen = jnp.logical_and(
-            local_position >= 0, local_position < jnp.array([OBS_DIM[0], OBS_DIM[1]])
+            local_position >= 0, local_position < obs_dim_array
         ).all()
         on_screen *= mobs.mask[mob_index]
 
