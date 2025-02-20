@@ -7,7 +7,7 @@ from craftax_marl.envs.common import compute_score
 from craftax_marl.constants import *
 from craftax_marl.game_logic import craftax_step
 from craftax_marl.craftax_state import EnvState, EnvParams, StaticEnvParams
-from craftax_marl.renderer import render_craftax_pixels
+from craftax_marl.renderer.renderer_pixels import render_craftax_pixels
 from craftax_marl.util.game_logic_utils import has_beaten_boss
 from craftax_marl.world_gen.world_gen import generate_world
 from environment_base.environment_bases import EnvironmentNoAutoReset

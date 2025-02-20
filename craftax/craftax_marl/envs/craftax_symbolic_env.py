@@ -8,7 +8,7 @@ from craftax_marl.envs.common import compute_score
 from craftax_marl.constants import *
 from craftax_marl.game_logic import craftax_step
 from craftax_marl.craftax_state import EnvState, EnvParams, StaticEnvParams
-from craftax_marl.renderer import render_craftax_symbolic
+from craftax_marl.renderer.renderer_symbolic import render_craftax_symbolic
 from craftax_marl.util.game_logic_utils import has_beaten_boss
 from craftax_marl.world_gen.world_gen import generate_world
 from environment_base.environment_bases import EnvironmentNoAutoReset
@@ -89,34 +89,47 @@ class CraftaxMARLSymbolicEnvNoAutoReset(EnvironmentNoAutoReset):
 
     def action_space(self, params: Optional[EnvParams] = None) -> spaces.Discrete:
         return spaces.Discrete(len(Action) + (self.static_env_params.player_count - 1))
-
-    @staticmethod
-    def get_map_obs_shape():
+    
+    def get_flat_map_obs_shape(self):
         num_mob_classes = 5
         num_mob_types = 8
         num_blocks = len(BlockType)
         num_items = len(ItemType)
+        num_players = self.static_env_params.player_count
+        light_map = 1
 
         return (
-            OBS_DIM[0],
-            OBS_DIM[1],
-            num_blocks + num_items + num_mob_classes * num_mob_types + 1,
+            OBS_DIM[0] *
+            OBS_DIM[1] *
+            (num_players + num_blocks + num_items + num_mob_classes * num_mob_types + light_map)
         )
 
-    @staticmethod
-    def get_flat_map_obs_shape():
-        map_obs_shape = CraftaxMARLSymbolicEnvNoAutoReset.get_map_obs_shape()
-        return map_obs_shape[0] * map_obs_shape[1] * map_obs_shape[2]
+    def get_teammate_dashboard_obs_shape(self):
+        num_players = self.static_env_params.player_count
+        num_health = 1
+        num_alive = 1
+        num_specialization = len(Specialization) - 1
+        num_req_mats = (Action.REQUEST_SAPPHIRE.value - Action.REQUEST_FOOD.value + 1)
+        num_directions = 8
 
-    @staticmethod
-    def get_inventory_obs_shape():
-        return 51
+        return num_players * (num_health + num_alive + num_specialization + num_req_mats + num_directions)
 
+    def get_inventory_obs_shape(self):
+        num_inventory = 16
+        num_potions = 6
+        num_intrinsics = 8
+        num_directions = 4
+        num_armour = 4
+        num_armour_enchantments = 4
+        num_special_values = 3
+        num_special_level_values = 4
+        return num_inventory + num_potions + num_intrinsics + num_directions + num_armour + num_armour_enchantments + num_special_values + num_special_level_values
+    
     def observation_space(self, params: Optional[EnvParams] = None) -> spaces.Box:
         flat_map_obs_shape = self.get_flat_map_obs_shape()
+        teammate_dashboard_obs_shape = self.get_teammate_dashboard_obs_shape()
         inventory_obs_shape = self.get_inventory_obs_shape()
-
-        obs_shape = flat_map_obs_shape + inventory_obs_shape
+        obs_shape = flat_map_obs_shape + teammate_dashboard_obs_shape + inventory_obs_shape
 
         return spaces.Box(
             0.0,
@@ -200,33 +213,46 @@ class CraftaxMARLSymbolicEnv(environment.Environment):
     def action_space(self, params: Optional[EnvParams] = None) -> spaces.Discrete:
         return spaces.Discrete(len(Action) + (self.static_env_params.player_count - 1))
 
-    @staticmethod
-    def get_map_obs_shape():
+    def get_flat_map_obs_shape(self):
         num_mob_classes = 5
         num_mob_types = 8
         num_blocks = len(BlockType)
         num_items = len(ItemType)
+        num_players = self.static_env_params.player_count
+        light_map = 1
 
         return (
-            OBS_DIM[0],
-            OBS_DIM[1],
-            num_blocks + num_items + num_mob_classes * num_mob_types + 1,
+            OBS_DIM[0] *
+            OBS_DIM[1] *
+            (num_players + num_blocks + num_items + num_mob_classes * num_mob_types + light_map)
         )
 
-    @staticmethod
-    def get_flat_map_obs_shape():
-        map_obs_shape = CraftaxMARLSymbolicEnv.get_map_obs_shape()
-        return map_obs_shape[0] * map_obs_shape[1] * map_obs_shape[2]
+    def get_teammate_dashboard_obs_shape(self):
+        num_players = self.static_env_params.player_count
+        num_health = 1
+        num_alive = 1
+        num_specialization = len(Specialization) - 1
+        num_req_mats = (Action.REQUEST_SAPPHIRE.value - Action.REQUEST_FOOD.value + 1)
+        num_directions = 8
 
-    @staticmethod
-    def get_inventory_obs_shape():
-        return 51
+        return num_players * (num_health + num_alive + num_specialization + num_req_mats + num_directions)
 
+    def get_inventory_obs_shape(self):
+        num_inventory = 16
+        num_potions = 6
+        num_intrinsics = 8
+        num_directions = 4
+        num_armour = 4
+        num_armour_enchantments = 4
+        num_special_values = 3
+        num_special_level_values = 4
+        return num_inventory + num_potions + num_intrinsics + num_directions + num_armour + num_armour_enchantments + num_special_values + num_special_level_values
+    
     def observation_space(self, params: Optional[EnvParams] = None) -> spaces.Box:
         flat_map_obs_shape = self.get_flat_map_obs_shape()
+        teammate_dashboard_obs_shape = self.get_teammate_dashboard_obs_shape()
         inventory_obs_shape = self.get_inventory_obs_shape()
-
-        obs_shape = flat_map_obs_shape + inventory_obs_shape
+        obs_shape = flat_map_obs_shape + teammate_dashboard_obs_shape + inventory_obs_shape
 
         return spaces.Box(
             0.0,

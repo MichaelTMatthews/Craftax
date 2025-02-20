@@ -7,7 +7,7 @@ from random import randint
 
 from craftax_marl.envs.craftax_pixels_env import CraftaxMARLPixelsEnv as CraftaxEnv
 from craftax_marl.game_logic import craftax_step
-from craftax_marl.renderer import render_craftax_pixels
+from craftax_marl.renderer.renderer_pixels import render_craftax_pixels
 from craftax_marl.constants import BLOCK_PIXEL_SIZE_HUMAN, OBS_DIM, INVENTORY_OBS_HEIGHT
 from craftax_marl.util.game_logic_utils import *
 from craftax_marl.util.maths_utils import *
