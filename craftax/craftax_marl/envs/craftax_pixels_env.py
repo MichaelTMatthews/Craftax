@@ -20,29 +20,26 @@ class CraftaxMARLPixelsEnv(MultiAgentEnv):
         self.num_agents = num_agents
         self.static_env_params = CraftaxMARLPixelsEnv.default_static_params()
 
-        self.player_names = [
+        self.agents = [
             f"agent_{i}" for i in range(self.static_env_params.player_count)
         ]
+        self.action_spaces = {name: self.action_shape() for name in self.agents}
+        self.observation_spaces = {name: self.observation_shape() for name in self.agents}
 
-        self.action_spaces = {name: self.action_shape() for name in self.player_names}
-        self.observation_spaces = {name: self.observation_shape() for name in self.player_names}
-
-        self.player_names = [
-            f"agent_{i}" for i in range(self.static_env_params.player_count)
-        ]
         self.player_specific_textures = load_player_specific_textures(
             TEXTURES[BLOCK_PIXEL_SIZE_HUMAN],
             self.static_env_params.player_count
         )
 
     @partial(jax.jit, static_argnums=(0,))
-    def reset(self, key: chex.PRNGKey) -> Tuple[chex.Array, EnvState]:
+    def reset(self, key: chex.PRNGKey) -> Tuple[Dict[str, chex.Array], EnvState]:
         state = generate_world(key, self.default_params, self.static_env_params)
         return self.get_obs(state), state
     
+    @partial(jax.jit, static_argnums=(0,))
     def step_env(
         self, key: chex.PRNGKey, state: EnvState, actions: Dict[str, chex.Array]
-    ) -> Tuple[chex.Array, EnvState, Dict[str, float], Dict[str, bool], Dict]:
+    ) -> Tuple[Dict[str, chex.Array], EnvState, Dict[str, float], Dict[str, bool], Dict]:
         actions = jnp.array(list(actions.values()))
         state, reward = craftax_step(key, state, actions, self.default_params, self.static_env_params)
 
@@ -51,27 +48,31 @@ class CraftaxMARLPixelsEnv(MultiAgentEnv):
         info = compute_score(state, done)
         info["discount"] = self.discount(state, self.default_params)
 
-        agent_rewards = {n: r for n,r in zip(self.player_names, reward)}
+        agent_rewards = {n: r for n,r in zip(self.agents, reward)}
 
-        agent_done = {n: done for n in self.player_names}
+        agent_done = {n: done for n in self.agents}
         agent_done["__all__"] = done
 
         return (
-            lax.stop_gradient(obs),
+            obs,
             lax.stop_gradient(state),
             agent_rewards,
             agent_done,
             info,
         )
 
+    @partial(jax.jit, static_argnums=(0,))
     def get_obs(self, state: EnvState) -> chex.Array:
-        pixels = render_craftax_pixels(
-            state, 
-            BLOCK_PIXEL_SIZE_HUMAN, 
-            self.static_env_params,
-            self.player_specific_textures
-        ) / 255.0
-        return pixels
+        pixels = lax.stop_gradient(
+                render_craftax_pixels(
+                state, 
+                BLOCK_PIXEL_SIZE_HUMAN, 
+                self.static_env_params,
+                self.player_specific_textures
+            ) / 255.0
+        )
+        obs = {n:o for n,o in zip(self.agents, pixels)}
+        return obs
     
     @property
     def default_params(self) -> EnvParams:
