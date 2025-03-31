@@ -111,14 +111,14 @@ class EnvState:
 @struct.dataclass
 class EnvParams:
     max_timesteps: int = 100000
-    day_length: int = 300
+    day_length: int = 999
 
     always_diamond: bool = False
 
     mob_despawn_distance: int = 14
     max_attribute: int = 5
 
-    god_mode: bool = False
+    god_mode: bool = True
 
     fractal_noise_angles: tuple[int, int, int, int] = (None, None, None, None)
 

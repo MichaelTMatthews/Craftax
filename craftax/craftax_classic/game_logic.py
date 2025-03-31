@@ -207,7 +207,8 @@ def do_action(rng, state, action, static_params):
     )
 
     # Stone
-    can_mine_stone = state.inventory.wood_pickaxe
+    can_mine_stone = True
+    # can_mine_stone = state.inventory.wood_pickaxe
     is_mining_stone = jnp.logical_and(
         state.map[block_position[0], block_position[1]] == BlockType.STONE.value,
         can_mine_stone,
@@ -228,7 +229,7 @@ def do_action(rng, state, action, static_params):
     )
 
     # Coal
-    can_mine_coal = state.inventory.wood_pickaxe
+    can_mine_coal = True
     is_mining_coal = jnp.logical_and(
         state.map[block_position[0], block_position[1]] == BlockType.COAL.value,
         can_mine_coal,
@@ -247,7 +248,7 @@ def do_action(rng, state, action, static_params):
     )
 
     # Iron
-    can_mine_iron = state.inventory.stone_pickaxe
+    can_mine_iron = True
     is_mining_iron = jnp.logical_and(
         state.map[block_position[0], block_position[1]] == BlockType.IRON.value,
         can_mine_iron,
@@ -1329,7 +1330,15 @@ def update_player_intrinsics(state, action):
         player_health=new_health,
     )
 
+    # Force the vital stats to always be at maximum so the player never dies.
+    state = state.replace(
+        player_health=9,   # full health
+        player_energy=9,   # full energy
+        player_hunger=0    # not hungry
+    )
+
     return state
+
 
 
 def update_plants(state, static_params):
@@ -1630,7 +1639,7 @@ def spawn_mobs(state, rng, params, static_params):
 
 
 def cap_inventory(state):
-    capped_inv = jax.tree_util.tree_map(lambda x: jnp.minimum(x, 9), state.inventory)
+    capped_inv = jax.tree_util.tree_map(lambda x: jnp.minimum(x, 99), state.inventory)
 
     state = state.replace(inventory=capped_inv)
 
@@ -1657,18 +1666,18 @@ def craftax_step(rng, state, action, params, static_params):
     # Movement
     state = move_player(state, action)
 
-    # Mobs
-    rng, _rng = jax.random.split(rng)
-    state = update_mobs(_rng, state, params, static_params)
+    # # Mobs
+    # rng, _rng = jax.random.split(rng)
+    # state = update_mobs(_rng, state, params, static_params)
 
-    rng, _rng = jax.random.split(rng)
-    state = spawn_mobs(state, _rng, params, static_params)
+    # rng, _rng = jax.random.split(rng)
+    # state = spawn_mobs(state, _rng, params, static_params)
 
     # Plants
     state = update_plants(state, static_params)
 
     # Intrinsics
-    state = update_player_intrinsics(state, action)
+    # state = update_player_intrinsics(state, action)
 
     # Cap inv
     state = cap_inventory(state)

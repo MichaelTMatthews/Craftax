@@ -2,11 +2,27 @@ from functools import partial
 
 from craftax.craftax_classic.constants import *
 
+"""
+OBS_DIM = (7, 9)
+MAX_OBS_DIM = max(OBS_DIM)
+assert OBS_DIM[0] % 2 == 1 and OBS_DIM[1] % 2 == 1
+BLOCK_PIXEL_SIZE_HUMAN = 64
+BLOCK_PIXEL_SIZE_IMG = 16
+BLOCK_PIXEL_SIZE_AGENT = 7
+INVENTORY_OBS_HEIGHT = 2
+TEXTURE_CACHE_FILE = os.path.join(
+    pathlib.Path(__file__).parent.resolve(), "assets", "texture_cache_classic.pbz2"
+)
+"""
 
+
+# USE THIS TO MODIFY THE SYMBOLIC OBSERVATION
 def render_craftax_symbolic(state):
+    # obs dim array is (7, 9)
     obs_dim_array = jnp.array([OBS_DIM[0], OBS_DIM[1]], dtype=jnp.int32)
 
     # Map
+    # Max obs dim is 9, so this is 11x11
     padded_grid = jnp.pad(
         state.map,
         (MAX_OBS_DIM + 2, MAX_OBS_DIM + 2),
@@ -18,48 +34,8 @@ def render_craftax_symbolic(state):
     map_view = jax.lax.dynamic_slice(padded_grid, tl_corner, OBS_DIM)
     map_view_one_hot = jax.nn.one_hot(map_view, num_classes=len(BlockType))
 
-    # Mobs
-    mob_map = jnp.zeros((*OBS_DIM, 4), dtype=jnp.uint8)  # 4 types of mobs
-
-    def _add_mob_to_map(carry, mob_index):
-        mob_map, mobs, mob_type_index = carry
-
-        local_position = (
-            mobs.position[mob_index]
-            - state.player_position
-            + jnp.array([OBS_DIM[0], OBS_DIM[1]]) // 2
-        )
-        on_screen = jnp.logical_and(
-            local_position >= 0, local_position < jnp.array([OBS_DIM[0], OBS_DIM[1]])
-        ).all()
-        on_screen *= mobs.mask[mob_index]
-
-        mob_map = mob_map.at[local_position[0], local_position[1], mob_type_index].set(
-            on_screen.astype(jnp.uint8)
-        )
-
-        return (mob_map, mobs, mob_type_index), None
-
-    (mob_map, _, _), _ = jax.lax.scan(
-        _add_mob_to_map,
-        (mob_map, state.zombies, 0),
-        jnp.arange(state.zombies.mask.shape[0]),
-    )
-    (mob_map, _, _), _ = jax.lax.scan(
-        _add_mob_to_map, (mob_map, state.cows, 1), jnp.arange(state.cows.mask.shape[0])
-    )
-    (mob_map, _, _), _ = jax.lax.scan(
-        _add_mob_to_map,
-        (mob_map, state.skeletons, 2),
-        jnp.arange(state.skeletons.mask.shape[0]),
-    )
-    (mob_map, _, _), _ = jax.lax.scan(
-        _add_mob_to_map,
-        (mob_map, state.arrows, 3),
-        jnp.arange(state.arrows.mask.shape[0]),
-    )
-
-    all_map = jnp.concatenate([map_view_one_hot, mob_map], axis=-1)
+    # Use only the map view one-hot (mob map removed)
+    all_map = map_view_one_hot
 
     # Inventory
     inventory = (
@@ -82,27 +58,14 @@ def render_craftax_symbolic(state):
         / 10.0
     )
 
-    intrinsics = (
-        jnp.array(
-            [
-                state.player_health,
-                state.player_food,
-                state.player_drink,
-                state.player_energy,
-            ]
-        ).astype(jnp.float16)
-        / 10.0
-    )
-
+    # Player direction one-hot encoding
     direction = jax.nn.one_hot(state.player_direction - 1, num_classes=4)
 
     all_flattened = jnp.concatenate(
         [
             all_map.flatten(),
             inventory,
-            intrinsics,
             direction,
-            jnp.array([state.light_level, state.is_sleeping]),
         ]
     )
 

@@ -224,8 +224,8 @@ def do_action(rng, state, action, static_params):
         wood=state.inventory.wood + 1 * is_mining_tree
     )
 
-    # Stone
-    can_mine_stone = state.inventory.pickaxe >= 1
+    # Stone PICKAXE REQUIREMENT
+    can_mine_stone = state.inventory.pickaxe >= 0
     is_mining_stone = jnp.logical_and(
         state.map[state.player_level][block_position[0], block_position[1]]
         == BlockType.STONE.value,
@@ -1833,14 +1833,13 @@ def update_mobs(rng, state, params, static_params):
 
 
 def update_player_intrinsics(state, action, static_params):
-    # Start sleeping?
+    # Sleep/Rest logic remains unchanged
     is_starting_sleep = jnp.logical_and(
         action == Action.SLEEP.value, state.player_energy < get_max_energy(state)
     )
     new_is_sleeping = jnp.logical_or(state.is_sleeping, is_starting_sleep)
     state = state.replace(is_sleeping=new_is_sleeping)
 
-    # Wake up?
     is_waking_up = jnp.logical_and(
         state.player_energy >= get_max_energy(state), state.is_sleeping
     )
@@ -1852,112 +1851,47 @@ def update_player_intrinsics(state, action, static_params):
         ),
     )
 
-    # Start resting?
     is_starting_rest = jnp.logical_and(
         action == Action.REST.value, state.player_health < get_max_health(state)
     )
     new_is_resting = jnp.logical_or(state.is_resting, is_starting_rest)
     state = state.replace(is_resting=new_is_resting)
 
-    # Wake up from resting
     is_waking_up = jnp.logical_and(
-        state.is_resting,
-        jnp.logical_or(
-            state.player_health >= get_max_health(state),
-            jnp.logical_or(state.player_food <= 0, state.player_drink <= 0),
-        ),
+        state.is_resting, state.player_health >= get_max_health(state)
     )
     new_is_resting = jnp.logical_and(state.is_resting, jnp.logical_not(is_waking_up))
+    state = state.replace(is_resting=new_is_resting)
+
+    # Remove decay, keep current values
     state = state.replace(
-        is_resting=new_is_resting,
+        player_hunger=state.player_hunger,
+        player_food=state.player_food,
+        player_thirst=state.player_thirst,
+        player_drink=state.player_drink
     )
 
-    not_boss = jnp.logical_not(is_fighting_boss(state, static_params))
-
-    intrinsic_decay_coeff = 1.0 - (0.125 * (state.player_dexterity - 1))
-
-    # Hunger
-    hunger_add = jax.lax.select(state.is_sleeping, 0.5, 1.0) * intrinsic_decay_coeff
-    new_hunger = state.player_hunger + hunger_add
-
-    hungered_food = jnp.maximum(state.player_food - 1 * not_boss, 0)
-    new_food = jax.lax.select(new_hunger > 25, hungered_food, state.player_food)
-    new_hunger = jax.lax.select(new_hunger > 25, 0.0, new_hunger)
-
-    state = state.replace(
-        player_hunger=new_hunger,
-        player_food=new_food,
-    )
-
-    # Thirst
-    thirst_add = jax.lax.select(state.is_sleeping, 0.5, 1.0) * intrinsic_decay_coeff
-    new_thirst = state.player_thirst + thirst_add
-    thirsted_drink = jnp.maximum(state.player_drink - 1 * not_boss, 0)
-    new_drink = jax.lax.select(new_thirst > 20, thirsted_drink, state.player_drink)
-    new_thirst = jax.lax.select(new_thirst > 20, 0.0, new_thirst)
-
-    state = state.replace(
-        player_thirst=new_thirst,
-        player_drink=new_drink,
-    )
-
-    # Fatigue
-    new_fatigue = jax.lax.select(
+    # Energy only increases when sleeping
+    new_energy = jax.lax.select(
         state.is_sleeping,
-        jnp.minimum(state.player_fatigue - 1, 0),
-        state.player_fatigue + intrinsic_decay_coeff,
-    )
-
-    new_energy = jax.lax.select(
-        new_fatigue > 30,
-        jnp.maximum(state.player_energy - 1 * not_boss, 0),
-        state.player_energy,
-    )
-    new_fatigue = jax.lax.select(new_fatigue > 30, 0.0, new_fatigue)
-
-    new_energy = jax.lax.select(
-        new_fatigue < -10,
         jnp.minimum(state.player_energy + 1, get_max_energy(state)),
-        new_energy,
+        state.player_energy
     )
-    new_fatigue = jax.lax.select(new_fatigue < -10, 0.0, new_fatigue)
+    state = state.replace(player_energy=new_energy)
 
-    state = state.replace(
-        player_fatigue=new_fatigue,
-        player_energy=new_energy,
-    )
-
-    # Health
-    necessities = jnp.array(
-        [
-            state.player_food > 0,
-            state.player_drink > 0,
-            jnp.logical_or(state.player_energy > 0, state.is_sleeping),
-        ],
-        dtype=bool,
-    )
-
-    all_necessities = necessities.all()
-    recover_all = jax.lax.select(state.is_sleeping, 2.0, 1.0)
-    recover_not_all = jax.lax.select(state.is_sleeping, -0.5, -1.0) * not_boss
-    recover_add = jax.lax.select(all_necessities, recover_all, recover_not_all)
-
+    # Health only increases
+    recover_add = jax.lax.select(state.is_sleeping, 2.0, 1.0)
     new_recover = state.player_recover + recover_add
-
     recovered_health = jnp.minimum(state.player_health + 1, get_max_health(state))
-    derecovered_health = state.player_health - 1
-
     new_health = jax.lax.select(new_recover > 25, recovered_health, state.player_health)
     new_recover = jax.lax.select(new_recover > 25, 0.0, new_recover)
-    new_health = jax.lax.select(new_recover < -15, derecovered_health, new_health)
-    new_recover = jax.lax.select(new_recover < -15, 0.0, new_recover)
 
     state = state.replace(
         player_recover=new_recover,
         player_health=new_health,
     )
 
-    # Mana
+    # Mana regeneration remains unchanged
     mana_recover_coeff = 1 + 0.25 * (state.player_intelligence - 1)
     new_recover_mana = (
         jax.lax.select(
@@ -3058,12 +2992,12 @@ def craftax_step(rng, state, action, params, static_params):
     # Movement
     state = move_player(state, action, params)
 
-    # Mobs
-    rng, _rng = jax.random.split(rng)
-    state = update_mobs(_rng, state, params, static_params)
+    # # Mobs
+    # rng, _rng = jax.random.split(rng)
+    # state = update_mobs(_rng, state, params, static_params)
 
-    rng, _rng = jax.random.split(rng)
-    state = spawn_mobs(state, _rng, params, static_params)
+    # rng, _rng = jax.random.split(rng)
+    # state = spawn_mobs(state, _rng, params, static_params)
 
     # Plants
     state = update_plants(state, static_params)
@@ -3090,8 +3024,9 @@ def craftax_step(rng, state, action, params, static_params):
 
     state = state.replace(
         timestep=state.timestep + 1,
-        light_level=calculate_light_level(state.timestep + 1, params),
+        light_level=0.5,
         state_rng=_rng,
     )
+
 
     return state, reward

@@ -11,6 +11,7 @@ from craftax.craftax_classic.envs.craftax_state import (
     EnvState,
     EnvParams,
     StaticEnvParams,
+    
 )
 from craftax.craftax_classic.renderer import render_craftax_symbolic
 from craftax.craftax_classic.world_gen import generate_world
@@ -62,7 +63,7 @@ class CraftaxClassicSymbolicEnvNoAutoReset(EnvironmentNoAutoReset):
         done = self.is_terminal(state, params)
         info = compute_score(state, done)
         info["discount"] = self.discount(state, params)
-
+        info["env_state"] = state
         return (
             lax.stop_gradient(self.get_obs(state)),
             lax.stop_gradient(state),
@@ -173,6 +174,10 @@ class CraftaxClassicSymbolicEnv(environment.Environment):
         inventory_obs_shape = get_inventory_obs_shape()
 
         obs_shape = flat_map_obs_shape + inventory_obs_shape
+
+        print("flat_map_obs_shape", flat_map_obs_shape)
+        print("inventory_obs_shape", inventory_obs_shape)
+
 
         return spaces.Box(
             0.0,

@@ -77,7 +77,7 @@ class EnvState:
 @struct.dataclass
 class EnvParams:
     max_timesteps: int = 10000
-    day_length: int = 300
+    day_length: int = 100000
 
     always_diamond: bool = True
 
@@ -87,17 +87,18 @@ class EnvParams:
 
     mob_despawn_distance: int = 14
 
-    spawn_cow_chance: float = 0.1
-    spawn_zombie_base_chance: float = 0.02
-    spawn_zombie_night_chance: float = 0.1
-    spawn_skeleton_chance: float = 0.05
+    spawn_cow_chance: float = 0
+    spawn_zombie_base_chance: float = 0
+    spawn_zombie_night_chance: float = 0
+    spawn_skeleton_chance: float = 0
 
     fractal_noise_angles: tuple[int, int, int, int] = (None, None, None, None)
 
 
 @struct.dataclass
 class StaticEnvParams:
-    map_size: Tuple[int, int] = (64, 64)
+    #NUMBER OF BLOCKS default 64x64
+    map_size: Tuple[int, int] = (32, 32)
 
     # Mobs
     max_zombies: int = 3

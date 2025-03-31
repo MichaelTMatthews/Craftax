@@ -41,7 +41,7 @@ class CraftaxClassicPixelsEnvNoAutoReset(EnvironmentNoAutoReset):
         done = self.is_terminal(state, params)
         info = compute_score(state, done)
         info["discount"] = self.discount(state, params)
-
+        info["env_state"] = state
         return (
             lax.stop_gradient(self.get_obs(state)),
             lax.stop_gradient(state),
@@ -113,6 +113,8 @@ class CraftaxClassicPixelsEnv(environment.Environment):
         done = self.is_terminal(state, params)
         info = compute_score(state, done)
         info["discount"] = self.discount(state, params)
+        #ADD HERE
+        info["env_state"] = state
 
         return (
             lax.stop_gradient(self.get_obs(state)),
