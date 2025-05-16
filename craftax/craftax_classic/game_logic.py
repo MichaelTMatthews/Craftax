@@ -1,5 +1,3 @@
-import chex
-
 from craftax.craftax_classic.constants import *
 from craftax.craftax_classic.envs.craftax_state import *
 
@@ -745,7 +743,7 @@ def place_block(state, action, static_params):
     return state
 
 
-def is_in_mob(state: EnvState, position: chex.Array):
+def is_in_mob(state: EnvState, position: jax.Array):
     return jnp.logical_or(
         state.mob_map[position[0], position[1]],
         (state.player_position == position).all(),

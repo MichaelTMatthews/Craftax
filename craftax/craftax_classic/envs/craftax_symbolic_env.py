@@ -1,7 +1,6 @@
-from jax import lax
+import jax
 from gymnax.environments import spaces, environment
 from typing import Tuple, Optional
-import chex
 
 from craftax.environment_base.environment_bases import EnvironmentNoAutoReset
 from craftax.craftax_classic.envs.common import compute_score
@@ -55,8 +54,8 @@ class CraftaxClassicSymbolicEnvNoAutoReset(EnvironmentNoAutoReset):
         return StaticEnvParams()
 
     def step_env(
-        self, rng: chex.PRNGKey, state: EnvState, action: int, params: EnvParams
-    ) -> Tuple[chex.Array, EnvState, float, bool, dict]:
+        self, rng: jax.Array, state: EnvState, action: int, params: EnvParams
+    ) -> Tuple[jax.Array, EnvState, float, bool, dict]:
         state, reward = craftax_step(rng, state, action, params, self.static_env_params)
 
         done = self.is_terminal(state, params)
@@ -64,21 +63,21 @@ class CraftaxClassicSymbolicEnvNoAutoReset(EnvironmentNoAutoReset):
         info["discount"] = self.discount(state, params)
 
         return (
-            lax.stop_gradient(self.get_obs(state)),
-            lax.stop_gradient(state),
+            jax.lax.stop_gradient(self.get_obs(state)),
+            jax.lax.stop_gradient(state),
             reward,
             done,
             info,
         )
 
     def reset_env(
-        self, rng: chex.PRNGKey, params: EnvParams
-    ) -> Tuple[chex.Array, EnvState]:
+        self, rng: jax.Array, params: EnvParams
+    ) -> Tuple[jax.Array, EnvState]:
         state = generate_world(rng, params, self.static_env_params)
 
         return self.get_obs(state), state
 
-    def get_obs(self, state: EnvState) -> chex.Array:
+    def get_obs(self, state: EnvState) -> jax.Array:
         pixels = render_craftax_symbolic(state)
         return pixels
 
@@ -127,8 +126,8 @@ class CraftaxClassicSymbolicEnv(environment.Environment):
         return StaticEnvParams()
 
     def step_env(
-        self, rng: chex.PRNGKey, state: EnvState, action: int, params: EnvParams
-    ) -> Tuple[chex.Array, EnvState, float, bool, dict]:
+        self, rng: jax.Array, state: EnvState, action: int, params: EnvParams
+    ) -> Tuple[jax.Array, EnvState, float, bool, dict]:
         state, reward = craftax_step(rng, state, action, params, self.static_env_params)
 
         done = self.is_terminal(state, params)
@@ -136,21 +135,21 @@ class CraftaxClassicSymbolicEnv(environment.Environment):
         info["discount"] = self.discount(state, params)
 
         return (
-            lax.stop_gradient(self.get_obs(state)),
-            lax.stop_gradient(state),
+            jax.lax.stop_gradient(self.get_obs(state)),
+            jax.lax.stop_gradient(state),
             reward,
             done,
             info,
         )
 
     def reset_env(
-        self, rng: chex.PRNGKey, params: EnvParams
-    ) -> Tuple[chex.Array, EnvState]:
+        self, rng: jax.Array, params: EnvParams
+    ) -> Tuple[jax.Array, EnvState]:
         state = generate_world(rng, params, self.static_env_params)
 
         return self.get_obs(state), state
 
-    def get_obs(self, state: EnvState) -> chex.Array:
+    def get_obs(self, state: EnvState) -> jax.Array:
         pixels = render_craftax_symbolic(state)
         return pixels
 
