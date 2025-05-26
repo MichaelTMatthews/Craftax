@@ -1,5 +1,5 @@
-import chex
-
+import jax
+import jax.numpy as jnp
 from craftax.craftax.constants import *
 from craftax.craftax.craftax_state import *
 
@@ -353,7 +353,7 @@ def calculate_light_level(timestep, params):
     return 1 - jnp.abs(jnp.cos(jnp.pi * progress)) ** 3
 
 
-def is_in_mob(state: EnvState, position: chex.Array):
+def is_in_mob(state: EnvState, position: jax.Array):
     return jnp.logical_or(
         state.mob_map[state.player_level, position[0], position[1]],
         (state.player_position == position).all(),

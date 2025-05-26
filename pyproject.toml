@@ -22,7 +22,6 @@ dependencies = [
     "numpy",
     "pygame",
     "gymnax",
-    "chex",
     "matplotlib",
     "imageio",
 ]
