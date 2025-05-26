@@ -132,7 +132,7 @@ Note that all scores from outside the original Craftax paper are reported and ha
 ## Craftax-1M
 | Algorithm | Reward (% max) |                                              Code                                               |                  Paper                  |
 |:----------|---------------:|:-----------------------------------------------------------------------------------------------:|:---------------------------------------:|
-| M<sup>3</sup>  |       6.6 |       [M<sup>3</sup>](https://github.com/leor-c/M3)                                             | [M<sup>3</sup>](https://arxiv.org/abs/2502.11537) |
+| Simulus  |       6.6 |       [Simulus](https://github.com/leor-c/Simulus)                                                    | [Simulus](https://arxiv.org/abs/2502.11537) |
 | Efficient MBRL   |            5.4 | - | [Efficient MBRL](https://arxiv.org/abs/2502.01591) |
 | PPO-RNN   |            2.3 | [Craftax_Baselines](https://github.com/MichaelTMatthews/Craftax_Baselines/blob/main/ppo_rnn.py) | [PPO](https://arxiv.org/abs/1707.06347) |
 | RND       |            2.2 | [Craftax_Baselines](https://github.com/MichaelTMatthews/Craftax_Baselines/blob/main/ppo_rnd.py) | [RND](https://arxiv.org/abs/1810.12894) |
