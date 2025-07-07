@@ -20,8 +20,6 @@
 </p>
 
 
-### <b>Update: Craftax was accepted at ICML 2024 as a spotlight!</b>
-
 # ⛏️ Craftax
 Craftax is an RL environment written entirely in <a href="https://github.com/google/jax">JAX</a>.  Craftax reimplements and significantly extends the game mechanics of <a href="https://github.com/danijar/crafter">Crafter</a>, taking inspiration from roguelike games such as <a href="https://github.com/facebookresearch/nle">NetHack</a>.
 Craftax conforms to the <a href="https://github.com/RobertTLange/gymnax">gymnax</a> interface, allowing easy integration with existing JAX-based frameworks like <a href="https://github.com/luchris429/purejaxrl">PureJaxRL</a> and [JaxUED](https://github.com/DramaCow/jaxued).
