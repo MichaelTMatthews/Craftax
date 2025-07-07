@@ -1,5 +1,3 @@
-import chex
-
 from craftax.craftax_classic.constants import *
 from craftax.craftax_classic.envs.craftax_state import *
 
@@ -353,7 +351,9 @@ def do_action(rng, state, action, static_params):
     new_food = jax.lax.select(action_block_in_bounds, new_food, state.player_food)
     new_hunger = jax.lax.select(action_block_in_bounds, new_hunger, state.player_hunger)
     new_growing_plants_age = jax.lax.select(
-        jnp.logical_and(action_block_in_bounds, is_eating_plant), new_growing_plants_age, state.growing_plants_age
+        jnp.logical_and(action_block_in_bounds, is_eating_plant),
+        new_growing_plants_age,
+        state.growing_plants_age,
     )
 
     new_achievements = jax.lax.select(
@@ -745,7 +745,7 @@ def place_block(state, action, static_params):
     return state
 
 
-def is_in_mob(state: EnvState, position: chex.Array):
+def is_in_mob(state: EnvState, position):
     return jnp.logical_or(
         state.mob_map[position[0], position[1]],
         (state.player_position == position).all(),

@@ -2,7 +2,6 @@ import jax
 from jax import lax
 from gymnax.environments import spaces, environment
 from typing import Tuple, Optional
-import chex
 
 from craftax.craftax.envs.common import log_achievements_to_info
 from craftax.environment_base.environment_bases import EnvironmentNoAutoReset
@@ -52,8 +51,8 @@ class CraftaxSymbolicEnvNoAutoReset(EnvironmentNoAutoReset):
         return StaticEnvParams()
 
     def step_env(
-        self, rng: chex.PRNGKey, state: EnvState, action: int, params: EnvParams
-    ) -> Tuple[chex.Array, EnvState, float, bool, dict]:
+        self, rng: jax.Array, state: EnvState, action: int, params: EnvParams
+    ) -> Tuple[jax.Array, EnvState, float, bool, dict]:
         state, reward = craftax_step(rng, state, action, params, self.static_env_params)
 
         done = self.is_terminal(state, params)
@@ -69,14 +68,14 @@ class CraftaxSymbolicEnvNoAutoReset(EnvironmentNoAutoReset):
         )
 
     def reset_env(
-        self, rng: chex.PRNGKey, params: EnvParams
-    ) -> Tuple[chex.Array, EnvState]:
+        self, rng: jax.Array, params: EnvParams
+    ) -> Tuple[jax.Array, EnvState]:
         rng, _rng = jax.random.split(rng)
         state = generate_world(_rng, params, self.static_env_params)
 
         return self.get_obs(state), state
 
-    def get_obs(self, state: EnvState) -> chex.Array:
+    def get_obs(self, state: EnvState) -> jax.Array:
         pixels = render_craftax_symbolic(state)
         return pixels
 
@@ -125,8 +124,8 @@ class CraftaxSymbolicEnv(environment.Environment):
         return StaticEnvParams()
 
     def step_env(
-        self, rng: chex.PRNGKey, state: EnvState, action: int, params: EnvParams
-    ) -> Tuple[chex.Array, EnvState, float, bool, dict]:
+        self, rng: jax.Array, state: EnvState, action: int, params: EnvParams
+    ) -> Tuple[jax.Array, EnvState, float, bool, dict]:
         state, reward = craftax_step(rng, state, action, params, self.static_env_params)
 
         done = self.is_terminal(state, params)
@@ -142,14 +141,14 @@ class CraftaxSymbolicEnv(environment.Environment):
         )
 
     def reset_env(
-        self, rng: chex.PRNGKey, params: EnvParams
-    ) -> Tuple[chex.Array, EnvState]:
+        self, rng: jax.Array, params: EnvParams
+    ) -> Tuple[jax.Array, EnvState]:
         rng, _rng = jax.random.split(rng)
         state = generate_world(_rng, params, self.static_env_params)
 
         return self.get_obs(state), state
 
-    def get_obs(self, state: EnvState) -> chex.Array:
+    def get_obs(self, state: EnvState) -> jax.Array:
         pixels = render_craftax_symbolic(state)
         return pixels
 

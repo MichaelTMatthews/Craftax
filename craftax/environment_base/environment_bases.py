@@ -1,10 +1,8 @@
 from dataclasses import dataclass
 
 import jax
-import chex
-from typing import Tuple, Union, Optional
+from typing import Union
 from functools import partial
-from flax import struct
 
 
 class EnvironmentNoAutoReset(object):
@@ -17,7 +15,7 @@ class EnvironmentNoAutoReset(object):
     @partial(jax.jit, static_argnums=(0, 4))
     def step(
         self,
-        key: chex.PRNGKey,
+        key: jax.Array,
         state,
         action: Union[int, float],
         params=None,
@@ -30,7 +28,7 @@ class EnvironmentNoAutoReset(object):
         return obs, state, reward, done, info
 
     @partial(jax.jit, static_argnums=(0, 2))
-    def reset(self, key: chex.PRNGKey, params=None):
+    def reset(self, key: jax.Array, params=None):
         """Performs resetting of environment."""
         # Use default env parameters if no others specified
         if params is None:
@@ -40,7 +38,7 @@ class EnvironmentNoAutoReset(object):
 
     def step_env(
         self,
-        key: chex.PRNGKey,
+        key: jax.Array,
         state,
         action: Union[int, float],
         params,
@@ -48,11 +46,11 @@ class EnvironmentNoAutoReset(object):
         """Environment-specific step transition."""
         raise NotImplementedError
 
-    def reset_env(self, key: chex.PRNGKey, params):
+    def reset_env(self, key: jax.Array, params):
         """Environment-specific reset."""
         raise NotImplementedError
 
-    def get_obs(self, state) -> chex.Array:
+    def get_obs(self, state) -> jax.Array:
         """Applies observation function to state."""
         raise NotImplementedError
 

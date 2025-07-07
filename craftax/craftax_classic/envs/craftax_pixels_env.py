@@ -1,7 +1,6 @@
 from jax import lax
 from gymnax.environments import spaces, environment
 from typing import Tuple, Optional
-import chex
 
 from craftax.environment_base.environment_bases import EnvironmentNoAutoReset
 from craftax.craftax_classic.envs.common import compute_score
@@ -33,8 +32,8 @@ class CraftaxClassicPixelsEnvNoAutoReset(EnvironmentNoAutoReset):
         return StaticEnvParams()
 
     def step_env(
-        self, key: chex.PRNGKey, state: EnvState, action: int, params: EnvParams
-    ) -> Tuple[chex.Array, EnvState, float, bool, dict]:
+        self, key: jax.Array, state: EnvState, action: int, params: EnvParams
+    ) -> Tuple[jax.Array, EnvState, float, bool, dict]:
 
         state, reward = craftax_step(key, state, action, params, self.static_env_params)
 
@@ -51,13 +50,13 @@ class CraftaxClassicPixelsEnvNoAutoReset(EnvironmentNoAutoReset):
         )
 
     def reset_env(
-        self, rng: chex.PRNGKey, params: EnvParams
-    ) -> Tuple[chex.Array, EnvState]:
+        self, rng: jax.Array, params: EnvParams
+    ) -> Tuple[jax.Array, EnvState]:
         state = generate_world(rng, params, self.static_env_params)
 
         return self.get_obs(state), state
 
-    def get_obs(self, state: EnvState) -> chex.Array:
+    def get_obs(self, state: EnvState) -> jax.Array:
         pixels = render_craftax_pixels(state, BLOCK_PIXEL_SIZE_AGENT) / 255.0
         return pixels
 
@@ -105,8 +104,8 @@ class CraftaxClassicPixelsEnv(environment.Environment):
         return StaticEnvParams()
 
     def step_env(
-        self, key: chex.PRNGKey, state: EnvState, action: int, params: EnvParams
-    ) -> Tuple[chex.Array, EnvState, float, bool, dict]:
+        self, key: jax.Array, state: EnvState, action: int, params: EnvParams
+    ) -> Tuple[jax.Array, EnvState, float, bool, dict]:
 
         state, reward = craftax_step(key, state, action, params, self.static_env_params)
 
@@ -123,13 +122,13 @@ class CraftaxClassicPixelsEnv(environment.Environment):
         )
 
     def reset_env(
-        self, rng: chex.PRNGKey, params: EnvParams
-    ) -> Tuple[chex.Array, EnvState]:
+        self, rng: jax.Array, params: EnvParams
+    ) -> Tuple[jax.Array, EnvState]:
         state = generate_world(rng, params, self.static_env_params)
 
         return self.get_obs(state), state
 
-    def get_obs(self, state: EnvState) -> chex.Array:
+    def get_obs(self, state: EnvState) -> jax.Array:
         pixels = render_craftax_pixels(state, BLOCK_PIXEL_SIZE_AGENT) / 255.0
         return pixels
 
