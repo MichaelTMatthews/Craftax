@@ -147,6 +147,10 @@ A small dataset of mixed-skill human trajectories is available [here](https://dr
 Once the zip file has been extracted, the trajectories can be loaded with the `load_compressed_pickle` function.  These were gathered on an earlier version of Craftax and it is recommended you use [v1.1.0](https://github.com/MichaelTMatthews/Craftax/releases/tag/v1.1.0) or earlier to investigate them.
 `run1` is the only trajectory to complete the game.
 
+# ❌ Errata
+
+- Prior to version 1.5.0 there was a bug that made it hard/impossible for the *first* planted plant to ever grow to ripeness in both Craftax and Craftax-Classic. This should have little effect on results as `EAT_PLANT` is an extremely rare achievement, and this only affected the first plant.
+
 # 🔎 See Also
 - ⛏️ [Crafter](https://github.com/danijar/crafter) The original Crafter benchmark.
 - ⚔️ [NLE](https://github.com/facebookresearch/nle) NetHack as an RL environment.

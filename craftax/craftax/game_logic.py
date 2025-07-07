@@ -489,7 +489,7 @@ def do_action(rng, state, action, static_params):
     new_food = jax.lax.select(action_block_in_bounds, new_food, state.player_food)
     new_hunger = jax.lax.select(action_block_in_bounds, new_hunger, state.player_hunger)
     new_growing_plants_age = jax.lax.select(
-        action_block_in_bounds, new_growing_plants_age, state.growing_plants_age
+        jnp.logical_and(action_block_in_bounds, is_eating_plant), new_growing_plants_age, state.growing_plants_age
     )
 
     new_achievements = jax.lax.select(
