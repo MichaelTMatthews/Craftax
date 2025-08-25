@@ -17,8 +17,9 @@ from PIL import Image
 import numpy as np
 from PIL import Image
 
-def reset_env():
-    seed = int.from_bytes(os.urandom(4), 'big')  # 32-bit random integer
+def reset_env(seed = None ):
+    if not seed:
+        seed = int.from_bytes(os.urandom(4), 'big')  # 32-bit random integer
     rng = jax.random.PRNGKey(seed)
     rng, _rng = jax.random.split(rng)
     rngs = jax.random.split(_rng, 3)
@@ -27,9 +28,11 @@ def reset_env():
 
 def execute_plan(env, rng, state, env_params, target, actions):
 
-    images = []
+    obs_set = []
     action_set = []  # Track actions, rewards, and achievements
     state_set = []
+    reward_set = []
+    info_set = []
     # Get map and player position
     map_ = state.map 
     start_pos = tuple(state.player_position.tolist())
@@ -43,10 +46,12 @@ def execute_plan(env, rng, state, env_params, target, actions):
         obs, state, reward, done, info = env.step(rng, state, ac, env_params)
 
         state_set.append(state)
-        images.append(obs.copy())
+        obs_set.append(obs.copy())
         action_set.append(ac)
+        reward_set.append(reward)
+        info_set.append(info)
 
-    return state, images, action_set, state_set
+    return state, obs_set, action_set, state_set, reward_set, info_set
 
 def states_to_dicts(states):
     states_dict = []

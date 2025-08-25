@@ -167,3 +167,4 @@ cython_debug/
 .idea/
 texture_cache.pbz2
 texture_cache*.pbz2
+/Traces
