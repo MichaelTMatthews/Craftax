@@ -7,7 +7,7 @@ from gym import Wrapper
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap, BoundaryNorm
-from astar import plan_to_object
+from astar import plan_to_object, plan_to_object_with_mining
 import os
 import block_types as bt
 import action_types as at
@@ -17,6 +17,11 @@ from PIL import Image
 import numpy as np
 from PIL import Image
 import imageio
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 def reset_env(seed = None ):
     # Only generate a random seed when seed is explicitly None.
@@ -36,16 +41,35 @@ def execute_plan(env, rng, state, env_params, target, actions):
     state_set = []
     reward_set = []
     info_set = []
+    
     # Get map and player position
     map_ = state.map 
     start_pos = tuple(state.player_position.tolist())
+    
+    logger.info(f"Executing plan: target={target}, start_pos={start_pos}, additional_actions={actions}")
+    logger.info(f"Map dimensions: {map_.shape}, map bounds: [{map_.min()}, {map_.max()}]")
 
-    # Plan path
-    plan_trace = plan_to_object(map_, start_pos, target)
+    # Plan path with mining capability
+    logger.info("Attempting pathfinding with mining capability...")
+    plan_trace = plan_to_object_with_mining(map_, start_pos, target)
+    
+    if plan_trace is None:
+        # Fallback to original pathfinding if mining pathfinding fails
+        logger.warning("Mining pathfinding failed, falling back to standard pathfinding...")
+        plan_trace = plan_to_object(map_, start_pos, target)
+    
+    if plan_trace is None:
+        logger.error(f"Both pathfinding methods failed for target {target} from position {start_pos}")
+        raise Exception(f"Could not find path to target {target} from position {start_pos}")
+    
+    logger.info(f"Pathfinding successful: {len(plan_trace)} movement actions")
     plan_trace.extend(actions)  # Append additional actions
+    logger.info(f"Total plan: {len(plan_trace)} actions ({len(plan_trace) - len(actions)} movement + {len(actions)} additional)")
 
     # Execute plan
-    for ac in plan_trace:
+    logger.info("Executing plan...")
+    for i, ac in enumerate(plan_trace):
+        logger.debug(f"Step {i+1}/{len(plan_trace)}: Action {ac}")
         obs, state, reward, done, info = env.step(rng, state, ac, env_params)
 
         state_set.append(state)
@@ -53,7 +77,11 @@ def execute_plan(env, rng, state, env_params, target, actions):
         action_set.append(ac)
         reward_set.append(reward)
         info_set.append(info)
+        
+        if done:
+            logger.warning(f"Episode ended early at step {i+1}")
 
+    logger.info(f"Plan execution completed: {len(action_set)} actions executed")
     return state, obs_set, action_set, state_set, reward_set, info_set
 
 def states_to_dicts(states):

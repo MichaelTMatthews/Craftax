@@ -12,7 +12,12 @@ from collections import Counter
 import imageio
 import matplotlib.pyplot as plt
 import random 
-import pickle 
+import pickle
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__) 
 
 jax.config.update("jax_platform_name", "cpu")
 
@@ -24,7 +29,9 @@ def is_valid_env(state, plan) -> bool:
     return True
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description="Generate Craftax training data with configurable logging levels",
+    )
     parser.add_argument(
         "--obs",
         type=str,
@@ -60,8 +67,46 @@ if __name__ == "__main__":
         default=1000,
         help="Upper bound on total seed attempts to reach the requested samples",
     )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Enable verbose logging for detailed debugging",
+    )
+    parser.add_argument(
+        "--log-level",
+        type=str,
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        default="DEBUG",
+        help="Set logging level (default: INFO)",
+    )
 
     args = parser.parse_args()
+
+    # Configure logging based on command line arguments
+    if args.verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
+        logging.getLogger("astar").setLevel(logging.DEBUG)
+        # Import and configure A* logging
+        try:
+            from astar import set_astar_verbose
+            set_astar_verbose(True)
+            logger.info("Verbose logging enabled for A* pathfinding")
+        except ImportError:
+            logger.warning("Could not import A* logging functions")
+        logger.info("Verbose logging enabled")
+    else:
+        # Set the specified log level
+        log_level = getattr(logging, args.log_level.upper())
+        logging.getLogger().setLevel(log_level)
+        logging.getLogger("astar").setLevel(log_level)
+        # Configure A* logging to match
+        try:
+            from astar import set_astar_log_level
+            set_astar_log_level(log_level)
+            logger.info(f"A* logging level set to {args.log_level}")
+        except ImportError:
+            logger.warning("Could not import A* logging functions")
+        logger.info(f"Logging level set to {args.log_level}")
 
     if args.obs == "symbolic":
         env = make_craftax_env_from_name(
@@ -90,10 +135,7 @@ if __name__ == "__main__":
             (bt.TREE, [at.DO], "wood"),
             (bt.STONE, [at.DO], "stone"),
             (bt.CRAFTING_TABLE, [at.MAKE_STONE_PICKAXE], "stone_pickaxe"),
-        ],
-        [
-            (bt.TREE, [at.DO], "wood"),
-            (bt.STONE, [at.DO], "stone"),
+            (bt.COAL, [at.DO], "coal"),
         ]
     ]
 
@@ -108,6 +150,8 @@ if __name__ == "__main__":
         next_seed += 1
         attempts += 1
 
+        logger.info(f"Attempt {attempts}/{args.max_attempts}: Generating trace {trace_nb + 1}/{args.samples} with seed {seed}")
+
         # Seed all RNGs deterministically per episode
         np.random.seed(seed)
         random.seed(seed)
@@ -115,15 +159,18 @@ if __name__ == "__main__":
 
         # Choose a plan using the Python RNG (seeded above)
         plan = random.choice(plans)
+        logger.info(f"Selected plan: {plan}")
 
         # Split per-episode key for env.reset and later for execute_plan
         key, key_reset = jax.random.split(key)
         # Obs are pixel obs; State is all game data
+        logger.info("Resetting environment...")
         obs, state = env.reset(key_reset, env_params)
+        logger.info(f"Environment reset complete. Player position: {state.player_position}")
 
         # Skip seeds with invalid worlds/configs for this plan
         if not is_valid_env(state, plan):
-            print(f"Skipping seed {seed}: invalid world for selected plan")
+            logger.warning(f"Skipping seed {seed}: invalid world for selected plan")
             continue
 
         all_obs = []
@@ -139,12 +186,17 @@ if __name__ == "__main__":
             all_obs.append(obs.copy())
 
         try:
-            for target, actions, truth in plan:
+            logger.info(f"Executing plan with {len(plan)} steps...")
+            for step_idx, (target, actions, truth) in enumerate(plan):
+                logger.info(f"Step {step_idx + 1}/{len(plan)}: Target={target}, Actions={actions}, Truth={truth}")
+                
                 # New key per plan step to keep JAX RNG usage clean
                 key, key_step = jax.random.split(key)
                 state, obs_set, action_log, state_set, rew_set, info_set = execute_plan(
                     env, key_step, state, env_params, target, actions
                 )
+
+                logger.info(f"Step {step_idx + 1} completed: {len(action_log)} actions, {len(obs_set)} observations")
 
                 all_states.extend(state_set)
                 all_actions.extend(action_log)
@@ -164,6 +216,8 @@ if __name__ == "__main__":
             all_info.append(all_info[-1])
             all_truths.append(all_truths[-1])
 
+            logger.info(f"Trace generation successful: {len(all_actions)} total actions, {len(all_obs)} observations")
+
             data = {
                 "all_obs": all_obs,
                 "all_states": all_states,
@@ -175,16 +229,23 @@ if __name__ == "__main__":
                 "seed": seed,
             }
 
-            with open(os.path.join(args.path, "raw_data", f"craftax_{trace_nb}.pkl"), "wb") as f:
+            output_file = os.path.join(args.path, "raw_data", f"craftax_{trace_nb}.pkl")
+            with open(output_file, "wb") as f:
                 pickle.dump(data, f)
+            logger.info(f"Trace saved to {output_file}")
 
             trace_nb += 1  # Only increment when we successfully generated a trace
 
+            logger.info("Generating GIF visualization...")
             gen_gif(args, f"trace_{trace_nb}", all_obs, all_rewards, all_truths, all_actions)
+            logger.info("GIF generation completed")
+            
         except Exception as e:
-            print(f"Failed to generate trace with seed {seed}: {e}")
+            logger.error(f"Failed to generate trace with seed {seed}: {e}", exc_info=True)
             continue
 
     if trace_nb < args.samples:
-        print(f"Generated {trace_nb}/{args.samples} traces before hitting max attempts ({attempts}).")
+        logger.warning(f"Generated {trace_nb}/{args.samples} traces before hitting max attempts ({attempts}).")
+    else:
+        logger.info(f"Successfully generated all {args.samples} traces in {attempts} attempts")
 
