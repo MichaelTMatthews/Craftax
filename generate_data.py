@@ -10,8 +10,18 @@ import json
 import jax
 from collections import Counter
 import imageio
+import matplotlib.pyplot as plt
+import random 
+import pickle 
 
 jax.config.update("jax_platform_name", "cpu")
+
+def is_valid_env(state, plan) -> bool:
+    """
+    Return False if this world/seed is known to be incompatible with the plan.
+    Implement your own checks here (e.g., required blocks present/reachable).
+    """
+    return True
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -26,7 +36,7 @@ if __name__ == "__main__":
         "--samples",
         type=int,
         required=False,
-        default=1,
+        default=10,
         help="Number of samples to generate",
     )
     parser.add_argument(
@@ -35,6 +45,20 @@ if __name__ == "__main__":
         required=False,
         default="Traces/Test/",
         help="Path to save the generated traces",
+    )
+    parser.add_argument(
+        "--base-seed",
+        type=int,
+        required=False,
+        default=0,
+        help="Base seed used to derive per-episode seeds",
+    )
+    parser.add_argument(
+        "--max-attempts",
+        type=int,
+        required=False,
+        default=1000,
+        help="Upper bound on total seed attempts to reach the requested samples",
     )
 
     args = parser.parse_args()
@@ -66,96 +90,101 @@ if __name__ == "__main__":
             (bt.TREE, [at.DO], "wood"),
             (bt.STONE, [at.DO], "stone"),
             (bt.CRAFTING_TABLE, [at.MAKE_STONE_PICKAXE], "stone_pickaxe"),
+        ],
+        [
+            (bt.TREE, [at.DO], "wood"),
+            (bt.STONE, [at.DO], "stone"),
         ]
     ]
 
-    trace_nb = 0
-    while trace_nb < args.samples:
-        rng, rngs = reset_env(0)
-        np.random.seed(0)
+    all_task_data = []
 
-        # Obs are pixel obs
-        # State is all game data
-        obs, state = env.reset(rngs[0], env_params)
+    trace_nb = 0
+    next_seed = args.base_seed
+    attempts = 0
+
+    while trace_nb < args.samples and attempts < args.max_attempts:
+        seed = next_seed
+        next_seed += 1
+        attempts += 1
+
+        # Seed all RNGs deterministically per episode
+        np.random.seed(seed)
+        random.seed(seed)
+        key = jax.random.PRNGKey(seed)
+
+        # Choose a plan using the Python RNG (seeded above)
+        plan = random.choice(plans)
+
+        # Split per-episode key for env.reset and later for execute_plan
+        key, key_reset = jax.random.split(key)
+        # Obs are pixel obs; State is all game data
+        obs, state = env.reset(key_reset, env_params)
+
+        # Skip seeds with invalid worlds/configs for this plan
+        if not is_valid_env(state, plan):
+            print(f"Skipping seed {seed}: invalid world for selected plan")
+            continue
 
         all_obs = []
-        all_states = []
+        all_states = [state]
         all_info = []
         all_rewards = []
         all_actions = []
-        all_truths = ""
+        all_truths = []
 
         if args.obs == "pixels":
             all_obs.append(get_top_down_obs(state, obs.copy()))
         else:
             all_obs.append(obs.copy())
 
+        try:
+            for target, actions, truth in plan:
+                # New key per plan step to keep JAX RNG usage clean
+                key, key_step = jax.random.split(key)
+                state, obs_set, action_log, state_set, rew_set, info_set = execute_plan(
+                    env, key_step, state, env_params, target, actions
+                )
 
-        
-        plan = plans[0]
+                all_states.extend(state_set)
+                all_actions.extend(action_log)
+                all_rewards.extend(rew_set)
+                all_info.extend(info_set)
+                all_truths.extend([truth] * len(obs_set))
 
-        for target, actions, truth in plan:
-            state, obs_set, action_log, state_set, rew_set, info_set = execute_plan(env, rngs[2], state, env_params, target, actions)
+                if args.obs == "pixels":
+                    for s, imgs in zip(state_set, obs_set):
+                        all_obs.append(get_top_down_obs(s, imgs))
+                else:
+                    all_obs.extend(obs_set)
 
-            all_states.extend(state_set)
-            all_actions.extend(action_log)
-            all_rewards.extend(rew_set)
-            all_info.extend(info_set)
-            all_truths += "\n".join([truth] * len(obs_set)) + "\n"
+            # Pad terminal step metadata
+            all_actions.append(0)
+            all_rewards.append(0)
+            all_info.append(all_info[-1])
+            all_truths.append(all_truths[-1])
 
-            if args.obs == "pixels":
-                for states, imgs in zip(state_set, obs_set):
-                    all_obs.append(get_top_down_obs(states, imgs))
-            else:
-                all_obs.extend(obs_set)
+            data = {
+                "all_obs": all_obs,
+                "all_states": all_states,
+                "all_info": all_info,
+                "all_rewards": all_rewards,
+                "all_actions": all_actions,
+                "all_truths": all_truths,
+                "plan": plan,
+                "seed": seed,
+            }
 
-        
+            with open(os.path.join(args.path, "raw_data", f"craftax_{trace_nb}.pkl"), "wb") as f:
+                pickle.dump(data, f)
 
-        import matplotlib.pyplot as plt
+            trace_nb += 1  # Only increment when we successfully generated a trace
 
-        gif_path = os.path.join(args.path, f"trace_{trace_nb}_obs.gif")
-        frames = []
+            gen_gif(args, f"trace_{trace_nb}", all_obs, all_rewards, all_truths, all_actions)
+        except Exception as e:
+            print(f"Failed to generate trace with seed {seed}: {e}")
+            continue
 
-        # Ensure all_obs, all_rewards, all_truths, all_actions are aligned
-        for idx, obs_img in enumerate(all_obs):
-            fig, ax = plt.subplots(figsize=(4, 4))
-            if obs_img.ndim == 3 and obs_img.shape[2] == 1:
-                obs_img = obs_img.squeeze(-1)
-            if obs_img.ndim == 2:  # grayscale to RGB
-                obs_img = np.stack([obs_img]*3, axis=-1)
-            ax.imshow(obs_img)
-            ax.axis('off')
+    if trace_nb < args.samples:
+        print(f"Generated {trace_nb}/{args.samples} traces before hitting max attempts ({attempts}).")
 
-            # Get corresponding reward, truth, and action
-            reward = all_rewards[idx] if idx < len(all_rewards) else ""
-            truth = all_truths.split("\n")[idx] if idx < len(all_truths.split("\n")) else ""
-            action = str(all_actions[idx]) if idx < len(all_actions) else ""
-
-            text_str = f"Reward: {reward}\nTruth: {truth}\nAction: {action}"
-            ax.text(0.02, 0.98, text_str, transform=ax.transAxes, fontsize=8,
-                verticalalignment='top', bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
-
-            fig.canvas.draw()
-
-            # Logical size
-            w, h = fig.canvas.get_width_height()
-
-            # Raw RGBA bytes
-            buf = np.frombuffer(fig.canvas.buffer_rgba(), dtype=np.uint8)
-
-            # Pixels in buffer (per channel grouped)
-            pixels = buf.size // 4
-            logical_pixels = w * h
-
-            # Compute HiDPI scale (usually 1 on non-Retina, 2 on Retina)
-            scale = int(round((pixels / logical_pixels) ** 0.5)) or 1
-            W, H = w * scale, h * scale
-
-            frame = buf.reshape(H, W, 4)[..., :3]  # drop alpha to get RGB
-            frames.append(frame)
-            plt.close(fig)
-
-        imageio.mimsave(gif_path, frames, duration=0.2)
-        print(f"Saved gif to {gif_path}")
-
-        trace_nb += 1

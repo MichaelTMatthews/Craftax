@@ -16,9 +16,12 @@ import math
 from PIL import Image
 import numpy as np
 from PIL import Image
+import imageio
 
 def reset_env(seed = None ):
-    if not seed:
+    # Only generate a random seed when seed is explicitly None.
+    # This ensures seed=0 is respected and yields deterministic runs.
+    if seed is None:
         seed = int.from_bytes(os.urandom(4), 'big')  # 32-bit random integer
     rng = jax.random.PRNGKey(seed)
     rng, _rng = jax.random.split(rng)
@@ -202,3 +205,50 @@ def inventory_satisfies_plan(inventory, plan, expected_counts=None):
         if inventory.get(resource, 0) < count:
             return False
     return True
+
+
+def gen_gif(args, name, all_obs, all_rewards, all_truths, all_actions):
+    gif_path = os.path.join(args.path, f"{name}.gif")
+    frames = []
+
+    # Ensure all_obs, all_rewards, all_truths, all_actions are aligned
+    for idx, obs_img in enumerate(all_obs):
+        fig, ax = plt.subplots(figsize=(4, 4))
+        if obs_img.ndim == 3 and obs_img.shape[2] == 1:
+            obs_img = obs_img.squeeze(-1)
+        if obs_img.ndim == 2:  # grayscale to RGB
+            obs_img = np.stack([obs_img]*3, axis=-1)
+        ax.imshow(obs_img)
+        ax.axis('off')
+
+        # Get corresponding reward, truth, and action
+        reward = all_rewards[idx] if idx < len(all_rewards) else ""
+        truth = all_truths[idx] if idx < len(all_truths) else ""
+        action = str(all_actions[idx]) if idx < len(all_actions) else ""
+
+        text_str = f"Reward: {reward}\nTruth: {truth}\nAction: {action}"
+        ax.text(0.02, 0.98, text_str, transform=ax.transAxes, fontsize=8,
+            verticalalignment='top', bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
+
+        fig.canvas.draw()
+
+        # Logical size
+        w, h = fig.canvas.get_width_height()
+
+        # Raw RGBA bytes
+        buf = np.frombuffer(fig.canvas.buffer_rgba(), dtype=np.uint8)
+
+        # Pixels in buffer (per channel grouped)
+        pixels = buf.size // 4
+        logical_pixels = w * h
+
+        # Compute HiDPI scale (usually 1 on non-Retina, 2 on Retina)
+        scale = int(round((pixels / logical_pixels) ** 0.5)) or 1
+        W, H = w * scale, h * scale
+
+        frame = buf.reshape(H, W, 4)[..., :3]  # drop alpha to get RGB
+        frames.append(frame)
+        plt.close(fig)
+
+    imageio.mimsave(gif_path, frames, duration=100)
+    print(f"Saved gif to {gif_path}")
