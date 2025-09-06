@@ -207,8 +207,8 @@ def do_action(rng, state, action, static_params):
     )
 
     # Stone
-    can_mine_stone = True
-    # can_mine_stone = state.inventory.wood_pickaxe
+    # can_mine_stone = True
+    can_mine_stone = state.inventory.wood_pickaxe
     is_mining_stone = jnp.logical_and(
         state.map[block_position[0], block_position[1]] == BlockType.STONE.value,
         can_mine_stone,
@@ -229,7 +229,9 @@ def do_action(rng, state, action, static_params):
     )
 
     # Coal
-    can_mine_coal = True
+    # can_mine_coal = True
+    can_mine_coal = state.inventory.stone_pickaxe
+
     is_mining_coal = jnp.logical_and(
         state.map[block_position[0], block_position[1]] == BlockType.COAL.value,
         can_mine_coal,
@@ -248,7 +250,9 @@ def do_action(rng, state, action, static_params):
     )
 
     # Iron
-    can_mine_iron = True
+    # can_mine_iron = True
+    can_mine_iron = state.inventory.stone_pickaxe
+    
     is_mining_iron = jnp.logical_and(
         state.map[block_position[0], block_position[1]] == BlockType.IRON.value,
         can_mine_iron,

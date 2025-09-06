@@ -76,7 +76,7 @@ if __name__ == "__main__":
         "--log-level",
         type=str,
         choices=["DEBUG", "INFO", "WARNING", "ERROR"],
-        default="INFO",
+        default="WARNING",
         help="Set logging level (default: INFO)",
     )
 
@@ -133,6 +133,11 @@ if __name__ == "__main__":
 
         ]
     ]
+
+    inventory_goals = {
+        "wood": 2,
+        "stone": 1,
+    }
 
     all_task_data = []
 
@@ -215,6 +220,24 @@ if __name__ == "__main__":
             all_actions.append(0)
             all_rewards.append(0)
             all_info.append(all_info[-1])
+
+            inventory_state = [s.inventory for s in all_states]
+            inventory_state_dicts = states_to_dicts(inventory_state)
+            last_inventory = inventory_state_dicts[-1]
+
+            valid_inv = True 
+
+            for inv_req in inventory_goals:
+                if last_inventory.get(inv_req, 0) < inventory_goals[inv_req]:
+                    valid_inv = False
+                    logger.warning(f"Trace failed inventory goal: needs {inventory_goals[inv_req]} {inv_req}, has {last_inventory.get(inv_req, 0)}")
+            
+            if valid_inv:
+                logger.info(f"Trace met inventory goals: {last_inventory}")
+            else:
+                logger.warning(f"Trace did not meet inventory goals: {last_inventory}, skipping trace")
+                continue
+
 
             # Sanity check
             if len(all_obs) != len(all_truths):
