@@ -43,7 +43,7 @@ if __name__ == "__main__":
         "--samples",
         type=int,
         required=False,
-        default=10,
+        default=5,
         help="Number of samples to generate",
     )
     parser.add_argument(
@@ -76,7 +76,7 @@ if __name__ == "__main__":
         "--log-level",
         type=str,
         choices=["DEBUG", "INFO", "WARNING", "ERROR"],
-        default="DEBUG",
+        default="INFO",
         help="Set logging level (default: INFO)",
     )
 
@@ -128,14 +128,9 @@ if __name__ == "__main__":
     plans = [
         [
             (bt.TREE, [at.DO], "wood"),
-            (bt.TREE, [at.DO], "wood"),
-            (bt.GRASS, [at.PLACE_TABLE], "table"),
-            (bt.TREE, [at.DO], "wood"),
-            (bt.CRAFTING_TABLE, [at.MAKE_WOOD_PICKAXE], "wooden_pickaxe"),
-            (bt.TREE, [at.DO], "wood"),
             (bt.STONE, [at.DO], "stone"),
-            (bt.CRAFTING_TABLE, [at.MAKE_STONE_PICKAXE], "stone_pickaxe"),
-            (bt.COAL, [at.DO], "coal"),
+            (bt.TREE, [at.DO], "wood"),
+
         ]
     ]
 
@@ -185,6 +180,9 @@ if __name__ == "__main__":
         else:
             all_obs.append(obs.copy())
 
+        # Initialize truth for the initial observation (before any actions)
+        all_truths.append(plan[0][2])
+
         try:
             logger.info(f"Executing plan with {len(plan)} steps...")
             for step_idx, (target, actions, truth) in enumerate(plan):
@@ -202,7 +200,10 @@ if __name__ == "__main__":
                 all_actions.extend(action_log)
                 all_rewards.extend(rew_set)
                 all_info.extend(info_set)
-                all_truths.extend([truth] * len(obs_set))
+
+                # Assign truths so that each step labels only its own frames
+                added = len(obs_set)
+                all_truths.extend([truth] * added)
 
                 if args.obs == "pixels":
                     for s, imgs in zip(state_set, obs_set):
@@ -210,19 +211,20 @@ if __name__ == "__main__":
                 else:
                     all_obs.extend(obs_set)
 
-            # Pad terminal step metadata
+            # Pad terminal step metadata (actions/rewards/info); truths already aligned to observations
             all_actions.append(0)
             all_rewards.append(0)
             all_info.append(all_info[-1])
-            all_truths.append(all_truths[-1])
+
+            # Sanity check
+            if len(all_obs) != len(all_truths):
+                logger.warning(f"obs/truth length mismatch: obs={len(all_obs)} truths={len(all_truths)}")
 
             logger.info(f"Trace generation successful: {len(all_actions)} total actions, {len(all_obs)} observations")
 
             data = {
                 "all_obs": all_obs,
                 "all_states": all_states,
-                "all_info": all_info,
-                "all_rewards": all_rewards,
                 "all_actions": all_actions,
                 "all_truths": all_truths,
                 "plan": plan,
