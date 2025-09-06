@@ -128,15 +128,50 @@ if __name__ == "__main__":
     plans = [
         [
             (bt.TREE, [at.DO], "wood"),
+            (bt.TREE, [at.DO], "wood"),
+            (bt.TREE, [at.DO], "wood"),
+            (bt.TREE, [at.DO], "wood"),
+            (bt.GRASS, [at.PLACE_TABLE], "table"),
+            (bt.TREE, [at.DO], "wood"),
+            (bt.CRAFTING_TABLE, [at.MAKE_WOOD_PICKAXE], "wooden_pickaxe"),
+            (bt.STONE, [at.DO], "stone"),
+            (bt.STONE, [at.DO], "stone"),
+            (bt.STONE, [at.DO], "stone"),
+            (bt.STONE, [at.DO], "stone"),
+            (bt.STONE, [at.DO], "stone"),
+            (bt.STONE, [at.DO], "stone"),
+            (bt.STONE, [at.DO], "stone"),
             (bt.STONE, [at.DO], "stone"),
             (bt.TREE, [at.DO], "wood"),
+            (bt.TREE, [at.DO], "wood"),
+            (bt.CRAFTING_TABLE, [at.MAKE_STONE_PICKAXE], "stone_pickaxe"),
+            # (bt.STONE, [at.DO], "stone"),
+            # (bt.STONE, [at.DO], "stone"),
+            # (bt.STONE, [at.DO], "stone"),
+            (bt.COAL, [at.DO], "coal"),
+            (bt.COAL, [at.DO], "coal"),
+            # (bt.COAL, [at.DO], "coal"),
+            # (bt.COAL, [at.DO], "coal"),
+            # (bt.COAL, [at.DO], "coal"),
+            (bt.IRON, [at.DO], "iron"),
+            (bt.IRON, [at.DO], "iron"),
+            (bt.PATH, [at.PLACE_FURNACE], "furnace"),
+            # (bt.PATH, [at.PLACE_TABLE], "table"),
+            (bt.FURNACE, [at.MAKE_IRON_PICKAXE], "iron_pickaxe"),
+
+            
+
+
+
+
 
         ]
     ]
 
     inventory_goals = {
-        "wood": 2,
-        "stone": 1,
+        # "wood": 2,
+        "iron_pickaxe": 1,
+        # "iron" : 2
     }
 
     all_task_data = []

@@ -69,7 +69,7 @@ def is_traversable(tile):
     """Return True if the tile is open for planning (tile 2: GRASS)."""
     tile = _convert_jax_value(tile)
     logger.debug(f"Checking if tile {tile} (type: {type(tile)}) is traversable")
-    return tile == 2 or tile == 13
+    return tile == 2 or tile == 13 or tile == 7
 
 def is_minable(tile):
     """Return True if the tile can be mined to become traversable."""

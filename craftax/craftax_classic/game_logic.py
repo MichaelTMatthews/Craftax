@@ -459,7 +459,8 @@ def do_crafting(state, action):
     is_crafting_iron_pickaxe = jnp.logical_and(
         action == Action.MAKE_IRON_PICKAXE.value,
         jnp.logical_and(
-            can_craft_iron_pickaxe, jnp.logical_and(is_at_furnace, is_at_crafting_table)
+            can_craft_iron_pickaxe, is_at_furnace
+            # can_craft_iron_pickaxe, jnp.logical_and(is_at_furnace, is_at_crafting_table)
         ),
     )
 
