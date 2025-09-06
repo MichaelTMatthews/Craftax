@@ -280,3 +280,89 @@ def gen_gif(args, name, all_obs, all_rewards, all_truths, all_actions):
 
     imageio.mimsave(gif_path, frames, duration=100)
     print(f"Saved gif to {gif_path}")
+
+from dataclasses import is_dataclass, asdict
+
+def _to_mapping(obj):
+    if isinstance(obj, dict):
+        return obj
+    if hasattr(obj, "_asdict"):
+        return obj._asdict()
+    if is_dataclass(obj):
+        return asdict(obj)
+    if hasattr(obj, "__dict__"):
+        return {k: v for k, v in vars(obj).items() if not k.startswith("_")}
+    out = {}
+    for k in dir(obj):
+        if k.startswith("_"):
+            continue
+        v = getattr(obj, k)
+        if not callable(v):
+            out[k] = v
+    return out
+
+def _to_number(x):
+    if hasattr(x, "item"):
+        try:
+            x = x.item()
+        except Exception:
+            pass
+    if isinstance(x, (bool, int)):
+        return int(x)
+    if isinstance(x, float):
+        return x
+    try:
+        return int(x)
+    except Exception:
+        return 0
+
+def _deltas(a, b):
+    A, B = _to_mapping(a), _to_mapping(b)
+    keys = set(A) | set(B)
+    out = {}
+    for k in keys:
+        va = _to_number(A.get(k, 0))
+        vb = _to_number(B.get(k, 0))
+        out[k] = (va, vb, vb - va)
+    return out
+def print_action_timeline(states):
+    """
+    Build an action timeline per rules:
+      - If wood delta == -2  -> label = 'table'
+      - Else if stone delta == -5 -> label = 'furnace'
+      - Else if exactly ONE resource increases -> label = that resource name
+      - Otherwise ignore the step (no label)
+    Then print each label repeated from (prev_event_step+1) to (current_step+1) inclusive.
+    """
+    states = list(states)
+    fin_arr = []
+
+    events = []  # (step_index, label) where step_index = i+1 (transition i -> i+1)
+    for i in range(len(states) - 1):
+        d = _deltas(states[i], states[i + 1])
+
+        # Special crafting decreases take precedence
+        wood_delta = d.get("wood", (0, 0, 0))[2]
+        stone_delta = d.get("stone", (0, 0, 0))[2]
+
+        if wood_delta == -2:
+            label = "table"
+        elif stone_delta == -5:
+            label = "furnace"
+        else:
+            # Only focus on increases: require exactly one positive delta
+            pos = [k for k, (_, _, dv) in d.items() if dv > 0]
+            label = pos[0] if len(pos) == 1 else None
+
+        if label is not None:
+            events.append((i + 1, label))
+
+    prev_step = 0
+    for step, label in events:
+        end = step + 1              # extend segment to i+1 (i.e., step+1)
+        repeat = end - prev_step
+        for _ in range(repeat):
+            fin_arr.append(label)
+        prev_step = end             # advance past the end to avoid overlap
+
+    return fin_arr

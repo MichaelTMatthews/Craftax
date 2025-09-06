@@ -620,7 +620,7 @@ def place_block(state, action, static_params):
 
     # Furnace
     furnace_key_down = action == Action.PLACE_FURNACE.value
-    has_stone = new_inventory.stone > 0
+    has_stone = new_inventory.stone > 5
     is_placing_furnace = jnp.logical_and(
         furnace_key_down,
         jnp.logical_and(

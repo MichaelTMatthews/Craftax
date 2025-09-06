@@ -76,7 +76,7 @@ if __name__ == "__main__":
         "--log-level",
         type=str,
         choices=["DEBUG", "INFO", "WARNING", "ERROR"],
-        default="WARNING",
+        default="ERROR",
         help="Set logging level (default: INFO)",
     )
 
@@ -158,12 +158,6 @@ if __name__ == "__main__":
             (bt.PATH, [at.PLACE_FURNACE], "furnace"),
             # (bt.PATH, [at.PLACE_TABLE], "table"),
             (bt.FURNACE, [at.MAKE_IRON_PICKAXE], "iron_pickaxe"),
-
-            
-
-
-
-
 
         ]
     ]
@@ -272,7 +266,9 @@ if __name__ == "__main__":
             else:
                 logger.warning(f"Trace did not meet inventory goals: {last_inventory}, skipping trace")
                 continue
+            
 
+            all_truths = print_action_timeline(inventory_state)
 
             # Sanity check
             if len(all_obs) != len(all_truths):
@@ -288,6 +284,8 @@ if __name__ == "__main__":
                 "plan": plan,
                 "seed": seed,
             }
+
+        
 
             output_file = os.path.join(args.path, "raw_data", f"craftax_{trace_nb}.pkl")
             with open(output_file, "wb") as f:
