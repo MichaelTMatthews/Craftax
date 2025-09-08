@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 import random
 import pickle
 import logging
+import gzip
 
 # Configure logging
 logging.basicConfig(
@@ -107,6 +108,7 @@ if __name__ == "__main__":
         # Configure A* logging to match
         try:
             from astar import set_astar_log_level
+
 
             set_astar_log_level(log_level)
             logger.info(f"A* logging level set to {args.log_level}")
@@ -412,18 +414,18 @@ if __name__ == "__main__":
                 "seed": seed,
             }
 
-            output_file = os.path.join(args.path, "raw_data", f"craftax_{trace_nb}.pkl")
-            with open(output_file, "wb") as f:
+            output_file = os.path.join(args.path, "raw_data", f"craftax_{trace_nb}.pkl.gz")
+            with gzip.open(output_file, "wb") as f:
                 pickle.dump(data, f)
-            logger.info(f"Trace saved to {output_file}")
+            logger.info(f"Compressed trace saved to {output_file}")
 
             trace_nb += 1  # Only increment when we successfully generated a trace
 
-            logger.info("Generating GIF visualization...")
-            gen_gif(
-                args, f"trace_{trace_nb}", all_obs, all_rewards, all_truths, all_actions
-            )
-            logger.info("GIF generation completed")
+            # logger.info("Generating GIF visualization...")
+            # gen_gif(
+            #     args, f"trace_{trace_nb}", all_obs, all_rewards, all_truths, all_actions
+            # )
+            # logger.info("GIF generation completed")
 
         except Exception as e:
             logger.error(
