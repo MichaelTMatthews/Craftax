@@ -1,0 +1,55 @@
+{
+  "wood_pickaxe": {
+    "wood": 1,
+    "crafting_table": true
+  },
+
+
+  "stone_pickaxe": {
+    "wood": 1,
+    "stone": 1,
+    "crafting_table": true
+  },
+
+
+  "iron_pickaxe": {
+    "wood": 1,
+    "stone": 1,
+    "iron": 1,
+    "coal": 1,
+    "furnace": true
+  },
+
+
+  "wood_sword": {
+    "wood": 1,
+    "crafting_table": true
+  },
+
+
+  "stone_sword": {
+    "wood": 1,
+    "stone": 1,
+    "crafting_table": true
+  },
+
+
+  "iron_sword": {
+    "wood": 1,
+    "stone": 1,
+    "iron": 1,
+    "coal": 1,
+    "crafting_table": true,
+    "furnace": true
+  },
+
+
+  "crafting_table": {
+    "wood": 2
+  },
+
+  
+  "furnace": {
+    "stone": 5
+  }
+}

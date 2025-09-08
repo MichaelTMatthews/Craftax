@@ -11,15 +11,18 @@ import jax
 from collections import Counter
 import imageio
 import matplotlib.pyplot as plt
-import random 
+import random
 import pickle
 import logging
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__) 
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
 
 jax.config.update("jax_platform_name", "cpu")
+
 
 def is_valid_env(state, plan) -> bool:
     """
@@ -27,6 +30,7 @@ def is_valid_env(state, plan) -> bool:
     Implement your own checks here (e.g., required blocks present/reachable).
     """
     return True
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -89,6 +93,7 @@ if __name__ == "__main__":
         # Import and configure A* logging
         try:
             from astar import set_astar_verbose
+
             set_astar_verbose(True)
             logger.info("Verbose logging enabled for A* pathfinding")
         except ImportError:
@@ -102,6 +107,7 @@ if __name__ == "__main__":
         # Configure A* logging to match
         try:
             from astar import set_astar_log_level
+
             set_astar_log_level(log_level)
             logger.info(f"A* logging level set to {args.log_level}")
         except ImportError:
@@ -130,6 +136,118 @@ if __name__ == "__main__":
             (bt.TREE, [at.DO], "wood"),
             (bt.TREE, [at.DO], "wood"),
             (bt.TREE, [at.DO], "wood"),
+            (bt.GRASS, [at.PLACE_TABLE], "table"),
+            (bt.TREE, [at.DO], "wood"),
+            (bt.CRAFTING_TABLE, [at.MAKE_WOOD_PICKAXE], "wooden_pickaxe"),
+            (bt.STONE, [at.DO], "stone"),
+            (bt.STONE, [at.DO], "stone"),
+            (bt.TREE, [at.DO], "wood"),
+            (bt.TREE, [at.DO], "wood"),
+            (bt.CRAFTING_TABLE, [at.MAKE_STONE_PICKAXE], "stone_pickaxe"),
+        ],
+        [
+            (bt.TREE, [at.DO], "wood"),
+            (bt.TREE, [at.DO], "wood"),
+            (bt.GRASS, [at.PLACE_TABLE], "table"),
+            (bt.TREE, [at.DO], "wood"),
+            (bt.TREE, [at.DO], "wood"),
+            (bt.CRAFTING_TABLE, [at.MAKE_WOOD_PICKAXE], "wooden_pickaxe"),
+            (bt.STONE, [at.DO], "stone"),
+            (bt.STONE, [at.DO], "stone"),
+            (bt.STONE, [at.DO], "stone"),
+            (bt.TREE, [at.DO], "wood"),
+            (bt.CRAFTING_TABLE, [at.MAKE_STONE_PICKAXE], "stone_pickaxe"),
+        ],
+        [
+            (bt.TREE, [at.DO], "wood"),
+            (bt.TREE, [at.DO], "wood"),
+            (bt.TREE, [at.DO], "wood"),
+            (bt.GRASS, [at.PLACE_TABLE], "table"),
+            (bt.TREE, [at.DO], "wood"),
+            (bt.CRAFTING_TABLE, [at.MAKE_WOOD_PICKAXE], "wooden_pickaxe"),
+            (bt.TREE, [at.DO], "wood"),
+            (bt.STONE, [at.DO], "stone"),
+            (bt.STONE, [at.DO], "stone"),
+            (bt.CRAFTING_TABLE, [at.MAKE_STONE_PICKAXE], "stone_pickaxe"),
+        ],
+        [
+            (bt.TREE, [at.DO], "wood"),
+            (bt.TREE, [at.DO], "wood"),
+            (bt.GRASS, [at.PLACE_TABLE], "table"),
+            (bt.TREE, [at.DO], "wood"),
+            (bt.TREE, [at.DO], "wood"),
+            (bt.CRAFTING_TABLE, [at.MAKE_WOOD_PICKAXE], "wooden_pickaxe"),
+            (bt.TREE, [at.DO], "wood"),
+            (bt.STONE, [at.DO], "stone"),
+            (bt.TREE, [at.DO], "wood"),
+            (bt.STONE, [at.DO], "stone"),
+            (bt.CRAFTING_TABLE, [at.MAKE_STONE_PICKAXE], "stone_pickaxe"),
+        ],
+        [
+            (bt.TREE, [at.DO], "wood"),
+            (bt.TREE, [at.DO], "wood"),
+            (bt.TREE, [at.DO], "wood"),
+            (bt.TREE, [at.DO], "wood"),
+            (bt.GRASS, [at.PLACE_TABLE], "table"),
+            (bt.CRAFTING_TABLE, [at.MAKE_WOOD_PICKAXE], "wooden_pickaxe"),
+            (bt.STONE, [at.DO], "stone"),
+            (bt.STONE, [at.DO], "stone"),
+            (bt.TREE, [at.DO], "wood"),
+            (bt.CRAFTING_TABLE, [at.MAKE_STONE_PICKAXE], "stone_pickaxe"),
+        ],
+        [
+            (bt.TREE, [at.DO], "wood"),
+            (bt.TREE, [at.DO], "wood"),
+            (bt.GRASS, [at.PLACE_TABLE], "table"),
+            (bt.TREE, [at.DO], "wood"),
+            (bt.CRAFTING_TABLE, [at.MAKE_WOOD_PICKAXE], "wooden_pickaxe"),
+            (bt.TREE, [at.DO], "wood"),
+            (bt.TREE, [at.DO], "wood"),
+            (bt.STONE, [at.DO], "stone"),
+            (bt.STONE, [at.DO], "stone"),
+            (bt.CRAFTING_TABLE, [at.MAKE_STONE_PICKAXE], "stone_pickaxe"),
+        ],
+        [
+            (bt.TREE, [at.DO], "wood"),
+            (bt.TREE, [at.DO], "wood"),
+            (bt.TREE, [at.DO], "wood"),
+            (bt.GRASS, [at.PLACE_TABLE], "table"),
+            (bt.TREE, [at.DO], "wood"),
+            (bt.CRAFTING_TABLE, [at.MAKE_WOOD_PICKAXE], "wooden_pickaxe"),
+            (bt.STONE, [at.DO], "stone"),
+            (bt.STONE, [at.DO], "stone"),
+            (bt.STONE, [at.DO], "stone"),
+            (bt.CRAFTING_TABLE, [at.MAKE_STONE_PICKAXE], "stone_pickaxe"),
+        ],
+        [
+            (bt.TREE, [at.DO], "wood"),
+            (bt.TREE, [at.DO], "wood"),
+            (bt.TREE, [at.DO], "wood"),
+            (bt.TREE, [at.DO], "wood"),
+            (bt.TREE, [at.DO], "wood"),
+            (bt.GRASS, [at.PLACE_TABLE], "table"),
+            (bt.CRAFTING_TABLE, [at.MAKE_WOOD_PICKAXE], "wooden_pickaxe"),
+            (bt.TREE, [at.DO], "wood"),
+            (bt.STONE, [at.DO], "stone"),
+            (bt.STONE, [at.DO], "stone"),
+            (bt.CRAFTING_TABLE, [at.MAKE_STONE_PICKAXE], "stone_pickaxe"),
+        ],
+        [
+            (bt.TREE, [at.DO], "wood"),
+            (bt.TREE, [at.DO], "wood"),
+            (bt.GRASS, [at.PLACE_TABLE], "table"),
+            (bt.TREE, [at.DO], "wood"),
+            (bt.TREE, [at.DO], "wood"),
+            (bt.CRAFTING_TABLE, [at.MAKE_WOOD_PICKAXE], "wooden_pickaxe"),
+            (bt.STONE, [at.DO], "stone"),
+            (bt.TREE, [at.DO], "wood"),
+            (bt.TREE, [at.DO], "wood"),
+            (bt.STONE, [at.DO], "stone"),
+            (bt.CRAFTING_TABLE, [at.MAKE_STONE_PICKAXE], "stone_pickaxe"),
+        ],
+        [
+            (bt.TREE, [at.DO], "wood"),
+            (bt.TREE, [at.DO], "wood"),
             (bt.TREE, [at.DO], "wood"),
             (bt.GRASS, [at.PLACE_TABLE], "table"),
             (bt.TREE, [at.DO], "wood"),
@@ -138,33 +256,27 @@ if __name__ == "__main__":
             (bt.STONE, [at.DO], "stone"),
             (bt.STONE, [at.DO], "stone"),
             (bt.STONE, [at.DO], "stone"),
-            (bt.STONE, [at.DO], "stone"),
-            (bt.STONE, [at.DO], "stone"),
-            (bt.STONE, [at.DO], "stone"),
-            (bt.STONE, [at.DO], "stone"),
+            (bt.CRAFTING_TABLE, [at.MAKE_STONE_PICKAXE], "stone_pickaxe"),
+        ],
+        [
             (bt.TREE, [at.DO], "wood"),
+            (bt.TREE, [at.DO], "wood"),
+            (bt.GRASS, [at.PLACE_TABLE], "table"),
+            (bt.TREE, [at.DO], "wood"),
+            (bt.TREE, [at.DO], "wood"),
+            (bt.TREE, [at.DO], "wood"),
+            (bt.CRAFTING_TABLE, [at.MAKE_WOOD_PICKAXE], "wooden_pickaxe"),
+            (bt.TREE, [at.DO], "wood"),
+            (bt.STONE, [at.DO], "stone"),
+            (bt.STONE, [at.DO], "stone"),
             (bt.TREE, [at.DO], "wood"),
             (bt.CRAFTING_TABLE, [at.MAKE_STONE_PICKAXE], "stone_pickaxe"),
-            # (bt.STONE, [at.DO], "stone"),
-            # (bt.STONE, [at.DO], "stone"),
-            # (bt.STONE, [at.DO], "stone"),
-            (bt.COAL, [at.DO], "coal"),
-            (bt.COAL, [at.DO], "coal"),
-            # (bt.COAL, [at.DO], "coal"),
-            # (bt.COAL, [at.DO], "coal"),
-            # (bt.COAL, [at.DO], "coal"),
-            (bt.IRON, [at.DO], "iron"),
-            (bt.IRON, [at.DO], "iron"),
-            (bt.PATH, [at.PLACE_FURNACE], "furnace"),
-            # (bt.PATH, [at.PLACE_TABLE], "table"),
-            (bt.FURNACE, [at.MAKE_IRON_PICKAXE], "iron_pickaxe"),
-
-        ]
+        ],
     ]
 
     inventory_goals = {
         # "wood": 2,
-        "iron_pickaxe": 1,
+        "stone_pickaxe": 1,
         # "iron" : 2
     }
 
@@ -179,7 +291,9 @@ if __name__ == "__main__":
         next_seed += 1
         attempts += 1
 
-        logger.info(f"Attempt {attempts}/{args.max_attempts}: Generating trace {trace_nb + 1}/{args.samples} with seed {seed}")
+        logger.info(
+            f"Attempt {attempts}/{args.max_attempts}: Generating trace {trace_nb + 1}/{args.samples} with seed {seed}"
+        )
 
         # Seed all RNGs deterministically per episode
         np.random.seed(seed)
@@ -195,7 +309,9 @@ if __name__ == "__main__":
         # Obs are pixel obs; State is all game data
         logger.info("Resetting environment...")
         obs, state = env.reset(key_reset, env_params)
-        logger.info(f"Environment reset complete. Player position: {state.player_position}")
+        logger.info(
+            f"Environment reset complete. Player position: {state.player_position}"
+        )
 
         # Skip seeds with invalid worlds/configs for this plan
         if not is_valid_env(state, plan):
@@ -220,15 +336,19 @@ if __name__ == "__main__":
         try:
             logger.info(f"Executing plan with {len(plan)} steps...")
             for step_idx, (target, actions, truth) in enumerate(plan):
-                logger.info(f"Step {step_idx + 1}/{len(plan)}: Target={target}, Actions={actions}, Truth={truth}")
-                
+                logger.info(
+                    f"Step {step_idx + 1}/{len(plan)}: Target={target}, Actions={actions}, Truth={truth}"
+                )
+
                 # New key per plan step to keep JAX RNG usage clean
                 key, key_step = jax.random.split(key)
                 state, obs_set, action_log, state_set, rew_set, info_set = execute_plan(
                     env, key_step, state, env_params, target, actions
                 )
 
-                logger.info(f"Step {step_idx + 1} completed: {len(action_log)} actions, {len(obs_set)} observations")
+                logger.info(
+                    f"Step {step_idx + 1} completed: {len(action_log)} actions, {len(obs_set)} observations"
+                )
 
                 all_states.extend(state_set)
                 all_actions.extend(action_log)
@@ -254,27 +374,34 @@ if __name__ == "__main__":
             inventory_state_dicts = states_to_dicts(inventory_state)
             last_inventory = inventory_state_dicts[-1]
 
-            valid_inv = True 
+            valid_inv = True
 
             for inv_req in inventory_goals:
                 if last_inventory.get(inv_req, 0) < inventory_goals[inv_req]:
                     valid_inv = False
-                    logger.warning(f"Trace failed inventory goal: needs {inventory_goals[inv_req]} {inv_req}, has {last_inventory.get(inv_req, 0)}")
-            
+                    logger.warning(
+                        f"Trace failed inventory goal: needs {inventory_goals[inv_req]} {inv_req}, has {last_inventory.get(inv_req, 0)}"
+                    )
+
             if valid_inv:
                 logger.info(f"Trace met inventory goals: {last_inventory}")
             else:
-                logger.warning(f"Trace did not meet inventory goals: {last_inventory}, skipping trace")
+                logger.warning(
+                    f"Trace did not meet inventory goals: {last_inventory}, skipping trace"
+                )
                 continue
-            
 
             all_truths = print_action_timeline(inventory_state)
 
             # Sanity check
             if len(all_obs) != len(all_truths):
-                logger.warning(f"obs/truth length mismatch: obs={len(all_obs)} truths={len(all_truths)}")
+                logger.warning(
+                    f"obs/truth length mismatch: obs={len(all_obs)} truths={len(all_truths)}"
+                )
 
-            logger.info(f"Trace generation successful: {len(all_actions)} total actions, {len(all_obs)} observations")
+            logger.info(
+                f"Trace generation successful: {len(all_actions)} total actions, {len(all_obs)} observations"
+            )
 
             data = {
                 "all_obs": all_obs,
@@ -285,8 +412,6 @@ if __name__ == "__main__":
                 "seed": seed,
             }
 
-        
-
             output_file = os.path.join(args.path, "raw_data", f"craftax_{trace_nb}.pkl")
             with open(output_file, "wb") as f:
                 pickle.dump(data, f)
@@ -295,15 +420,22 @@ if __name__ == "__main__":
             trace_nb += 1  # Only increment when we successfully generated a trace
 
             logger.info("Generating GIF visualization...")
-            gen_gif(args, f"trace_{trace_nb}", all_obs, all_rewards, all_truths, all_actions)
+            gen_gif(
+                args, f"trace_{trace_nb}", all_obs, all_rewards, all_truths, all_actions
+            )
             logger.info("GIF generation completed")
-            
+
         except Exception as e:
-            logger.error(f"Failed to generate trace with seed {seed}: {e}", exc_info=True)
+            logger.error(
+                f"Failed to generate trace with seed {seed}: {e}", exc_info=True
+            )
             continue
 
     if trace_nb < args.samples:
-        logger.warning(f"Generated {trace_nb}/{args.samples} traces before hitting max attempts ({attempts}).")
+        logger.warning(
+            f"Generated {trace_nb}/{args.samples} traces before hitting max attempts ({attempts})."
+        )
     else:
-        logger.info(f"Successfully generated all {args.samples} traces in {attempts} attempts")
-
+        logger.info(
+            f"Successfully generated all {args.samples} traces in {attempts} attempts"
+        )
