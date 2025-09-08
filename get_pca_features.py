@@ -1,152 +1,67 @@
 import os
-import json
 import gzip
 import pickle
+from pathlib import Path
 from tqdm import tqdm
 import numpy as np
-from sklearn.preprocessing import StandardScaler
-from sklearn.decomposition import PCA
 import joblib
-import matplotlib.pyplot as plt
 
-# Optional (only if you want to save a quick visual of reconstructions):
-# import matplotlib.pyplot as plt
+# ---- Config ----
+DATA_DIR = Path(os.path.dirname(__file__)) / 'Traces' / 'Test' 
+OUTPUT_DIR = DATA_DIR / 'pca_features'   # change to DATA_DIR if you want them alongside inputs
+MODEL_PATH = DATA_DIR / 'pca_model.joblib'  # path to your saved model
+IMG_SHAPE = (274, 274, 3)                # for sanity checks (optional)
 
-DATA_DIR = os.path.join(os.path.dirname(__file__), 'Traces/Test/raw_data')
-IMG_SHAPE = (274, 274, 3)
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-# -----------------------
-# 1) Load images
-# -----------------------
-all_images = []
-for filename in tqdm(os.listdir(DATA_DIR)):
-    if filename.endswith('.pkl.gz'):
-        file_path = os.path.join(DATA_DIR, filename)
-        with gzip.open(file_path, 'rb') as f:
-            data = pickle.load(f)
-            all_images.extend(data['all_obs'])
+print("model dir:", MODEL_PATH)
 
-all_images = np.array(all_images, dtype=np.float32)
-print("All images loaded", all_images.shape)  # (N, 274, 274, 3)
+# ---- Load model (scaler + PCA) ----
+artifacts = joblib.load(MODEL_PATH)
+scaler = artifacts['scaler']   # StandardScaler(with_std=False)
+pca = artifacts['pca']         # PCA(n_components=512)
+n_features_expected = scaler.mean_.shape[0]
+print(f"Loaded model: PCA comps={pca.n_components_}, expected features={n_features_expected}")
 
-# -----------------------
-# 2) Flatten to (N, D)
-# -----------------------
-N = all_images.shape[0]
-all_images = all_images.reshape(N, -1)
-print("All images flattened", all_images.shape)  # (N, 225252)
+# ---- Utility: robustly strip .pkl.gz -> .npy keeping base name identical ----
+def output_name_for(input_path: Path) -> Path:
+    stem = input_path.name
+    if stem.endswith('.pkl.gz'):
+        stem = stem[:-7]
+    else:
+        stem = Path(stem).stem
+    return OUTPUT_DIR / f"{stem}.npy"
 
-# -----------------------
-# 3) Mean-center (keep scaler for inverse)
-# -----------------------
-scaler = StandardScaler(with_std=False)
-all_images_centered = scaler.fit_transform(all_images)
+# ---- Process each file independently (no shuffling) ----
+raw_dir = DATA_DIR / 'raw_data'
+if not raw_dir.exists():
+    raise FileNotFoundError(f"Raw data directory not found: {raw_dir}")
 
-# -----------------------
-# 4) Shuffle (keep same permutation for originals)
-# -----------------------
-rng = np.random.default_rng(0)
-perm = rng.permutation(N)
-all_images_centered = all_images_centered[perm]
-all_images_orig = all_images[perm]  # uncentered originals aligned to the same order
+for in_path in tqdm(sorted(raw_dir.glob('*.pkl.gz'))):
+    out_path = output_name_for(in_path)
 
-# -----------------------
-# 5) PCA fit
-# -----------------------
-pca = PCA(n_components=512)  # or set n_components=0.95 to target 95% variance
-X_pca = pca.fit_transform(all_images_centered)
+    if out_path.exists():
+        continue
 
-# -----------------------
-# 6) Print variance captured
-# -----------------------
-expl_ratio = pca.explained_variance_ratio_
-cum_var = np.cumsum(expl_ratio)
-print(f"Kept components: {pca.n_components_}")
-print(f"Explained variance captured (sum): {cum_var[-1]:.4f}")
-print("First 10 component variance ratios:", np.round(expl_ratio[:10], 4))
-print("Cumulative after 10 comps:", round(cum_var[min(9, len(cum_var)-1)], 4))
+    with gzip.open(in_path, 'rb') as f:
+        data = pickle.load(f)
+        if 'all_obs' not in data:
+            raise KeyError(f"'all_obs' key missing in {in_path}")
+        imgs = data['all_obs']
 
-# -----------------------
-# 7) Save model compressed
-# -----------------------
-# A) Save the full objects (handy if you want to inverse_transform later)
-joblib.dump(
-    {
-        'pca': pca,
-        'scaler': scaler,
-        'img_shape': IMG_SHAPE
-    },
-    'pca_model.joblib',
-    compress=3
-)
-print("Saved PCA model + scaler -> pca_model.joblib")
+    imgs = np.asarray(imgs, dtype=np.float32)
+    n, h, w, c = imgs.shape
+    if (h, w, c) != IMG_SHAPE:
+        print(f"Warning: {in_path.name} has shape {(h,w,c)} != {IMG_SHAPE}")
 
-# B) Also save a lightweight NPZ (portable across environments)
-np.savez_compressed(
-    'pca_artifacts.npz',
-    components=pca.components_,
-    mean=scaler.mean_,
-    explained_variance=pca.explained_variance_,
-    explained_variance_ratio=pca.explained_variance_ratio_,
-    singular_values=pca.singular_values_,
-    n_components=np.array([pca.n_components_]),
-    img_shape=np.array(IMG_SHAPE)
-)
-print("Saved PCA artifacts -> pca_artifacts.npz")
+    X = imgs.reshape(n, -1)
+    if X.shape[1] != n_features_expected:
+        raise ValueError(
+            f"Feature size mismatch for {in_path.name}: got {X.shape[1]}, "
+            f"model expects {n_features_expected}"
+        )
 
-# Free memory if desired
-del all_images
+    X_centered = scaler.transform(X)
+    X_feats = pca.transform(X_centered)
 
-# -----------------------
-# 8) Reconstruct 5 random images and report error
-# -----------------------
-k = 5
-idx = rng.choice(X_pca.shape[0], size=k, replace=False)
-
-# Reconstruct from PCA space -> centered feature space
-recon_centered = pca.inverse_transform(X_pca[idx])
-
-# Undo centering -> original pixel space in [~0,1]
-recon = scaler.inverse_transform(recon_centered)
-
-# Clip to [0,1] just in case of slight negative/overflow due to projection
-recon = np.clip(recon, 0.0, 1.0)
-
-# Reshape both originals and reconstructions to image tensors
-recon_imgs = recon.reshape(k, *IMG_SHAPE)
-orig_imgs = all_images_orig[idx].reshape(k, *IMG_SHAPE)
-
-# Compute simple metrics
-mse = np.mean((recon_imgs - orig_imgs) ** 2, axis=(1,2,3))
-psnr = 10.0 * np.log10(1.0 / np.maximum(mse, 1e-12))
-
-print("Reconstruction sample indices:", idx.tolist())
-for i in range(k):
-    print(f"[{i}] MSE={mse[i]:.6f}  PSNR={psnr[i]:.2f} dB")
-
-# -----------------------
-# 9) (Optional) Save a side-by-side montage as a PNG
-# -----------------------
-# Uncomment this block if you want a quick visual saved to disk.
-
-import math
-rows = k
-fig, axes = plt.subplots(rows, 2, figsize=(6, 3*rows))
-if rows == 1:
-    axes = np.array([axes])
-for i in range(rows):
-    axes[i,0].imshow(orig_imgs[i])
-    axes[i,0].set_title(f"Original #{idx[i]}")
-    axes[i,0].axis('off')
-    axes[i,1].imshow(recon_imgs[i])
-    axes[i,1].set_title(f"Reconstruction #{idx[i]}")
-    axes[i,1].axis('off')
-plt.tight_layout()
-out_path = "pca_recon_samples.png"
-plt.savefig(out_path, dpi=120)
-print(f"Saved reconstruction montage -> {out_path}")
-
-# -----------------------
-# 10) Cleanup
-# -----------------------
-del all_images_centered, all_images_orig, X_pca, recon_centered, recon, recon_imgs, orig_imgs
+    np.save(out_path, X_feats)
