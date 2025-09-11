@@ -4,10 +4,12 @@ import json
 import gzip
 import pickle
 import matplotlib.pyplot as plt
+import numpy as np
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), 'Traces/Test')
 
 os.makedirs(DATA_DIR + '/groundTruth', exist_ok=True)
+os.makedirs(DATA_DIR + '/actions', exist_ok=True)
 
 all_file_lines = []
 
@@ -17,6 +19,12 @@ for filename in os.listdir(DATA_DIR + '/raw_data'):
         with gzip.open(file_path, 'rb') as f:
             data = pickle.load(f)
             truths = data['all_truths']
+            actions = data['all_actions']
+
+            actions = np.array(actions)
+
+            np.save(os.path.join(DATA_DIR, 'actions', filename.replace('.pkl.gz', '')), actions)
+
             truth_file_path = os.path.join(DATA_DIR, 'groundTruth', filename.replace('.pkl.gz', ''))
             with open(truth_file_path, 'w') as truth_file:
                 for i, truth in enumerate(truths):
