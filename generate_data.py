@@ -69,7 +69,7 @@ if __name__ == "__main__":
         "--max-attempts",
         type=int,
         required=False,
-        default=1000,
+        default=10000,
         help="Upper bound on total seed attempts to reach the requested samples",
     )
     parser.add_argument(
@@ -137,143 +137,13 @@ if __name__ == "__main__":
         [
             (bt.TREE, [at.DO], "wood"),
             (bt.TREE, [at.DO], "wood"),
-            (bt.TREE, [at.DO], "wood"),
             (bt.GRASS, [at.PLACE_TABLE], "table"),
             (bt.TREE, [at.DO], "wood"),
             (bt.CRAFTING_TABLE, [at.MAKE_WOOD_PICKAXE], "wooden_pickaxe"),
             (bt.STONE, [at.DO], "stone"),
-            (bt.STONE, [at.DO], "stone"),
-            (bt.TREE, [at.DO], "wood"),
             (bt.TREE, [at.DO], "wood"),
             (bt.CRAFTING_TABLE, [at.MAKE_STONE_PICKAXE], "stone_pickaxe"),
-        ],
-        [
-            (bt.TREE, [at.DO], "wood"),
-            (bt.TREE, [at.DO], "wood"),
-            (bt.GRASS, [at.PLACE_TABLE], "table"),
-            (bt.TREE, [at.DO], "wood"),
-            (bt.TREE, [at.DO], "wood"),
-            (bt.CRAFTING_TABLE, [at.MAKE_WOOD_PICKAXE], "wooden_pickaxe"),
-            (bt.STONE, [at.DO], "stone"),
-            (bt.STONE, [at.DO], "stone"),
-            (bt.STONE, [at.DO], "stone"),
-            (bt.TREE, [at.DO], "wood"),
-            (bt.CRAFTING_TABLE, [at.MAKE_STONE_PICKAXE], "stone_pickaxe"),
-        ],
-        [
-            (bt.TREE, [at.DO], "wood"),
-            (bt.TREE, [at.DO], "wood"),
-            (bt.TREE, [at.DO], "wood"),
-            (bt.GRASS, [at.PLACE_TABLE], "table"),
-            (bt.TREE, [at.DO], "wood"),
-            (bt.CRAFTING_TABLE, [at.MAKE_WOOD_PICKAXE], "wooden_pickaxe"),
-            (bt.TREE, [at.DO], "wood"),
-            (bt.STONE, [at.DO], "stone"),
-            (bt.STONE, [at.DO], "stone"),
-            (bt.CRAFTING_TABLE, [at.MAKE_STONE_PICKAXE], "stone_pickaxe"),
-        ],
-        [
-            (bt.TREE, [at.DO], "wood"),
-            (bt.TREE, [at.DO], "wood"),
-            (bt.GRASS, [at.PLACE_TABLE], "table"),
-            (bt.TREE, [at.DO], "wood"),
-            (bt.TREE, [at.DO], "wood"),
-            (bt.CRAFTING_TABLE, [at.MAKE_WOOD_PICKAXE], "wooden_pickaxe"),
-            (bt.TREE, [at.DO], "wood"),
-            (bt.STONE, [at.DO], "stone"),
-            (bt.TREE, [at.DO], "wood"),
-            (bt.STONE, [at.DO], "stone"),
-            (bt.CRAFTING_TABLE, [at.MAKE_STONE_PICKAXE], "stone_pickaxe"),
-        ],
-        [
-            (bt.TREE, [at.DO], "wood"),
-            (bt.TREE, [at.DO], "wood"),
-            (bt.TREE, [at.DO], "wood"),
-            (bt.TREE, [at.DO], "wood"),
-            (bt.GRASS, [at.PLACE_TABLE], "table"),
-            (bt.CRAFTING_TABLE, [at.MAKE_WOOD_PICKAXE], "wooden_pickaxe"),
-            (bt.STONE, [at.DO], "stone"),
-            (bt.STONE, [at.DO], "stone"),
-            (bt.TREE, [at.DO], "wood"),
-            (bt.CRAFTING_TABLE, [at.MAKE_STONE_PICKAXE], "stone_pickaxe"),
-        ],
-        [
-            (bt.TREE, [at.DO], "wood"),
-            (bt.TREE, [at.DO], "wood"),
-            (bt.GRASS, [at.PLACE_TABLE], "table"),
-            (bt.TREE, [at.DO], "wood"),
-            (bt.CRAFTING_TABLE, [at.MAKE_WOOD_PICKAXE], "wooden_pickaxe"),
-            (bt.TREE, [at.DO], "wood"),
-            (bt.TREE, [at.DO], "wood"),
-            (bt.STONE, [at.DO], "stone"),
-            (bt.STONE, [at.DO], "stone"),
-            (bt.CRAFTING_TABLE, [at.MAKE_STONE_PICKAXE], "stone_pickaxe"),
-        ],
-        [
-            (bt.TREE, [at.DO], "wood"),
-            (bt.TREE, [at.DO], "wood"),
-            (bt.TREE, [at.DO], "wood"),
-            (bt.GRASS, [at.PLACE_TABLE], "table"),
-            (bt.TREE, [at.DO], "wood"),
-            (bt.CRAFTING_TABLE, [at.MAKE_WOOD_PICKAXE], "wooden_pickaxe"),
-            (bt.STONE, [at.DO], "stone"),
-            (bt.STONE, [at.DO], "stone"),
-            (bt.STONE, [at.DO], "stone"),
-            (bt.CRAFTING_TABLE, [at.MAKE_STONE_PICKAXE], "stone_pickaxe"),
-        ],
-        [
-            (bt.TREE, [at.DO], "wood"),
-            (bt.TREE, [at.DO], "wood"),
-            (bt.TREE, [at.DO], "wood"),
-            (bt.TREE, [at.DO], "wood"),
-            (bt.TREE, [at.DO], "wood"),
-            (bt.GRASS, [at.PLACE_TABLE], "table"),
-            (bt.CRAFTING_TABLE, [at.MAKE_WOOD_PICKAXE], "wooden_pickaxe"),
-            (bt.TREE, [at.DO], "wood"),
-            (bt.STONE, [at.DO], "stone"),
-            (bt.STONE, [at.DO], "stone"),
-            (bt.CRAFTING_TABLE, [at.MAKE_STONE_PICKAXE], "stone_pickaxe"),
-        ],
-        [
-            (bt.TREE, [at.DO], "wood"),
-            (bt.TREE, [at.DO], "wood"),
-            (bt.GRASS, [at.PLACE_TABLE], "table"),
-            (bt.TREE, [at.DO], "wood"),
-            (bt.TREE, [at.DO], "wood"),
-            (bt.CRAFTING_TABLE, [at.MAKE_WOOD_PICKAXE], "wooden_pickaxe"),
-            (bt.STONE, [at.DO], "stone"),
-            (bt.TREE, [at.DO], "wood"),
-            (bt.TREE, [at.DO], "wood"),
-            (bt.STONE, [at.DO], "stone"),
-            (bt.CRAFTING_TABLE, [at.MAKE_STONE_PICKAXE], "stone_pickaxe"),
-        ],
-        [
-            (bt.TREE, [at.DO], "wood"),
-            (bt.TREE, [at.DO], "wood"),
-            (bt.TREE, [at.DO], "wood"),
-            (bt.GRASS, [at.PLACE_TABLE], "table"),
-            (bt.TREE, [at.DO], "wood"),
-            (bt.CRAFTING_TABLE, [at.MAKE_WOOD_PICKAXE], "wooden_pickaxe"),
-            (bt.STONE, [at.DO], "stone"),
-            (bt.STONE, [at.DO], "stone"),
-            (bt.STONE, [at.DO], "stone"),
-            (bt.STONE, [at.DO], "stone"),
-            (bt.CRAFTING_TABLE, [at.MAKE_STONE_PICKAXE], "stone_pickaxe"),
-        ],
-        [
-            (bt.TREE, [at.DO], "wood"),
-            (bt.TREE, [at.DO], "wood"),
-            (bt.GRASS, [at.PLACE_TABLE], "table"),
-            (bt.TREE, [at.DO], "wood"),
-            (bt.TREE, [at.DO], "wood"),
-            (bt.TREE, [at.DO], "wood"),
-            (bt.CRAFTING_TABLE, [at.MAKE_WOOD_PICKAXE], "wooden_pickaxe"),
-            (bt.TREE, [at.DO], "wood"),
-            (bt.STONE, [at.DO], "stone"),
-            (bt.STONE, [at.DO], "stone"),
-            (bt.TREE, [at.DO], "wood"),
-            (bt.CRAFTING_TABLE, [at.MAKE_STONE_PICKAXE], "stone_pickaxe"),
-        ],
+        ]
     ]
 
     inventory_goals = {
@@ -421,11 +291,11 @@ if __name__ == "__main__":
 
             trace_nb += 1  # Only increment when we successfully generated a trace
 
-            # logger.info("Generating GIF visualization...")
-            # gen_gif(
-            #     args, f"trace_{trace_nb}", all_obs, all_rewards, all_truths, all_actions
-            # )
-            # logger.info("GIF generation completed")
+            logger.info("Generating GIF visualization...")
+            gen_gif(
+                args, f"trace_{trace_nb}", all_obs, all_rewards, all_truths, all_actions
+            )
+            logger.info("GIF generation completed")
 
         except Exception as e:
             logger.error(

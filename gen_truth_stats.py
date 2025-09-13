@@ -6,7 +6,7 @@ import pickle
 import matplotlib.pyplot as plt
 import numpy as np
 
-DATA_DIR = os.path.join(os.path.dirname(__file__), 'Traces/Test')
+DATA_DIR = os.path.join(os.path.dirname(__file__), 'Traces/segs_test')
 
 os.makedirs(DATA_DIR + '/groundTruth', exist_ok=True)
 os.makedirs(DATA_DIR + '/actions', exist_ok=True)

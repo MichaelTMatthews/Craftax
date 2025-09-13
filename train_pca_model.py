@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 # Optional (only if you want to save a quick visual of reconstructions):
 # import matplotlib.pyplot as plt
 
-DATA_DIR = os.path.join(os.path.dirname(__file__), 'Traces/Test/raw_data')
+DATA_DIR = os.path.join(os.path.dirname(__file__), 'Traces/segs_test/raw_data')
 IMG_SHAPE = (274, 274, 3)
 
 # -----------------------

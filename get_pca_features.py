@@ -7,7 +7,7 @@ import numpy as np
 import joblib
 
 # ---- Config ----
-DATA_DIR = Path(os.path.dirname(__file__)) / 'Traces' / 'Test' 
+DATA_DIR = Path(os.path.dirname(__file__)) / 'Traces' / 'segs_test' 
 OUTPUT_DIR = DATA_DIR / 'pca_features'   # change to DATA_DIR if you want them alongside inputs
 MODEL_PATH = DATA_DIR / 'pca_model.joblib'  # path to your saved model
 IMG_SHAPE = (274, 274, 3)                # for sanity checks (optional)
