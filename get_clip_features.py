@@ -11,7 +11,7 @@ import open_clip
 from torchvision import transforms
 
 # ---- Config ----
-DATA_DIR = Path(os.path.dirname(__file__)) / 'Traces' / 'Test'
+DATA_DIR = Path(os.path.dirname(__file__)) / 'Traces' / 'stone_pickaxe_easy'
 OUTPUT_DIR = DATA_DIR / 'clip_features'    # output directory for CLIP features
 IMG_SHAPE = (274, 274, 3)                  # expected input shape
 BATCH_SIZE = 64

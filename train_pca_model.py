@@ -12,16 +12,18 @@ import matplotlib.pyplot as plt
 # Optional (only if you want to save a quick visual of reconstructions):
 # import matplotlib.pyplot as plt
 
-DATA_DIR = os.path.join(os.path.dirname(__file__), 'Traces/segs_test/raw_data')
+DATA_DIR = os.path.join(os.path.dirname(__file__), 'Traces/stone_pickaxe_easy')
 IMG_SHAPE = (274, 274, 3)
+COMPONENTS = 1000
+os.makedirs(DATA_DIR + '/pca_models', exist_ok=True)
 
 # -----------------------
 # 1) Load images
 # -----------------------
 all_images = []
-for filename in tqdm(os.listdir(DATA_DIR)):
+for filename in tqdm(os.listdir(DATA_DIR + '/raw_data')):
     if filename.endswith('.pkl.gz'):
-        file_path = os.path.join(DATA_DIR, filename)
+        file_path = os.path.join(DATA_DIR + '/raw_data', filename)
         with gzip.open(file_path, 'rb') as f:
             data = pickle.load(f)
             all_images.extend(data['all_obs'])
@@ -53,7 +55,7 @@ all_images_orig = all_images[perm]  # uncentered originals aligned to the same o
 # -----------------------
 # 5) PCA fit
 # -----------------------
-pca = PCA(n_components=512)  # or set n_components=0.95 to target 95% variance
+pca = PCA(n_components=COMPONENTS)  # or set n_components=0.95 to target 95% variance
 X_pca = pca.fit_transform(all_images_centered)
 
 # -----------------------
@@ -76,14 +78,14 @@ joblib.dump(
         'scaler': scaler,
         'img_shape': IMG_SHAPE
     },
-    'pca_model.joblib',
+    f'{DATA_DIR}/pca_models/pca_model_{COMPONENTS}.joblib',
     compress=3
 )
 print("Saved PCA model + scaler -> pca_model.joblib")
 
 # B) Also save a lightweight NPZ (portable across environments)
 np.savez_compressed(
-    'pca_artifacts.npz',
+    f'{DATA_DIR}/pca_models/pca_artifacts_{COMPONENTS}.npz',
     components=pca.components_,
     mean=scaler.mean_,
     explained_variance=pca.explained_variance_,
@@ -142,11 +144,7 @@ for i in range(rows):
     axes[i,1].set_title(f"Reconstruction #{idx[i]}")
     axes[i,1].axis('off')
 plt.tight_layout()
-out_path = "pca_recon_samples.png"
-plt.savefig(out_path, dpi=120)
+out_path = DATA_DIR + f"/pca_models/pca_recon_samples_{COMPONENTS}.png"
+plt.savefig(out_path, dpi=300)
 print(f"Saved reconstruction montage -> {out_path}")
 
-# -----------------------
-# 10) Cleanup
-# -----------------------
-del all_images_centered, all_images_orig, X_pca, recon_centered, recon, recon_imgs, orig_imgs

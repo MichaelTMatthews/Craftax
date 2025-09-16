@@ -6,10 +6,12 @@ from tqdm import tqdm
 import numpy as np
 import joblib
 
+COMPONENTS = 512
+
 # ---- Config ----
-DATA_DIR = Path(os.path.dirname(__file__)) / 'Traces' / 'segs_test' 
-OUTPUT_DIR = DATA_DIR / 'pca_features'   # change to DATA_DIR if you want them alongside inputs
-MODEL_PATH = DATA_DIR / 'pca_model.joblib'  # path to your saved model
+DATA_DIR = Path(os.path.dirname(__file__)) / 'Traces' / 'stone_pickaxe_easy' 
+OUTPUT_DIR = DATA_DIR / f'pca_features_{COMPONENTS}'   # change to DATA_DIR if you want them alongside inputs
+MODEL_PATH = DATA_DIR / 'pca_models' / f'pca_model_{COMPONENTS}.joblib'  # path to your saved model
 IMG_SHAPE = (274, 274, 3)                # for sanity checks (optional)
 
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)

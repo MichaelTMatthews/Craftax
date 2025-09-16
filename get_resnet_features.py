@@ -10,7 +10,7 @@ from torchvision import models, transforms
 from PIL import Image
 
 # ---- Config ----
-DATA_DIR = Path(os.path.dirname(__file__)) / 'Traces' / 'Test'
+DATA_DIR = Path(os.path.dirname(__file__)) / 'Traces' / 'stone_pickaxe_easy'
 OUTPUT_DIR = DATA_DIR / 'resnet_features'   # new output directory
 IMG_SHAPE = (274, 274, 3)                   # expected input shape
 BATCH_SIZE = 512
