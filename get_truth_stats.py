@@ -10,6 +10,7 @@ DATA_DIR = os.path.join(os.path.dirname(__file__), 'Traces/stone_pickaxe_easy')
 
 os.makedirs(DATA_DIR + '/groundTruth', exist_ok=True)
 os.makedirs(DATA_DIR + '/actions', exist_ok=True)
+os.makedirs(DATA_DIR + '/pixel_obs', exist_ok=True)
 
 all_file_lines = []
 
@@ -20,10 +21,13 @@ for filename in os.listdir(DATA_DIR + '/raw_data'):
             data = pickle.load(f)
             truths = data['all_truths']
             actions = data['all_actions']
+            obs = data['all_obs']
 
             actions = np.array(actions)
+            obs = np.array(obs)
 
             np.save(os.path.join(DATA_DIR, 'actions', filename.replace('.pkl.gz', '')), actions)
+            np.save(os.path.join(DATA_DIR, 'pixel_obs', filename.replace('.pkl.gz', '')), obs)
 
             truth_file_path = os.path.join(DATA_DIR, 'groundTruth', filename.replace('.pkl.gz', ''))
             with open(truth_file_path, 'w') as truth_file:

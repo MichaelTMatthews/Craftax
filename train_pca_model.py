@@ -8,13 +8,23 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 import joblib
 import matplotlib.pyplot as plt
+import argparse
+
 
 # Optional (only if you want to save a quick visual of reconstructions):
 # import matplotlib.pyplot as plt
 
-DATA_DIR = os.path.join(os.path.dirname(__file__), 'Traces/stone_pickaxe_easy')
+# -----------------------
+# Config
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--data_dir", type=str, default="Traces/stone_pickaxe_easy", help="Path to the data directory")
+parser.add_argument("--components", type=int, default=1000, help="Number of PCA components")
+args = parser.parse_args()
+
+DATA_DIR = os.path.join(os.path.dirname(__file__), args.data_dir)
 IMG_SHAPE = (274, 274, 3)
-COMPONENTS = 1000
+COMPONENTS = args.components
 os.makedirs(DATA_DIR + '/pca_models', exist_ok=True)
 
 # -----------------------

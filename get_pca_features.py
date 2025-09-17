@@ -5,11 +5,17 @@ from pathlib import Path
 from tqdm import tqdm
 import numpy as np
 import joblib
+import argparse
 
-COMPONENTS = 512
+parser = argparse.ArgumentParser()
+parser.add_argument("--data_dir", type=str, default="Traces/stone_pickaxe_easy", help="Path to the data directory")
+parser.add_argument("--components", type=int, default=1000, help="Number of PCA components")
+args = parser.parse_args()
+
+COMPONENTS = args.components
 
 # ---- Config ----
-DATA_DIR = Path(os.path.dirname(__file__)) / 'Traces' / 'stone_pickaxe_easy' 
+DATA_DIR = Path(os.path.dirname(__file__)) / args.data_dir
 OUTPUT_DIR = DATA_DIR / f'pca_features_{COMPONENTS}'   # change to DATA_DIR if you want them alongside inputs
 MODEL_PATH = DATA_DIR / 'pca_models' / f'pca_model_{COMPONENTS}.joblib'  # path to your saved model
 IMG_SHAPE = (274, 274, 3)                # for sanity checks (optional)
