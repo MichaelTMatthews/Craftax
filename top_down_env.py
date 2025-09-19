@@ -28,20 +28,24 @@ class CraftaxTopDownEnv(gym.Env):
     """
     metadata = {'render.modes': ['human']}
 
-    def __init__(self):
+    def __init__(self, seed=None):
         super(CraftaxTopDownEnv, self).__init__()
         # Create the Craftax environment with pixel observations.
         self.env = make_craftax_env_from_name("Craftax-Classic-Pixels-v1", auto_reset=True)
         self.env_params = self.env.default_params.replace(
-            max_timesteps=100000,    # Allow long episodes
-            day_length=99999,        # Long day length
-            mob_despawn_distance=0,  # Disable mob interactions
+            max_timesteps=100000,
+            day_length=99999,
+            mob_despawn_distance=0,
         )
         
-        # Initialize a JAX random key.
-        self.rng = jax.random.PRNGKey(0)
+        # Initialize a JAX random key (seeded).
+        if seed is None:
+            import secrets
+            seed = np.uint32(secrets.randbits(32)).item()
+        self._seed = int(seed)
+        self.rng = jax.random.PRNGKey(self._seed)
         
-        # Reset the environment once to determine observation shape.
+        # Reset once to determine observation shape.
         self.rng, reset_key = jax.random.split(self.rng)
         obs, state = self.env.reset(reset_key, self.env_params)
         top_down = get_top_down_obs(state, obs.copy())
@@ -57,10 +61,25 @@ class CraftaxTopDownEnv(gym.Env):
         # Store the current environment state.
         self.state = state
 
-    def reset(self):
+    def seed(self, seed=None):
+        """Set the RNG seed. Returns [seed] for Gym compatibility."""
+        if seed is None:
+            import secrets
+            seed = np.uint32(secrets.randbits(32)).item()
+        self._seed = int(seed)
+        self.rng = jax.random.PRNGKey(self._seed)
+        # refresh action-space RNG too
+        self.rng, action_rng = jax.random.split(self.rng)
+        self.action_space.rng = action_rng
+        return [self._seed]
+
+    def reset(self, seed=None):
         """
         Resets the environment and returns the initial top-down observation.
+        Optionally reseeds with a provided seed.
         """
+        if seed is not None:
+            self.seed(seed)
         self.rng, reset_key = jax.random.split(self.rng)
         obs, self.state = self.env.reset(reset_key, self.env_params)
         top_down = get_top_down_obs(self.state, obs.copy())
