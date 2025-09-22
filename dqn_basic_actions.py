@@ -9,6 +9,8 @@ from stable_baselines3.common.vec_env import DummyVecEnv, VecTransposeImage, Vec
 
 from top_down_env_gymnasium import CraftaxTopDownEnv
 
+import imageio
+
 if __name__ == "__main__":
     # Centralized kwargs for reuse
     env_kwargs = dict(
@@ -70,8 +72,17 @@ if __name__ == "__main__":
     eval_env = VecMonitor(eval_env)
 
     obs = eval_env.reset()
+
+    all_obs = [obs.copy()]
+    total_reward = 0.0
+
     for _ in range(100):
         action, _ = model.predict(obs, deterministic=True)
         obs, rewards, dones, infos = eval_env.step(action)
+        all_obs.append(obs.copy())
+        total_reward += rewards[0]
         if np.any(dones):
             obs = eval_env.reset()
+
+        frames = [f for f in all_obs]
+        imageio.mimsave(f"craftax_dqn_sp_{total_reward}.gif", frames, fps=5)

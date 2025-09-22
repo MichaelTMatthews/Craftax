@@ -170,3 +170,5 @@ texture_cache*.pbz2
 /Traces
 .DS_Store
 .DS_Store
+
+tb_logs_dqn_craftax/
