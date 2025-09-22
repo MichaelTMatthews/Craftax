@@ -1,7 +1,7 @@
 # dqn_craftax_sb3_gymnasium.py
 import numpy as np
 import gymnasium as gym
-from gymnasium.wrappers import TimeLimit
+from gymnasium.wrappers import TimeLimit  # (can remove if unused)
 
 from stable_baselines3 import DQN
 from stable_baselines3.common.env_util import make_vec_env
@@ -10,26 +10,28 @@ from stable_baselines3.common.vec_env import DummyVecEnv, VecTransposeImage, Vec
 from top_down_env_gymnasium import CraftaxTopDownEnv
 
 if __name__ == "__main__":
+    # Centralized kwargs for reuse
+    env_kwargs = dict(
+        render_mode="rgb_array",          # keep consistent for pixel observations
+        reward_items=["wood", "stone"],
+        done_item="stone_pickaxe",
+        include_base_reward=False,
+    )
 
-    # 1) Build a Gymnasium VecEnv from your Gymnasium env class
+    # Proper usage: pass the class, not an instance
     vec_env = make_vec_env(
         CraftaxTopDownEnv,
         n_envs=1,
         vec_env_cls=DummyVecEnv,
-        env_kwargs={"render_mode": None},
+        env_kwargs=env_kwargs,
         wrapper_kwargs={"max_steps": 10000},
     )
 
-    # 2) Channel-first for CNN policies (HWC -> CHW)
     vec_env = VecTransposeImage(vec_env)
-
-    # 3) Episode stats logging at VecEnv level
     vec_env = VecMonitor(vec_env)
 
-    # 4) DQN config tuned for pixels (conservative baseline)
     policy_kwargs = dict(
-        net_arch=[256, 256],  # MLP after CNN feature extractor
-        # Optionally: features_extractor_class / kwargs for a custom CNN
+        net_arch=[256, 256],
     )
 
     model = DQN(
@@ -53,23 +55,22 @@ if __name__ == "__main__":
         device="auto",
     )
 
-    # 5) Train
     model.learn(total_timesteps=500_000, progress_bar=True)
     model.save("dqn_craftax_topdown")
 
-    # 6) Quick sanity rollout (SB3 VecEnv: step() -> (obs, rewards, dones, infos))
+    # Evaluation env (reuse same kwargs for consistency)
     eval_env = make_vec_env(
         CraftaxTopDownEnv,
         n_envs=1,
         vec_env_cls=DummyVecEnv,
-        env_kwargs={"render_mode": None},
+        env_kwargs=env_kwargs,
         wrapper_kwargs={"max_steps": 10000},
     )
     eval_env = VecTransposeImage(eval_env)
     eval_env = VecMonitor(eval_env)
 
     obs = eval_env.reset()
-    for _ in range(1000):
+    for _ in range(100):
         action, _ = model.predict(obs, deterministic=True)
         obs, rewards, dones, infos = eval_env.step(action)
         if np.any(dones):

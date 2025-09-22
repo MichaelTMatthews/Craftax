@@ -28,8 +28,10 @@ class CraftaxTopDownEnv(gym.Env):
         reward_items: Sequence[str] | None = None,
         done_item: str | None = None,
         include_base_reward: bool = False,
+        return_uint8: bool = True,  # <--- added (SB3 friendly)
     ):
         super().__init__()
+        self.return_uint8 = return_uint8
 
         # --- Base Craftax env
         self.env = make_craftax_env_from_name("Craftax-Classic-Pixels-v1", auto_reset=True)
@@ -63,10 +65,15 @@ class CraftaxTopDownEnv(gym.Env):
         top_down = get_top_down_obs(state, obs.copy())
         self.state = state
 
-        # --- Observation space (float32 image)
-        self.observation_space = spaces.Box(
-            low=0, high=1, shape=top_down.shape, dtype=np.float32
-        )
+        if self.return_uint8:
+            obs_shape = top_down.shape
+            self.observation_space = spaces.Box(
+                low=0, high=255, shape=obs_shape, dtype=np.uint8
+            )
+        else:
+            self.observation_space = spaces.Box(
+                low=0, high=1, shape=top_down.shape, dtype=np.float32
+            )
 
         # --- Action mapping: expose only actions 0..16
         allowed_actions = list(range(17))
@@ -115,6 +122,8 @@ class CraftaxTopDownEnv(gym.Env):
         self.rng, reset_key = jax.random.split(self.rng)
         obs, self.state = self.env.reset(reset_key, self.env_params)
         top_down = get_top_down_obs(self.state, obs.copy())
+        if self.return_uint8:
+            top_down = (np.clip(top_down, 0, 1) * 255).astype(np.uint8)
 
         self._init_inventory_counters()
 
@@ -136,6 +145,8 @@ class CraftaxTopDownEnv(gym.Env):
             step_key, self.state, raw_action, self.env_params
         )
         top_down = get_top_down_obs(self.state, obs.copy())
+        if self.return_uint8:
+            top_down = (np.clip(top_down, 0, 1) * 255).astype(np.uint8)
 
         # --- Custom reward calculation
         reward_gain = 0
@@ -195,6 +206,7 @@ if __name__ == "__main__":
         reward_items=["wood"],
         done_item="wood",
         include_base_reward=False,
+        return_uint8=True,  # ensure SB3 compatibility
     )
 
 
@@ -213,5 +225,5 @@ if __name__ == "__main__":
         total_reward += r
     print("Episode finished with total reward:", total_reward)
 
-    frames = [(np.clip(f, 0, 1) * 255).astype(np.uint8) for f in all_obs]
+    frames = [f for f in all_obs]
     imageio.mimsave(f"craftax_new_env_{total_reward}.gif", frames, fps=5)
