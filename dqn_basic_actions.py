@@ -63,7 +63,6 @@ if __name__ == "__main__":
         n_envs=1,
         vec_env_cls=DummyVecEnv,
         env_kwargs={"render_mode": None},
-        wrapper_class=time_limit_wrapper,
         wrapper_kwargs={"max_steps": 10000},
     )
     eval_env = VecTransposeImage(eval_env)
