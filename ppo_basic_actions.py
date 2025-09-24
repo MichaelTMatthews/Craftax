@@ -43,7 +43,7 @@ if __name__ == "__main__":
         env=vec_env,
         verbose=1,
         learning_rate=3e-4,
-        n_steps=2048,           # rollout length per env
+        n_steps=512,           # rollout length per env
         batch_size=256,         # must be <= n_steps * n_envs
         n_epochs=10,            # minibatch passes per update
         gamma=0.99,
@@ -57,7 +57,7 @@ if __name__ == "__main__":
         device="auto",
     )
 
-    model.learn(total_timesteps=1_000_000, log_interval=10, tb_log_name="run1_ppo", progress_bar=True)
+    model.learn(total_timesteps=3_000, log_interval=10, tb_log_name="run1_ppo", progress_bar=True)
 
     model.save("ppo_craftax_wood_pickaxe_sparse")
 
