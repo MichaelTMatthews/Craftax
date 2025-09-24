@@ -34,43 +34,18 @@ if __name__ == "__main__":
         net_arch=[256, 256],
     )
 
-    # model = DQN(
-    #     policy="CnnPolicy",
-    #     env=vec_env,
-    #     verbose=1,
-    #     learning_rate=1e-4,
-    #     buffer_size=50_000,          # 100k–1M depending on RAM
-    #     learning_starts=50_000,       # warmup before updates
-    #     batch_size=256,
-    #     gamma=0.99,
-    #     train_freq=(4, "step"),
-    #     gradient_steps=1,
-    #     target_update_interval=10_000,
-    #     exploration_fraction=0.8,     # slow anneal over a long run
-    #     exploration_initial_eps=1.0,
-    #     exploration_final_eps=0.05,
-    #     # optimize_memory_usage helps with large replay buffers
-    #     optimize_memory_usage=True,
-    #     policy_kwargs=policy_kwargs,
-    #     tensorboard_log="./tb_logs_dqn_craftax",
-    #     device="auto",
-    # )
-
-    # model.learn(total_timesteps=1_000_000, log_interval=10, tb_log_name="run1", progress_bar=True)
-
-
     model = DQN(
         policy="CnnPolicy",
         env=vec_env,
         verbose=1,
         learning_rate=1e-4,
-        buffer_size=500,          # 100k–1M depending on RAM
-        learning_starts=500,       # warmup before updates
+        buffer_size=50_000,          # 100k–1M depending on RAM
+        learning_starts=50_000,       # warmup before updates
         batch_size=256,
         gamma=0.99,
         train_freq=(4, "step"),
         gradient_steps=1,
-        target_update_interval=100,
+        target_update_interval=10_000,
         exploration_fraction=0.8,     # slow anneal over a long run
         exploration_initial_eps=1.0,
         exploration_final_eps=0.05,
@@ -81,7 +56,9 @@ if __name__ == "__main__":
         device="auto",
     )
 
-    model.learn(total_timesteps=1000, log_interval=10, tb_log_name="run1", progress_bar=True)
+    model.learn(total_timesteps=1_000_000, log_interval=10, tb_log_name="run1", progress_bar=True)
+
+
 
     model.save("dqn_craftax_wood_pickaxe_sparse")
 
