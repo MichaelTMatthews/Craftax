@@ -89,13 +89,16 @@ if __name__ == "__main__":
     obs, info = eval_env.reset()
     images = [obs.copy()]
     done = False
-    while not done:
+    steps = 0
+    while not done and steps < 200:
         action, _states = model.predict(obs, deterministic=True)
         obs, reward, terminated, truncated, info = eval_env.step(action)
         images.append(obs.copy())
         done = terminated or truncated
+        steps += 1
+        print(f"Step {steps} Action {action} Reward {reward} Done {done}")
 
-    frames = [(np.clip(f, 0, 1) * 255).astype(np.uint8) for f in images]
-    imageio.mimsave(f"craftax_run_test_wp_sparse.gif", frames, fps=5)
+    # frames = [f for f in images]
+    imageio.mimsave(f"craftax_run_test_wp_sparse.gif", images, fps=5)
 
 
