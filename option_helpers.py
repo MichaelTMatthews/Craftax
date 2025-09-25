@@ -163,12 +163,12 @@ def applicable_pu_start_models(models, state, *, return_details=False, eps=0.0):
 
     # Print list of applicable models
     applicable = [r for r in rows if r["applicable"]]
-    if applicable:
-        print("Applicable models (prob ≥ threshold):")
-        for r in applicable:
-            print(f"  - {r['skill']}: p={r['prob']:.3f}  thr={r['thr']:.3f}  margin={r['margin']:.3f}")
-    else:
-        print("No applicable models for this state.")
+    # if applicable:
+    #     print("Applicable models (prob ≥ threshold):")
+    #     for r in applicable:
+    #         print(f"  - {r['skill']}: p={r['prob']:.3f}  thr={r['thr']:.3f}  margin={r['margin']:.3f}")
+    # else:
+    #     print("No applicable models for this state.")
 
     return rows if return_details else [r["skill"] for r in applicable]
 
