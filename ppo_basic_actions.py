@@ -14,8 +14,8 @@ import imageio
 if __name__ == "__main__":
     env_kwargs = dict(
         render_mode="rgb_array",
-        reward_items=[],
-        done_item="wood_pickaxe",
+        reward_items=["wood", "stone", "wood_pickaxe"],
+        done_item="stone_pickaxe",
         include_base_reward=False,
     )
 
@@ -24,7 +24,7 @@ if __name__ == "__main__":
         n_envs=1,
         vec_env_cls=DummyVecEnv,
         env_kwargs=env_kwargs,
-        wrapper_kwargs={"max_steps": 100},
+        wrapper_kwargs={"max_steps": 50},
     )
 
     # PPO with CnnPolicy expects channel-first; transpose HWC -> CHW
@@ -42,22 +42,22 @@ if __name__ == "__main__":
         policy="CnnPolicy",
         env=vec_env,
         verbose=1,
-        learning_rate=3e-4,
-        n_steps=512,           # rollout length per env
-        batch_size=256,         # must be <= n_steps * n_envs
-        n_epochs=10,            # minibatch passes per update
-        gamma=0.99,
-        gae_lambda=0.95,
-        clip_range=0.2,
-        ent_coef=0.0,
-        vf_coef=0.5,
-        max_grad_norm=0.5,
-        policy_kwargs=policy_kwargs,
+        # learning_rate=3e-4,
+        # n_steps=512,           # rollout length per env
+        # batch_size=256,         # must be <= n_steps * n_envs
+        # n_epochs=10,            # minibatch passes per update
+        # gamma=0.99,
+        # gae_lambda=0.95,
+        # clip_range=0.2,
+        # ent_coef=0.0,
+        # vf_coef=0.5,
+        # max_grad_norm=0.5,
+        # policy_kwargs=policy_kwargs,
         tensorboard_log="./tb_logs_ppo_craftax",
         device="auto",
     )
 
-    model.learn(total_timesteps=3_000, log_interval=10, tb_log_name="run1_ppo", progress_bar=True)
+    model.learn(total_timesteps=1_000_000, log_interval=10, tb_log_name="run1_ppo", progress_bar=True)
 
     model.save("ppo_craftax_wood_pickaxe_sparse")
 
