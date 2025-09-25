@@ -132,13 +132,15 @@ class OptionsOnTopEnv(gym.Env):
 
         # start from the latest obs
         obs_local = self.current_obs
-        if obs_local is None:
-            # print("No current observation available, resetting environment.")
-            # If step called before reset, fall back to env.reset()
-            obs_local, _ = self.env.reset()
-            self.current_obs = obs_local
+        # if obs_local is None:
+        #     # print("No current observation available, resetting environment.")
+        #     # If step called before reset, fall back to env.reset()
+        #     obs_local, _ = self.env.reset()
+        #     self.current_obs = obs_local
 
+        
         while True:
+            # print(f" Option {skill_name} step {inner_steps+1}")
             frame = self._as_uint8_frame(obs_local)
             prim_action = int(bc_policy(self.models, frame, skill_name))
             if prim_action < 0 or prim_action >= P:
@@ -153,12 +155,13 @@ class OptionsOnTopEnv(gym.Env):
             # termination checks (always via OBS)
             if term or trunc:
                 terminated, truncated = bool(term), bool(trunc)
-                # print(f"Option {skill_name} ended due to env done after {inner_steps} steps.")
+                print(f"Option {skill_name} ended due to env done after {inner_steps} steps.")
                 break
             if should_terminate(self.models, self._as_uint8_frame(obs_local), skill_name):
-                # print(f"Option {skill_name} terminated after {inner_steps} steps.")
+                print(f"Option {skill_name} terminated after {inner_steps} steps due to model.")
                 break
             if inner_steps >= self.max_skill_len:
+                print(f"Option {skill_name} reached max_skill_len={self.max_skill_len}, stopping.")
                 break
         
             
@@ -176,71 +179,163 @@ class OptionsOnTopEnv(gym.Env):
     
 import numpy as np
 import random
+import random
+import numpy as np
+import imageio
+
+import random
+import numpy as np
+import imageio
+
+# --- your env imports here ---
+# from craftax_env import CraftaxTopDownEnv
+# from options_env import OptionsOnTopEnv
+
+def print_options_mask(tag, mask, start, count):
+    opts = mask[start:start+count]
+    print(f"{tag} options mask: {opts.tolist()}")
 
 if __name__ == "__main__":
+    # Build envs
     base = CraftaxTopDownEnv(
         render_mode="rgb_array",
         reward_items=["wood"],
-        done_item="stone_pickaxe",
+        done_item="wood_pickaxe",
         include_base_reward=False,
         return_uint8=True,
     )
     env = OptionsOnTopEnv(base_env=base, num_primitives=17, num_options=5, gamma=0.99)
-    all_obs = []
-    # Seed everything for reproducibility
+
+    # Reproducibility
     seed = 0
     random.seed(seed)
     np.random.seed(seed)
 
+    # Reset and capture first frame
+    frames = []
     obs, info = env.reset(seed=seed)
-    all_obs.append(obs.copy())
+    frames.append(obs.copy())
 
-    # Locate where options start in the mask
+    # Identify option range
+    num_primitives = getattr(env, "num_primitives", 17)
+    num_options = getattr(env, "num_options", 5)
+    option_start = num_primitives
+
+    # Sequence of skill indices within options
+    skills_seq = [0, 0, 0, 4, 4, 0, 0, 2, 2]
+
+    # Print mask BEFORE any option
     mask = env.action_masks()
-    n_actions = len(mask)
-    option_start = getattr(env, "num_primitives", 17)
-    option_end = n_actions
-    option_indices = list(range(option_start, option_end))
+    print_options_mask("BEFORE first run", mask, option_start, num_options)
 
-    # 1) Check mask BEFORE running option 0
-    options_mask_before = mask[option_start:option_end]
-    print(f"Options mask BEFORE option 0: {options_mask_before.tolist()}")
+    rewards = []
 
-    # 2) Run option 0 (wood)
-    opt0 = option_start + 0
-    skill_name = env.skills[0] if hasattr(env, "skills") and len(env.skills) > 0 else "unknown"
-    print(f"Running OPTION 0 ({skill_name}) [action id {opt0}], valid={bool(mask[opt0])}")
-    obs, r, terminated, truncated, info = env.step(opt0)
-    all_obs.append(obs.copy())
-    print(f"Option 0 result -> Reward: {r} | Terminated: {terminated} | Truncated: {truncated}")
+    def run_skill(skill_idx, tag):
+        # nonlocal obs
+        action_id = option_start + skill_idx
+        mask = env.action_masks()
+        valid = bool(mask[action_id]) if action_id < len(mask) else False
+        skill_name = None
+        if hasattr(env, "skills"):
+            try:
+                skill_name = env.skills[skill_idx]
+            except Exception:
+                skill_name = None
+        skill_label = f"{skill_idx}" + (f" ({skill_name})" if skill_name else "")
 
-    # 3) Check mask AFTER running option 0
-    mask = env.action_masks()
-    options_mask_after_opt = mask[option_start:option_end]
-    print(f"Options mask AFTER option 0: {options_mask_after_opt.tolist()}")
+        print(f"{tag}: running OPTION {skill_label} [action id {action_id}], valid={valid}")
+        obs, r, terminated, truncated, info = env.step(action_id)
+        frames.append(obs.copy())
+        print(f"{tag}: reward={r}, terminated={terminated}, truncated={truncated}")
 
-    # If episode ended, reset before primitive steps
-    if terminated or truncated:
-        print("\nEpisode ended after option. Resetting before primitive steps...\n")
-        obs, info = env.reset()
+        mask_after = env.action_masks()
+        print_options_mask(f"AFTER {tag}", mask_after, option_start, num_options)
 
-    # 4) Run primitive action 0 for 5 steps
-    steps_to_run = 5
-    for i in range(steps_to_run):
-        obs, r, terminated, truncated, info = env.step(0)
-        all_obs.append(obs.copy())
-        print(f"Primitive step {i+1}/{steps_to_run} -> Reward: {r} | Terminated: {terminated} | Truncated: {truncated}")
         if terminated or truncated:
-            print("\nEpisode ended during primitive steps. Resetting...\n")
-            obs, info = env.reset()
-            break
+            print(f"{tag}: episode ended → resetting")
+            obs, _ = env.reset()
+            frames.append(obs.copy())
+        
+        print("===========")  # blank line
+        return r
+    
 
-    # 5) Check mask AFTER primitive steps
-    mask = env.action_masks()
-    options_mask_after_prim = mask[option_start:option_end]
-    print(f"Options mask AFTER {steps_to_run} primitive steps: {options_mask_after_prim.tolist()}")
+    # Execute the sequence
+    for i, s in enumerate(skills_seq, 1):
+        r = run_skill(s, f"Run {i}")
+        rewards.append(r)
+
+    # Save GIF
+    seq_str = "-".join(map(str, skills_seq))
+    rewards_str = "_".join(str(float(r)) for r in rewards)  # cast to float for clean printing
+    out_path = f"craftax_skills_{seq_str}_seed_{seed}_rewards_{rewards_str}.gif"
+    imageio.mimsave(out_path, frames, fps=5)
+    print(f"Saved GIF to: {out_path}")
+
+# if __name__ == "__main__":
+#     base = CraftaxTopDownEnv(
+#         render_mode="rgb_array",
+#         reward_items=["wood"],
+#         done_item="stone_pickaxe",
+#         include_base_reward=False,
+#         return_uint8=True,
+#     )
+#     env = OptionsOnTopEnv(base_env=base, num_primitives=17, num_options=5, gamma=0.99)
+#     all_obs = []
+#     # Seed everything for reproducibility
+#     seed = 0
+#     random.seed(seed)
+#     np.random.seed(seed)
+
+#     obs, info = env.reset(seed=seed)
+#     all_obs.append(obs.copy())
+
+#     # Locate where options start in the mask
+#     mask = env.action_masks()
+#     n_actions = len(mask)
+#     option_start = getattr(env, "num_primitives", 17)
+#     option_end = n_actions
+#     option_indices = list(range(option_start, option_end))
+
+#     # 1) Check mask BEFORE running option 0
+#     options_mask_before = mask[option_start:option_end]
+#     print(f"Options mask BEFORE option 0: {options_mask_before.tolist()}")
+
+#     # 2) Run option 0 (wood)
+#     opt0 = option_start + 0
+#     skill_name = env.skills[0] if hasattr(env, "skills") and len(env.skills) > 0 else "unknown"
+#     print(f"Running OPTION 0 ({skill_name}) [action id {opt0}], valid={bool(mask[opt0])}")
+#     obs, r, terminated, truncated, info = env.step(opt0)
+#     all_obs.append(obs.copy())
+#     print(f"Option 0 result -> Reward: {r} | Terminated: {terminated} | Truncated: {truncated}")
+
+#     # 3) Check mask AFTER running option 0
+#     mask = env.action_masks()
+#     options_mask_after_opt = mask[option_start:option_end]
+#     print(f"Options mask AFTER option 0: {options_mask_after_opt.tolist()}")
+
+#     # If episode ended, reset before primitive steps
+#     if terminated or truncated:
+#         print("\nEpisode ended after option. Resetting before primitive steps...\n")
+#         obs, info = env.reset()
+
+#     # 4) Run primitive action 0 for 5 steps
+#     steps_to_run = 5
+#     for i in range(steps_to_run):
+#         obs, r, terminated, truncated, info = env.step(0)
+#         all_obs.append(obs.copy())
+#         print(f"Primitive step {i+1}/{steps_to_run} -> Reward: {r} | Terminated: {terminated} | Truncated: {truncated}")
+#         if terminated or truncated:
+#             print("\nEpisode ended during primitive steps. Resetting...\n")
+#             obs, info = env.reset()
+#             break
+
+#     # 5) Check mask AFTER primitive steps
+#     mask = env.action_masks()
+#     options_mask_after_prim = mask[option_start:option_end]
+#     print(f"Options mask AFTER {steps_to_run} primitive steps: {options_mask_after_prim.tolist()}")
 
 
-    import imageio
-    frames = [f for f in all_obs]
-    imageio.mimsave(f"craftax_run_test_seed_{seed}_{r}.gif", frames, fps=5)
+#     import imageio
+#     frames = [f for f in all_obs]
+#     imageio.mimsave(f"craftax_run_test_seed_{seed}_{r}.gif", frames, fps=5)

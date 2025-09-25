@@ -17,6 +17,10 @@ class CraftaxTopDownEnv(gym.Env):
       - reward_items: list of item names; +1 per unit newly acquired each step
       - done_item: item name whose acquisition (increment) terminates the episode (+1 reward too)
       - include_base_reward: if True, adds original env reward to custom reward
+
+      Special case:
+      - If "table" is included in reward_items, then whenever wood decreases by exactly 2
+        in a single step, give +1 reward (inventory_increments["table"] = 1 for that step).
     """
     metadata = {"render_modes": ["rgb_array", "human"], "render_fps": 0}
 
@@ -108,6 +112,15 @@ class CraftaxTopDownEnv(gym.Env):
         else:
             self.prev_done_count = None
 
+        # Track wood separately for the special "table" reward logic.
+        if "table" in self.reward_items:
+            try:
+                self.prev_wood_count = self._get_item_count("wood")
+            except AttributeError:
+                self.prev_wood_count = 0
+        else:
+            self.prev_wood_count = None
+
     # ---------- Gymnasium API ----------
     def reset(self, *, seed: int | None = None, options=None):
         if seed is not None:
@@ -152,12 +165,25 @@ class CraftaxTopDownEnv(gym.Env):
         reward_gain = 0
         item_increments = {}
         for item in self.reward_items:
+            # Standard "+1 per unit increase" rule
             new_count = self._get_item_count(item)
             inc = new_count - self.prev_counts[item]
             if inc > 0:
-                reward_gain += inc  # +1 per unit increase
+                reward_gain += inc
                 item_increments[item] = inc
             self.prev_counts[item] = new_count
+
+        # Special "table" reward: +1 if wood decreased by exactly 2 in this step.
+        if "table" in self.reward_items:
+            new_wood = self._get_item_count("wood")
+            if self.prev_wood_count is None:
+                self.prev_wood_count = new_wood
+            wood_delta = new_wood - self.prev_wood_count
+            if wood_delta == -2:
+                reward_gain += 1
+                # Expose the event in increments for visibility
+                item_increments["table"] = 1
+            self.prev_wood_count = new_wood
 
         terminated = False
         done_increment = 0
