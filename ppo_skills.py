@@ -21,10 +21,13 @@ class RandomSeedOnReset(gym.Wrapper):
         self.rng = np.random.default_rng() if rng is None else rng
 
     def reset(self, *, seed=None, options=None, **kwargs):
-        # Drop any incoming seed from VecEnv and inject our own every episode
         kwargs.pop("seed", None)
         new_seed = int(self.rng.integers(0, 2**31 - 1))
         return self.env.reset(seed=new_seed, options=options, **kwargs)
+
+    # NEW: forward masks so ActionMasker can see them
+    def action_masks(self):
+        return self.env.action_masks()
 
 
 def mask_fn(env):
