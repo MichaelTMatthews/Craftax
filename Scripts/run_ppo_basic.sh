@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=ppo_craftax_actions        # Job name
 #SBATCH --partition=bigbatch                     # Replace with your cluster's GPU partition name
-#SBATCH --output=/home-mscluster/dharvey/HiSD/Experiments/ppo_actions_wood.out  # Standard output and error log
+#SBATCH --output=/home-mscluster/dharvey/HiSD/Experiments/ppo_actions_wood_eval.out  # Standard output and error log
 # Load your environment
 
 source ~/.bashrc
