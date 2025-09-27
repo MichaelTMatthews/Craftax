@@ -15,6 +15,11 @@ from top_down_env_gymnasium_options import OptionsOnTopEnv
 import imageio
 
 
+import gymnasium as gym
+from gymnasium.wrappers import TimeLimit, RecordEpisodeStatistics
+from sb3_contrib.common.wrappers import ActionMasker
+
+# reseed wrapper (same as before, with seed override)
 class RandomSeedOnReset(gym.Wrapper):
     def __init__(self, env, rng=None):
         super().__init__(env)
@@ -25,38 +30,38 @@ class RandomSeedOnReset(gym.Wrapper):
         new_seed = int(self.rng.integers(0, 2**31 - 1))
         return self.env.reset(seed=new_seed, options=options, **kwargs)
 
-    # NEW: forward masks so ActionMasker can see them
-    def action_masks(self):
-        return self.env.action_masks()
-
-
-def mask_fn(env):
-    return env.action_masks()
-
-
 def make_options_env(*, rng, render_mode=None, K=5, max_episode_steps=25):
     def _thunk():
-        base_env = CraftaxTopDownEnv(
-            render_mode=render_mode,  # None for train; "rgb_array" for eval/gif
+        base = CraftaxTopDownEnv(
+            render_mode=render_mode,
             reward_items=[],
             done_item="wood",
             include_base_reward=False,
-            return_uint8=True,        # keep 274x274x3 uint8 obs
+            return_uint8=True,
         )
-        env = OptionsOnTopEnv(
-            base_env,
+        core = OptionsOnTopEnv(
+            base,
             num_primitives=16,
             num_options=K,
             gamma=1,
             max_skill_len=50,
         )
 
-        env = TimeLimit(env, max_episode_steps=max_episode_steps)
-        env = RandomSeedOnReset(env, rng=rng)
-        env = ActionMasker(env, mask_fn)
-        env = RecordEpisodeStatistics(env)
-        return env
+        # 1) ActionMasker wraps the env that has `action_masks`
+        def mask_fn(e):  # no unwrapping needed
+            return e.action_masks()
+        masked = ActionMasker(core, mask_fn)
+
+        # 2) Add outer wrappers afterwards
+        capped   = TimeLimit(masked, max_episode_steps=max_episode_steps)
+        reseeded = RandomSeedOnReset(capped, rng=rng)
+        logged   = RecordEpisodeStatistics(reseeded)
+        return logged
     return _thunk
+
+
+def mask_fn(env):
+    return env.action_masks()
 
 
 if __name__ == "__main__":
@@ -72,6 +77,7 @@ if __name__ == "__main__":
         train_env,
         verbose=1,
         tensorboard_log="./tb_logs_ppo_craftax",
+        device="auto",
     )
 
 
