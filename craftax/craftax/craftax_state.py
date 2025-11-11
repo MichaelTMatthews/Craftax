@@ -46,23 +46,40 @@ class EnvState:
     chests_opened: jnp.ndarray
     monsters_killed: jnp.ndarray
 
+    reward_tmp: float
+
     player_position: jnp.ndarray
     player_level: int
     player_direction: int
 
     # Intrinsics
     player_health: float
+    player_health_prev: float
+    player_health_th: float
+
     player_food: int
+    player_food_prev: int
+    player_food_th: int
+
     player_drink: int
+    player_drink_prev: int
+    player_drink_th: int
+
     player_energy: int
+    player_energy_prev: int
+    player_energy_th: int
+
     player_mana: int
+    player_mana_prev: int
+    player_mana_th: int
+    
     is_sleeping: bool
     is_resting: bool
 
     # Second order intrinsics
     player_recover: float
-    player_hunger: float
-    player_thirst: float
+    player_hunger: float    
+    player_thirst: float    
     player_fatigue: float
     player_recover_mana: float
 
@@ -71,6 +88,7 @@ class EnvState:
     player_dexterity: int
     player_strength: int
     player_intelligence: int
+
 
     inventory: Inventory
 
@@ -135,3 +153,8 @@ class StaticEnvParams:
     max_ranged_mobs: int = 2
     max_mob_projectiles: int = 3
     max_player_projectiles: int = 3
+    health_max: int = 9
+    food_max: int = 9
+    drink_max: int = 9
+    energy_max: int = 9
+    mana_max: int = 9

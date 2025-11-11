@@ -3070,21 +3070,50 @@ def craftax_step(rng, state, action, params, static_params):
 
     # Intrinsics
     state = update_player_intrinsics(state, action, static_params)
-
     # Cap inv
     state = clip_inventory_and_intrinsics(state, params)
 
     # Inventory achievements
     state = calculate_inventory_achievements(state)
-
     # Reward
-    achievement_coefficients = ACHIEVEMENT_REWARD_MAP
-    achievement_reward = (
-        (state.achievements.astype(int) - init_achievements.astype(int))
-        * achievement_coefficients
-    ).sum()
-    health_reward = (state.player_health - init_health) * 0.1
-    reward = achievement_reward + health_reward
+    #achievement_coefficients = ACHIEVEMENT_REWARD_MAP
+    #achievement_reward = (
+    #    (state.achievements.astype(int) - init_achievements.astype(int))
+    #    * achievement_coefficients
+    #).sum()
+    #health_reward = (state.player_health - init_health) * 0.1
+    #reward = achievement_reward + health_reward
+    a = jnp.abs(state.player_health - state.player_health_th) * 1/static_params.health_max
+    b = jnp.abs(state.player_health_prev - state.player_health_th) * 1/static_params.health_max
+    u = jax.lax.select(state.player_health > state.player_health_th, 1, 0)
+    v = jax.lax.select(a >= b, 1, 0)#v = 1 if a < b else 0
+    health_reward = u + (1 - u) * (1 - 3 * v)
+
+    a = jnp.abs(state.player_food - state.player_food_th) * 1/static_params.food_max
+    b = jnp.abs(state.player_food_prev - state.player_food_th) * 1/static_params.food_max
+    u = jax.lax.select(state.player_food > state.player_food_th, 1, 0)
+    v = jax.lax.select(a >= b, 1, 0)
+    food_reward = u + (1 -  u) * (1 - 3 * v)
+
+    a = jnp.abs(state.player_drink - state.player_drink_th) * 1/static_params.drink_max
+    b = jnp.abs(state.player_drink_prev - state.player_drink_th) * 1/static_params.drink_max
+    u = jax.lax.select(state.player_drink > state.player_drink_th, 1, 0)
+    v = jax.lax.select(a >= b, 1, 0)
+    drink_reward = u + (1 -  u) * (1 - 3 * v)
+
+    a = jnp.abs(state.player_energy - state.player_energy_th) * 1/static_params.energy_max
+    b = jnp.abs(state.player_energy_prev - state.player_energy_th) * 1/static_params.energy_max
+    u = jax.lax.select(state.player_energy > state.player_energy_th, 1, 0)
+    v = jax.lax.select(a >= b, 1, 0)
+    energy_reward = u + (1 -  u) * (1 - 3 * v)
+
+    a = jnp.abs(state.player_mana - state.player_mana_th) * 1/static_params.mana_max
+    b = jnp.abs(state.player_mana_prev - state.player_mana_th) * 1/static_params.mana_max
+    u = jax.lax.select(state.player_mana > state.player_mana_th, 1, 0)
+    v = jax.lax.select(a >= b, 1, 0)
+    mana_reward = u + (1 - u) * (1  - 3 * v)
+
+    reward = (health_reward + food_reward + drink_reward + energy_reward) * 0.05
 
     rng, _rng = jax.random.split(rng)
 
@@ -3092,6 +3121,12 @@ def craftax_step(rng, state, action, params, static_params):
         timestep=state.timestep + 1,
         light_level=calculate_light_level(state.timestep + 1, params),
         state_rng=_rng,
+        player_health_prev=state.player_health + 0,
+        player_food_prev=state.player_food + 0,
+        player_drink_prev=state.player_drink + 0,
+        player_energy_prev=state.player_energy + 0,
+        player_mana_prev=state.player_mana + 0,
+        reward_tmp=state.player_drink_th
     )
 
     return state, reward

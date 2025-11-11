@@ -179,9 +179,14 @@ def main(args):
             )
             new_achievements = env_state.achievements
             print_new_achievements(old_achievements, new_achievements)
-
-            if reward > 0.8:
-                print(f"Reward: {reward}\n")
+            print(f"Health: {env_state.player_health}, Recover: {env_state.player_recover}")
+            print(f"Food: {env_state.player_food}, Hunger: {env_state.player_hunger}")
+            print(f"Drink: {env_state.player_drink}, Thirst: {env_state.player_thirst}")
+            print(f"Energy: {env_state.player_energy}, Fatigue: {env_state.player_fatigue}")
+            print(f"Mana: {env_state.player_mana}, Mana Recover: {env_state.player_recover_mana}")
+            print(f"Reward tmp {env_state.reward_tmp}")
+            #if reward > 0.8:
+            print(f"Reward: {reward}\n")
 
             traj_history["state"].append(env_state)
             traj_history["action"].append(action)
