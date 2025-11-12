@@ -51,27 +51,23 @@ class EnvState:
     player_position: jnp.ndarray
     player_level: int
     player_direction: int
+    player_temperature: int
+    player_temperature_th: int
 
     # Intrinsics
     player_health: float
-    player_health_prev: float
     player_health_th: float
 
     player_food: int
-    player_food_prev: int
     player_food_th: int
 
     player_drink: int
-    player_drink_prev: int
     player_drink_th: int
 
     player_energy: int
-    player_energy_prev: int
     player_energy_th: int
 
     player_mana: int
-    player_mana_prev: int
-    player_mana_th: int
     
     is_sleeping: bool
     is_resting: bool

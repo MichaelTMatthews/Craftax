@@ -672,6 +672,11 @@ def generate_world(rng, params, static_params):
     player_mana_choice = jax.random.choice(_rng2, jnp.array([2, 5, 7, 9]))
     player_mana_th_value = jnp.asarray(player_mana_choice, dtype=jnp.int32)
 
+    rng, _rng = jax.random.split(rng)
+    rng, _rng2 = jax.random.split(rng)
+    player_temperature_choice = jax.random.choice(_rng2, jnp.array([0, 5, 10, 20]))
+    player_temperature_th_value = jnp.asarray(player_temperature_choice, dtype=jnp.int32)
+
     state = EnvState(
         map=map,
         item_map=item_map,
@@ -688,27 +693,23 @@ def generate_world(rng, params, static_params):
         player_position=player_position,
         player_direction=jnp.asarray(Action.UP.value, dtype=jnp.int32),
         player_level=jnp.asarray(0, dtype=jnp.int32),
-        
+        player_temperature = 0,
+        player_temperature_th = player_temperature_th_value,
+
         player_health=jnp.asarray(9.0, dtype=jnp.float32),
-        player_health_prev=jnp.asarray(0.0, dtype=jnp.float32),
         player_health_th=player_health_th_value,
         
         player_food=jnp.asarray(9, dtype=jnp.int32),
-        player_food_prev=jnp.asarray(0.0, dtype=jnp.int32),
         player_food_th=player_food_th_value,
         reward_tmp=0,
 
         player_drink=jnp.asarray(9, dtype=jnp.int32),
-        player_drink_prev=jnp.asarray(0.0, dtype=jnp.int32),
         player_drink_th=player_drink_th_value,
 
         player_energy=jnp.asarray(9, dtype=jnp.int32),
-        player_energy_prev=jnp.asarray(0.0, dtype=jnp.int32),
         player_energy_th=player_energy_th_value,
 
         player_mana=jnp.asarray(9, dtype=jnp.int32),
-        player_mana_prev=jnp.asarray(0, dtype=jnp.int32),
-        player_mana_th=player_mana_th_value,
 
         player_recover=jnp.asarray(0.0, dtype=jnp.float32),
         player_hunger=jnp.asarray(0.0, dtype=jnp.float32),
