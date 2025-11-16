@@ -31,7 +31,7 @@ def get_flat_map_obs_shape():
 
 
 def get_inventory_obs_shape():
-    return 51
+    return 51+5  # Inventory size + potions + intrinsics + direction + armour + armour_enchantments + special values
 
 
 class CraftaxSymbolicEnvNoAutoReset(EnvironmentNoAutoReset):

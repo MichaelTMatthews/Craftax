@@ -68,6 +68,7 @@ class EnvState:
     player_energy_th: int
 
     player_mana: int
+    player_mana_th: int
     
     is_sleeping: bool
     is_resting: bool

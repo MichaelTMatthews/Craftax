@@ -164,6 +164,11 @@ def render_craftax_symbolic(state: EnvState):
             state.player_dexterity / 10.0,
             state.player_strength / 10.0,
             state.player_intelligence / 10.0,
+            state.player_mana_th / 10.0,
+            state.player_health_th / 10.0,
+            state.player_food_th / 10.0,
+            state.player_drink_th / 10.0,
+            state.player_energy_th / 10.0
         ]
     ).astype(jnp.float32)
 
@@ -185,13 +190,13 @@ def render_craftax_symbolic(state: EnvState):
     all_flattened = jnp.concatenate(
         [
             all_map.flatten(),
-            inventory,
-            potions,
-            intrinsics,
-            direction,
-            armour,
-            armour_enchantments,
-            special_values,
+            inventory, #16
+            potions, #6
+            intrinsics, #9 + #5
+            direction, #4
+            armour, #4
+            armour_enchantments, #4
+            special_values, #8
         ]
     )
 

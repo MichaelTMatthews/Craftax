@@ -654,22 +654,22 @@ def generate_world(rng, params, static_params):
 
     rng, _rng = jax.random.split(rng)
     rng, _rng2 = jax.random.split(rng)
-    player_food_th_choice = jax.random.choice(_rng2, jnp.array([9]))
+    player_food_th_choice = jax.random.choice(_rng2, jnp.array([8]))
     player_food_th_value = jnp.asarray(player_food_th_choice, dtype=jnp.int32)
 
     rng, _rng = jax.random.split(rng)
     rng, _rng2 = jax.random.split(rng)
-    player_drink_th_choice = jax.random.choice(_rng2, jnp.array([9]))
+    player_drink_th_choice = jax.random.choice(_rng2, jnp.array([8]))
     player_drink_th_value = jnp.asarray(player_drink_th_choice, dtype=jnp.int32)
 
     rng, _rng = jax.random.split(rng)
     rng, _rng2 = jax.random.split(rng)
-    player_energy_th_choice = jax.random.choice(_rng2, jnp.array([9]))
+    player_energy_th_choice = jax.random.choice(_rng2, jnp.array([5]))
     player_energy_th_value = jnp.asarray(player_energy_th_choice, dtype=jnp.int32)
 
     rng, _rng = jax.random.split(rng)
     rng, _rng2 = jax.random.split(rng)
-    player_mana_choice = jax.random.choice(_rng2, jnp.array([9]))
+    player_mana_choice = jax.random.choice(_rng2, jnp.array([1]))
     player_mana_th_value = jnp.asarray(player_mana_choice, dtype=jnp.int32)
 
     rng, _rng = jax.random.split(rng)
@@ -710,6 +710,7 @@ def generate_world(rng, params, static_params):
         player_energy_th=player_energy_th_value,
 
         player_mana=jnp.asarray(9, dtype=jnp.int32),
+        player_mana_th=player_mana_th_value,
 
         player_recover=jnp.asarray(0.0, dtype=jnp.float32),
         player_hunger=jnp.asarray(0.0, dtype=jnp.float32),

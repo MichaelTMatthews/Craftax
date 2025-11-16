@@ -3018,6 +3018,7 @@ def craftax_step(rng, state, action, params, static_params):
     init_drink = state.player_drink
     init_energy = state.player_energy
     init_temperature = state.player_energy
+    init_mana = state.player_mana
 
     # Interrupt action if sleeping or resting
     action = jax.lax.select(state.is_sleeping, Action.NOOP.value, action)
@@ -3119,13 +3120,14 @@ def craftax_step(rng, state, action, params, static_params):
     v = jax.lax.select(a >= b, 1, 0)
     energy_reward = u + (1 -  u) * (1 - 3 * v)
 
-    a = jnp.abs(state.player_temperature - state.player_temperature_th)/20.0
-    b = jnp.abs(init_temperature - state.player_temperature_th)/20.0
-    u = jax.lax.select(state.player_temperature >= state.player_temperature_th, 1, 0)
-    v = jax.lax.select(a >= b, 1, 0)
-    temperature_reward = u + (1 -  u) * (1 - 3 * v)
 
-    reward = (health_reward + food_reward + drink_reward + energy_reward) * 0.05
+    a = jnp.abs(state.player_mana - state.player_mana_th) * 1.0/static_params.mana_max
+    b = jnp.abs(init_mana - state.player_mana_th) * 1/static_params.mana_max
+    u = jax.lax.select(state.player_mana >= state.player_mana_th, 1, 0)
+    v = jax.lax.select(a >= b, 1, 0)
+    mana_reward = u + (1 -  u) * (1 - 3 * v)
+
+    reward = (health_reward + food_reward * 0.5 + drink_reward * 0.5 + energy_reward * 0.5 + mana_reward * 0.5) * 0.05 + achievement_reward
 
     rng, _rng = jax.random.split(rng)
 
