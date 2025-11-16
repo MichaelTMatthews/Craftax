@@ -3087,13 +3087,14 @@ def craftax_step(rng, state, action, params, static_params):
     # Inventory achievements
     state = calculate_inventory_achievements(state)
     # Reward
-    #achievement_coefficients = ACHIEVEMENT_REWARD_MAP
-    #achievement_reward = (
-    #    (state.achievements.astype(int) - init_achievements.astype(int))
-    #    * achievement_coefficients
-    #).sum()
-    #health_reward = (state.player_health - init_health) * 0.1
-    #reward = achievement_reward + health_reward
+    achievement_coefficients = ACHIEVEMENT_REWARD_MAP
+    achievement_reward = (
+        (state.achievements.astype(int) - init_achievements.astype(int))
+        * achievement_coefficients
+    ).sum()
+    health_reward = (state.player_health - init_health) * 0.1
+    default_reward = achievement_reward + health_reward
+    
     a = jnp.abs(state.player_health - state.player_health_th) * 1.0/static_params.health_max
     b = jnp.abs(init_health - state.player_health_th) * 1.0/static_params.health_max
     u = jax.lax.select(state.player_health > state.player_health_th, 1, 0)
@@ -3131,7 +3132,8 @@ def craftax_step(rng, state, action, params, static_params):
     state = state.replace (
         timestep=state.timestep + 1,
         light_level=calculate_light_level(state.timestep + 1, params),
-        state_rng=_rng
+        state_rng=_rng,
+        default_reward=default_reward,
     )
 
     return state, reward
