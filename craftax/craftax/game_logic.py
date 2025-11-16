@@ -3097,31 +3097,31 @@ def craftax_step(rng, state, action, params, static_params):
     
     a = jnp.abs(state.player_health - state.player_health_th) * 1.0/static_params.health_max
     b = jnp.abs(init_health - state.player_health_th) * 1.0/static_params.health_max
-    u = jax.lax.select(state.player_health > state.player_health_th, 1, 0)
+    u = jax.lax.select(state.player_health >= state.player_health_th, 1, 0)
     v = jax.lax.select(a >= b, 1, 0)#v = 1 if a < b else 0
     health_reward = u + (1 - u) * (1 - 3 * v)
 
     a = jnp.abs(state.player_food - state.player_food_th) * 1.0/static_params.food_max
     b = jnp.abs(init_food - state.player_food_th) * 1.0/static_params.food_max
-    u = jax.lax.select(state.player_food > state.player_food_th, 1, 0)
+    u = jax.lax.select(state.player_food >= state.player_food_th, 1, 0)
     v = jax.lax.select(a >= b, 1, 0)
     food_reward = u + (1 -  u) * (1 - 3 * v)
 
     a = jnp.abs(state.player_drink - state.player_drink_th) * 1.0/static_params.drink_max
     b = jnp.abs(init_drink - state.player_drink_th) * 1/static_params.drink_max
-    u = jax.lax.select(state.player_drink > state.player_drink_th, 1, 0)
+    u = jax.lax.select(state.player_drink >= state.player_drink_th, 1, 0)
     v = jax.lax.select(a >= b, 1, 0)
     drink_reward = u + (1 -  u) * (1 - 3 * v)
 
     a = jnp.abs(state.player_energy - state.player_energy_th) * 1.0/static_params.energy_max
     b = jnp.abs(init_energy - state.player_energy_th) * 1/static_params.energy_max
-    u = jax.lax.select(state.player_energy > state.player_energy_th, 1, 0)
+    u = jax.lax.select(state.player_energy >= state.player_energy_th, 1, 0)
     v = jax.lax.select(a >= b, 1, 0)
     energy_reward = u + (1 -  u) * (1 - 3 * v)
 
     a = jnp.abs(state.player_temperature - state.player_temperature_th)/20.0
     b = jnp.abs(init_temperature - state.player_temperature_th)/20.0
-    u = jax.lax.select(state.player_temperature > state.player_temperature_th, 1, 0)
+    u = jax.lax.select(state.player_temperature >= state.player_temperature_th, 1, 0)
     v = jax.lax.select(a >= b, 1, 0)
     temperature_reward = u + (1 -  u) * (1 - 3 * v)
 
