@@ -131,7 +131,7 @@ class CraftaxSymbolicEnv(environment.Environment):
         done = self.is_terminal(state, params)
         info = log_achievements_to_info(state, done)
         info["discount"] = self.discount(state, params)
-
+        info["default_reward"] = state.default_reward
         return (
             lax.stop_gradient(self.get_obs(state)),
             lax.stop_gradient(state),
