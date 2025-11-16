@@ -701,7 +701,7 @@ def generate_world(rng, params, static_params):
         
         player_food=jnp.asarray(9, dtype=jnp.int32),
         player_food_th=player_food_th_value,
-        reward_tmp=0,
+        default_reward=0.0,
 
         player_drink=jnp.asarray(9, dtype=jnp.int32),
         player_drink_th=player_drink_th_value,
