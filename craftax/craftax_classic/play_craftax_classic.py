@@ -135,11 +135,19 @@ def main(args):
             obs, env_state, reward, done, info = step_fn(
                 _rng, env_state, action, env_params
             )
+
             new_achievements = env_state.achievements
             print_new_achievements(old_achievements, new_achievements)
 
+            print(f"uHealth: {env_state.player_sHealth:.2f} | Health: {env_state.player_uHealth_th:.2f}")
+            print(f"uFood: {env_state.player_sFood:.2f} | Food: {env_state.player_uFood_th:.2f}")
+            print(f"uDrink: {env_state.player_sDrink:.2f} | Drink: {env_state.player_uDrink_th:.2f}")
+            print(f"uEnergy: {env_state.player_sEnergy:.2f} | Energy: {env_state.player_uEnergy_th:.2f}") 
+
             if reward > 0.01 or reward < -0.01:
                 print(f"Reward: {reward}\n")
+                print(f"Done : {done}\n")
+
 
             renderer.render(env_state)
 

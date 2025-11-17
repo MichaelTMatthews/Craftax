@@ -5,7 +5,6 @@ import jax.random
 from flax import struct
 import jax.numpy as jnp
 
-
 @struct.dataclass
 class Inventory:
     wood: int = 0
@@ -21,14 +20,12 @@ class Inventory:
     stone_sword: int = 0
     iron_sword: int = 0
 
-
 @struct.dataclass
 class Mobs:
     position: jnp.ndarray
     health: int
     mask: bool
     attack_cooldown: int
-
 
 @struct.dataclass
 class EnvState:
@@ -37,6 +34,7 @@ class EnvState:
 
     player_position: jnp.ndarray
     player_direction: int
+    default_reward: float
 
     # Intrinsics
     player_health: int
@@ -44,6 +42,22 @@ class EnvState:
     player_drink: int
     player_energy: int
     is_sleeping: bool
+
+
+    player_uHealth: float
+    player_uFood: float
+    player_uDrink: float
+    player_uEnergy: float
+
+    player_uHealth_th: float
+    player_uFood_th: float
+    player_uDrink_th: float
+    player_uEnergy_th: float
+
+    player_sHealth: float
+    player_sFood: float
+    player_sDrink: float
+    player_sEnergy: float
 
     # Second order intrinsics
     player_recover: float

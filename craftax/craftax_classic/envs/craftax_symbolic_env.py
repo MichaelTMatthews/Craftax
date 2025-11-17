@@ -29,7 +29,7 @@ def get_flat_map_obs_shape():
 
 def get_inventory_obs_shape():
     inv_size = 12
-    num_intrinsics = 4
+    num_intrinsics = 12
     light_level = 1
     is_sleeping = 1
     direction = 4
@@ -61,7 +61,7 @@ class CraftaxClassicSymbolicEnvNoAutoReset(EnvironmentNoAutoReset):
         done = self.is_terminal(state, params)
         info = compute_score(state, done)
         info["discount"] = self.discount(state, params)
-
+        info["default_reward"] = state.default_reward
         return (
             lax.stop_gradient(self.get_obs(state)),
             lax.stop_gradient(state),
@@ -133,7 +133,7 @@ class CraftaxClassicSymbolicEnv(environment.Environment):
         done = self.is_terminal(state, params)
         info = compute_score(state, done)
         info["discount"] = self.discount(state, params)
-
+        info["default_reward"] = state.default_reward
         return (
             lax.stop_gradient(self.get_obs(state)),
             lax.stop_gradient(state),

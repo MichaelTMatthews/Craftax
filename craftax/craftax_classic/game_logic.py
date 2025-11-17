@@ -1640,7 +1640,45 @@ def cap_inventory(state):
 def craftax_step(rng, state, action, params, static_params):
     init_achievements = state.achievements
     init_health = state.player_health
+    init_uHealth = state.player_uHealth
+    init_uFood = state.player_uFood
+    init_uDrink = state.player_uDrink
+    init_uEnergy = state.player_uEnergy
 
+    uHealth = jax.lax.select(is_game_over(state, params), 0.0, 0.95 * init_uHealth + 0.05 * state.player_health)
+    uHealth = jax.lax.select(uHealth >= 9.0, 9.0, uHealth)
+    uFood = 0.95 * init_uFood + 0.05 * state.player_food
+    uFood = jax.lax.select(uFood >= 9.0, 9.0, uFood)
+    uDrink = 0.95 * init_uDrink + 0.05 * state.player_drink
+    uDrink = jax.lax.select(uDrink >= 9.0, 9.0, uDrink)
+    uEnergy = 0.95 * init_uEnergy + 0.05 * state.player_energy
+    uEnergy = jax.lax.select(uEnergy >= 9.0, 9.0, uEnergy)
+
+    state = state.replace(
+        player_uHealth=uHealth,
+        player_uFood=uFood,
+        player_uDrink=uDrink,
+        player_uEnergy=uEnergy
+    )
+
+    init_sHealth = state.player_sHealth
+    init_sFood = state.player_sFood
+    init_sDrink = state.player_sDrink
+    init_sEnergy = state.player_sEnergy
+
+
+    sHealth = uHealth / 9.0
+    sFood = uFood / 9.0
+    sDrink = uDrink / 9.0
+    sEnergy = uEnergy / 9.0
+
+    state = state.replace(
+        player_sHealth=sHealth,
+        player_sFood=sFood,
+        player_sDrink=sDrink,
+        player_sEnergy=sEnergy
+    )
+    
     # Interrupt action if sleeping
     action = jax.lax.select(state.is_sleeping, Action.NOOP.value, action)
 
@@ -1678,8 +1716,41 @@ def craftax_step(rng, state, action, params, static_params):
         state.achievements.astype(jnp.float32).sum()
         - init_achievements.astype(jnp.float32).sum()
     )
-    health_reward = (state.player_health - init_health) * 0.1
-    reward = achievement_reward + health_reward
+    #health_reward = (state.player_health - init_health) * 0.1
+    #reward = achievement_reward + health_reward
+
+    a = jnp.abs(sHealth - state.player_uHealth_th)
+    b = jnp.abs(init_sHealth - state.player_uHealth_th)
+    u = jax.lax.select(state.player_sHealth >= state.player_uHealth_th, 1, 0)
+    v = jax.lax.select(a >= b, 1, 0)#v = 1 if a < b else 0
+    health_reward = u + (1 - u) * (1 - 3 * v)
+
+    a = jnp.abs(sFood - state.player_uFood_th)
+    b = jnp.abs(init_sFood - state.player_uFood_th)
+    u = jax.lax.select(state.player_sFood >= state.player_uFood_th, 1, 0)
+    v = jax.lax.select(a >= b, 1, 0)#v = 1 if a < b else 0
+    food_reward = u + (1 - u) * (1 - 3 * v)
+
+    a = jnp.abs(sDrink - state.player_uDrink_th)
+    b = jnp.abs(init_sDrink - state.player_uDrink_th)
+    u = jax.lax.select(state.player_sDrink >= state.player_uDrink_th, 1, 0)
+    v = jax.lax.select(a >= b, 1, 0)#v = 1 if a < b else 0
+    drink_reward = u + (1 - u) * (1 - 3 * v)
+
+    a = jnp.abs(sEnergy - state.player_uEnergy_th)
+    b = jnp.abs(init_sEnergy - state.player_uEnergy_th)
+    u = jax.lax.select(state.player_sEnergy >= state.player_uEnergy_th, 1, 0)
+    v = jax.lax.select(a >= b, 1, 0)#v = 1 if a < b else 0
+    energy_reward = u + (1 - u) * (1 - 3 * v)
+
+
+    reward = (
+        + health_reward * 0.9
+        + food_reward * 0.5
+        + drink_reward * 0.5
+        + energy_reward + 0.5
+    )
+
 
     rng, _rng = jax.random.split(rng)
 
@@ -1687,6 +1758,7 @@ def craftax_step(rng, state, action, params, static_params):
         timestep=state.timestep + 1,
         light_level=calculate_light_level(state.timestep + 1, params),
         state_rng=_rng,
+        default_reward=0.0,
     )
 
     return state, reward
