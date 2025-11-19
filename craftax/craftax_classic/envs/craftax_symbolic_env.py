@@ -29,7 +29,7 @@ def get_flat_map_obs_shape():
 
 def get_inventory_obs_shape():
     inv_size = 12
-    num_intrinsics = 12
+    num_intrinsics = 20
     light_level = 1
     is_sleeping = 1
     direction = 4

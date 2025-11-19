@@ -1644,8 +1644,10 @@ def craftax_step(rng, state, action, params, static_params):
     init_uFood = state.player_uFood
     init_uDrink = state.player_uDrink
     init_uEnergy = state.player_uEnergy
+    init_uAccomplishment = state.player_uAccomplishment
+    init_accomplishment = state.player_accomplishment
 
-    uHealth = jax.lax.select(is_game_over(state, params), 0.0, 0.95 * init_uHealth + 0.05 * state.player_health)
+    uHealth = jax.lax.select(state.player_health<=0, 0.0, 0.95 * init_uHealth + 0.05 * state.player_health)
     uHealth = jax.lax.select(uHealth >= 9.0, 9.0, uHealth)
     uFood = 0.95 * init_uFood + 0.05 * state.player_food
     uFood = jax.lax.select(uFood >= 9.0, 9.0, uFood)
@@ -1665,6 +1667,7 @@ def craftax_step(rng, state, action, params, static_params):
     init_sFood = state.player_sFood
     init_sDrink = state.player_sDrink
     init_sEnergy = state.player_sEnergy
+    init_sAccomplishment = state.player_sAccomplishment
 
 
     sHealth = uHealth / 9.0
@@ -1711,11 +1714,32 @@ def craftax_step(rng, state, action, params, static_params):
     # Cap inv
     state = cap_inventory(state)
 
-    # Reward
-    achievement_reward = (
+    add_accomplisment = (
         state.achievements.astype(jnp.float32).sum()
         - init_achievements.astype(jnp.float32).sum()
     )
+
+    add_accomplisment = jax.lax.select(is_game_over(state, params), 0.0, add_accomplisment)
+    add_accomplisment = jax.lax.select(add_accomplisment == 0.0, -0.01, add_accomplisment)
+
+    new_accomplisment = state.player_accomplishment + 10 * add_accomplisment
+    new_accomplisment = jax.lax.select(new_accomplisment < 0.0, 0.0, new_accomplisment)
+    new_accomplisment = jax.lax.select(
+        new_accomplisment > 9.0,
+        9.0,
+        new_accomplisment,
+    )
+
+    state = state.replace(player_accomplishment=new_accomplisment)
+
+    uAccomplishment = 0.95 * init_uAccomplishment + 0.05 * state.player_accomplishment
+    uAccomplishment = jax.lax.select(uAccomplishment >= 9.0, 9.0, uAccomplishment) 
+
+    state = state.replace(player_uAccomplishment=uAccomplishment)
+
+    sAccomplishment = uAccomplishment / 9.0
+    state = state.replace(player_sAccomplishment=sAccomplishment)
+
     #health_reward = (state.player_health - init_health) * 0.1
     #reward = achievement_reward + health_reward
 
@@ -1724,6 +1748,9 @@ def craftax_step(rng, state, action, params, static_params):
     u = jax.lax.select(state.player_sHealth >= state.player_uHealth_th, 1, 0)
     v = jax.lax.select(a >= b, 1, 0)#v = 1 if a < b else 0
     health_reward = u + (1 - u) * (1 - 3 * v)
+    
+    survival_kernel = jax.lax.select(u == 1, 0.0, 1.0) 
+
 
     a = jnp.abs(sFood - state.player_uFood_th)
     b = jnp.abs(init_sFood - state.player_uFood_th)
@@ -1743,12 +1770,18 @@ def craftax_step(rng, state, action, params, static_params):
     v = jax.lax.select(a >= b, 1, 0)#v = 1 if a < b else 0
     energy_reward = u + (1 - u) * (1 - 3 * v)
 
+    a = jnp.abs(sAccomplishment - state.player_uAccomplishment_th)
+    b = jnp.abs(init_sAccomplishment - state.player_uAccomplishment_th)
+    u = jax.lax.select(state.player_sAccomplishment >= state.player_uAccomplishment_th, 1, 0)
+    v = jax.lax.select(a >= b, 1, 0)#v = 1 if a < b else 0
+    accomplishment_reward = u + (1 - u) * (1 - 3 * v)
 
     reward = (
         + health_reward * 0.9
         + food_reward * 0.5
         + drink_reward * 0.5
         + energy_reward + 0.5
+        + accomplishment_reward * 0.9
     )
 
 

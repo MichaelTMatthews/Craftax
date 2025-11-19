@@ -41,23 +41,28 @@ class EnvState:
     player_food: int
     player_drink: int
     player_energy: int
+    player_accomplishment: float
     is_sleeping: bool
 
 
     player_uHealth: float
+
     player_uFood: float
     player_uDrink: float
     player_uEnergy: float
+    player_uAccomplishment: float
 
     player_uHealth_th: float
     player_uFood_th: float
     player_uDrink_th: float
     player_uEnergy_th: float
+    player_uAccomplishment_th: float
 
     player_sHealth: float
     player_sFood: float
     player_sDrink: float
     player_sEnergy: float
+    player_sAccomplishment: float
 
     # Second order intrinsics
     player_recover: float

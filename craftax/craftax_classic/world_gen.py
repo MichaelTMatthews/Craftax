@@ -146,6 +146,8 @@ def generate_world(rng, params, static_params):
     uDrink_th_value = jax.random.uniform(_rng, ()) * 0.9 + 0.1
     rng, _rng = jax.random.split(rng)
     uEnergy_th_value = jax.random.uniform(_rng, ()) * 0.9 + 0.1
+    rng, _rng = jax.random.split(rng)
+    uAccomplishment_th_value = jax.random.uniform(_rng, ()) * 0.2 + 0.8
 
     # Lava
     lava_map = jnp.logical_and(
@@ -247,18 +249,22 @@ def generate_world(rng, params, static_params):
         player_food=9,
         player_drink=9,
         player_energy=9,
-        player_uHealth=0.0,
-        player_uFood=0.0,
-        player_uDrink=0.0,
-        player_uEnergy=0.0,
+        player_uHealth=9.0,
+        player_uFood=9.0,
+        player_uDrink=9.0,
+        player_uEnergy=9.0,
         player_uHealth_th=uHealth_th_value,
         player_uFood_th=uFood_th_value,
         player_uDrink_th=uDrink_th_value,
         player_uEnergy_th=uEnergy_th_value,
+        player_uAccomplishment_th=uAccomplishment_th_value,
         player_sHealth=0.0,
         player_sFood=0.0,
         player_sDrink=0.0,
         player_sEnergy=0.0,
+        player_uAccomplishment=0.0,
+        player_sAccomplishment=0.0,
+        player_accomplishment=0.0,
         player_recover=0.0,
         player_hunger=0.0,
         player_thirst=0.0,
@@ -354,6 +360,8 @@ def generate_random_world(rng, params, static_params):
     uDrink_th_value = jax.random.uniform(_rng, ()) * 0.9 + 0.1
     rng, _rng = jax.random.split(rng)
     uEnergy_th_value = jax.random.uniform(_rng, ()) * 0.9 + 0.1
+    rng, _rng = jax.random.split(rng)
+    uAccomplishment_th_value = jax.random.uniform(_rng, ()) * 0.2 + 0.8
 
     state = EnvState(
         map=map,
@@ -364,10 +372,18 @@ def generate_random_world(rng, params, static_params):
         player_food=9,
         player_drink=9,
         player_energy=9,
+        player_uHealth=9.0,
+        player_uFood=9.0,
+        player_uDrink=9.0,
+        player_uEnergy=9.0,
         player_uHealth_th=uHealth_th_value,
         player_uFood_th=uFood_th_value,
         player_uDrink_th=uDrink_th_value,
         player_uEnergy_th=uEnergy_th_value,
+        player_uAccomplishment_th=uAccomplishment_th_value,
+        player_uAccomplishment=0.0,
+        player_sAccomplishment=0.0,
+        player_accomplishment=0.0,
         player_sHealth=0.0,
         player_sFood=0.0,
         player_sDrink=0.0,

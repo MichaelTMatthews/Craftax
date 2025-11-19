@@ -90,13 +90,21 @@ def render_craftax_symbolic(state):
                 state.player_drink,
                 state.player_energy,
                 state.player_sHealth,
+                state.player_accomplishment,
+                state.player_uHealth,
+                state.player_uFood,
+                state.player_uDrink,
+                state.player_uEnergy,
+                state.player_uAccomplishment,
                 state.player_sFood,
                 state.player_sDrink,
                 state.player_sEnergy,
+                state.player_sAccomplishment,
                 state.player_uHealth_th,
                 state.player_uFood_th,
                 state.player_uDrink_th,
                 state.player_uEnergy_th,
+                state.player_uAccomplishment_th,
             ]
         ).astype(jnp.float16)
         / 10.0
