@@ -137,17 +137,30 @@ def generate_world(rng, params, static_params):
     tree = jnp.logical_and(tree, map == BlockType.GRASS.value)
     map = jnp.where(tree, BlockType.TREE.value, map)
 
+
     #Intrisics limits initilization
     rng, _rng = jax.random.split(rng)
-    uHealth_th_value = jax.random.uniform(_rng, ()) * 0.4 + 0.6
+    health_value = jax.random.choice(_rng, jnp.array([6,7,8,9]))
     rng, _rng = jax.random.split(rng)
-    uFood_th_value = jax.random.uniform(_rng, ()) * 0.9 + 0.1
+    food_value = jax.random.choice(_rng, jnp.array([1,2,3,4,5,6,7,8,9]))
     rng, _rng = jax.random.split(rng)
-    uDrink_th_value = jax.random.uniform(_rng, ()) * 0.9 + 0.1
+    drink_value = jax.random.choice(_rng, jnp.array([1,2,3,4,5,6,7,8,9]))
     rng, _rng = jax.random.split(rng)
-    uEnergy_th_value = jax.random.uniform(_rng, ()) * 0.9 + 0.1
+    energy_value = jax.random.choice(_rng, jnp.array([1,2,3,4,5,6,7,8,9]))
     rng, _rng = jax.random.split(rng)
-    uAccomplishment_th_value = jax.random.uniform(_rng, ()) * 0.2 + 0.8
+    accomplishment_value = 0.0
+
+    #Intrisics limits initilization
+    #rng, _rng = jax.random.split(rng)
+    uHealth_th_value = 0.9#jax.random.uniform(_rng, ()) * 0.1 + 0.9
+    #rng, _rng = jax.random.split(rng)
+    uFood_th_value = 0.8#jax.random.uniform(_rng, ()) * 0.2 + 0.8
+    #rng, _rng = jax.random.split(rng)
+    uDrink_th_value = 0.8#jax.random.uniform(_rng, ()) * 0.2 + 0.8
+    #rng, _rng = jax.random.split(rng)
+    uEnergy_th_value = 0.5#jax.random.uniform(_rng, ()) * 0.2 + 0.8
+    #rng, _rng = jax.random.split(rng)
+    uAccomplishment_th_value = 0.9#jax.random.uniform(_rng, ()) * 0.2 + 0.8
 
     # Lava
     lava_map = jnp.logical_and(
@@ -245,14 +258,16 @@ def generate_world(rng, params, static_params):
         default_reward=0.0,
         player_position=player_position,
         player_direction=Action.UP.value,
-        player_health=9,
-        player_food=9,
-        player_drink=9,
-        player_energy=9,
-        player_uHealth=9.0,
-        player_uFood=9.0,
-        player_uDrink=9.0,
-        player_uEnergy=9.0,
+        player_health=health_value,
+        player_food=food_value,
+        player_drink=drink_value,
+        player_energy=energy_value,
+        player_accomplishment=accomplishment_value,
+        player_uHealth=jnp.float32(health_value),
+        player_uFood=jnp.float32(food_value),
+        player_uDrink=jnp.float32(drink_value),
+        player_uEnergy=jnp.float32(energy_value),
+        player_uAccomplishment=jnp.float32(accomplishment_value),
         player_uHealth_th=uHealth_th_value,
         player_uFood_th=uFood_th_value,
         player_uDrink_th=uDrink_th_value,
@@ -262,9 +277,7 @@ def generate_world(rng, params, static_params):
         player_sFood=0.0,
         player_sDrink=0.0,
         player_sEnergy=0.0,
-        player_uAccomplishment=0.0,
         player_sAccomplishment=0.0,
-        player_accomplishment=0.0,
         player_recover=0.0,
         player_hunger=0.0,
         player_thirst=0.0,
@@ -355,13 +368,13 @@ def generate_random_world(rng, params, static_params):
     rng, _rng = jax.random.split(rng)
     uHealth_th_value = jax.random.uniform(_rng, ()) * 0.4 + 0.6
     rng, _rng = jax.random.split(rng)
-    uFood_th_value = jax.random.uniform(_rng, ()) * 0.9 + 0.1
+    uFood_th_value = jax.random.uniform(_rng, ()) * 0.4 + 0.6
     rng, _rng = jax.random.split(rng)
-    uDrink_th_value = jax.random.uniform(_rng, ()) * 0.9 + 0.1
+    uDrink_th_value = jax.random.uniform(_rng, ()) * 0.4 + 0.6
     rng, _rng = jax.random.split(rng)
-    uEnergy_th_value = jax.random.uniform(_rng, ()) * 0.9 + 0.1
+    uEnergy_th_value = jax.random.uniform(_rng, ()) * 0.4 + 0.6
     rng, _rng = jax.random.split(rng)
-    uAccomplishment_th_value = jax.random.uniform(_rng, ()) * 0.2 + 0.8
+    uAccomplishment_th_value = jax.random.uniform(_rng, ()) * 0.4 + 0.6
 
     state = EnvState(
         map=map,

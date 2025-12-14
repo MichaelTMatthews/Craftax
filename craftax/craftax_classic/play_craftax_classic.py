@@ -144,9 +144,10 @@ def main(args):
             print(f"uDrink: {env_state.player_sDrink:.2f} | Drink: {env_state.player_uDrink_th:.2f}")
             print(f"uEnergy: {env_state.player_sEnergy:.2f} | Energy: {env_state.player_uEnergy_th:.2f}") 
             print(f"uAccomplishment: {env_state.player_sAccomplishment:.2f} | Accomplishment: {env_state.player_uAccomplishment_th:.2f}")
-            if reward > 0.01 or reward < -0.01:
-                print(f"Reward: {reward}\n")
-                print(f"Done : {done}\n")
+            print(f"Accomplishment: {env_state.player_accomplishment:.2f}")
+            
+            print(f"Reward: {reward}\n")
+            print(f"Done : {done}\n")
 
 
             renderer.render(env_state)
