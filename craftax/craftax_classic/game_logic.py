@@ -1638,8 +1638,8 @@ def cap_inventory(state):
 
 
 def craftax_step(rng, state, action, params, static_params):
-    #return myhomeostatic_step(rng, state, action, params, static_params)
-    return yoshida_step(rng, state, action, params, static_params)
+    return myhomeostatic_step(rng, state, action, params, static_params)
+    #return yoshida_step(rng, state, action, params, static_params)
 
 def default_step(rng, state, action, params, static_params):
     init_achievements = state.achievements
