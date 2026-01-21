@@ -132,7 +132,7 @@ class Achievement(Enum):
 # TEXTURES
 def load_texture(filename, block_pixel_size, clamp_alpha=True):
     filename = os.path.join(pathlib.Path(__file__).parent.resolve(), "assets", filename)
-    img = iio.imread(filename)
+    img = iio.imread(filename, mode="RGBA")
     jnp_img = jnp.array(img).astype(int)
     assert jnp_img.shape[:2] == (16, 16)
 
@@ -176,12 +176,12 @@ def load_all_textures(block_pixel_size):
 
     block_textures = jnp.array(
         [
-            load_texture("debug_tile.png", block_pixel_size),
+            load_texture("debug_tile.png", block_pixel_size)[:, :, :3],
             jnp.ones((block_pixel_size, block_pixel_size, 3), dtype=jnp.int32) * 128,
-            load_texture("grass.png", block_pixel_size),
-            load_texture("water.png", block_pixel_size),
-            load_texture("stone.png", block_pixel_size),
-            load_texture("tree.png", block_pixel_size),
+            load_texture("grass.png", block_pixel_size)[:, :, :3],
+            load_texture("water.png", block_pixel_size)[:, :, :3],
+            load_texture("stone.png", block_pixel_size)[:, :, :3],
+            load_texture("tree.png", block_pixel_size)[:, :, :3],
             load_texture("wood.png", block_pixel_size)[:, :, :3],
             load_texture("path.png", block_pixel_size)[:, :, :3],
             load_texture("coal.png", block_pixel_size)[:, :, :3],
