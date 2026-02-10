@@ -12,7 +12,7 @@ class EnvironmentNoAutoReset(object):
     def default_params(self):
         return NotImplementedError
 
-    @partial(jax.jit, static_argnums=(0, 4))
+    @partial(jax.jit, static_argnums=(0,))
     def step(
         self,
         key: jax.Array,
@@ -27,7 +27,7 @@ class EnvironmentNoAutoReset(object):
         obs, state, reward, done, info = self.step_env(key, state, action, params)
         return obs, state, reward, done, info
 
-    @partial(jax.jit, static_argnums=(0, 2))
+    @partial(jax.jit, static_argnums=(0,))
     def reset(self, key: jax.Array, params=None):
         """Performs resetting of environment."""
         # Use default env parameters if no others specified
