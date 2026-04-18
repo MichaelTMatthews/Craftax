@@ -1673,6 +1673,15 @@ def craftax_step(rng, state, action, params, static_params):
     # Cap inv
     state = cap_inventory(state)
 
+    # Lava (implicit negative reward)
+    in_lava = (
+        state.map[state.player_position[0], state.player_position[1]]
+        == BlockType.LAVA.value
+    )
+    state = state.replace(
+        player_health=jax.lax.select(in_lava, 0, state.player_health)
+    )
+
     # Reward
     achievement_reward = (
         state.achievements.astype(jnp.float32).sum()
