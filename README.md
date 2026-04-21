@@ -118,6 +118,7 @@ Note that all scores from outside the original Craftax paper are reported and ha
 ## Craftax-1B
 | Algorithm | Reward (% max) |                                              Code                                               |                  Paper                  |
 |:----------|---------------:|:-----------------------------------------------------------------------------------------------:|:---------------------------------------:|
+| maskedPPO-GTrXL + RS |           33.8 | [craftax-maskedPPO-reward-shaping](https://github.com/Doguhan58/craftax-maskedPPO-reward-shaping)|[maskedPPO](https://arxiv.org/abs/1910.06764) [PBRS](https://people.eecs.berkeley.edu/~pabbeel/cs287-fa09/readings/NgHaradaRussell-shaping-ICML1999.pdf) |
 | PPO-GTrXL |           18.3 | [TransformerXL_PPO_JAX](https://github.com/Reytuag/transformerXL_PPO_JAX)                       | [GTrXL](https://arxiv.org/abs/1910.06764)| 
 | PQN-RNN   |           16.0 | [purejaxql](https://github.com/mttga/purejaxql/) | [PQN](https://arxiv.org/abs/2407.04811) |
 | PPO-RNN   |           15.3 | [Craftax_Baselines](https://github.com/MichaelTMatthews/Craftax_Baselines/blob/main/ppo_rnn.py) | [PPO](https://arxiv.org/abs/1707.06347) |
