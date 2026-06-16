@@ -6,7 +6,7 @@
         <a href= "https://pypi.org/project/craftax/">
         <img src="https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-blue" /></a>
         <a href= "https://pypi.org/project/craftax/">
-        <img src="https://img.shields.io/badge/pypi-1.5.0-green" /></a>
+        <img src="https://img.shields.io/badge/pypi-1.6.0-green" /></a>
         <a href= "https://pepy.tech/project/craftax">
         <img src="https://static.pepy.tech/badge/craftax" /></a>
        <a href= "https://github.com/MichaelTMatthews/Craftax/blob/main/LICENSE">
@@ -15,9 +15,8 @@
         <img src="https://img.shields.io/badge/blog-link-purple" /></a>
        <a href= "https://arxiv.org/abs/2402.16801">
         <img src="https://img.shields.io/badge/arxiv-2402.16801-b31b1b" /></a>
-       <a href= "https://github.com/psf/black">
-        <img src="https://img.shields.io/badge/code%20style-black-000000.svg" /></a>
-</p>
+<a href= "https://github.com/astral-sh/ruff">
+        <img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" /></a></p>
 
 
 # ⛏️ Craftax
