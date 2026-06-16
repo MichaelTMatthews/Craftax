@@ -593,7 +593,7 @@ TORCH_LIGHT_MAP = jnp.clip(1 - TORCH_LIGHT_MAP, 0.0, 1.0)
 # TEXTURES
 def load_texture(filename, block_pixel_size):
     filename = os.path.join(pathlib.Path(__file__).parent.resolve(), "assets", filename)
-    img = iio.imread(filename)
+    img = iio.imread(filename, mode="RGBA")
     jnp_img = jnp.array(img).astype(int)
     assert jnp_img.shape[:2] == (16, 16)
 
