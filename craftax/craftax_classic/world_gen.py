@@ -1,8 +1,9 @@
-from functools import partial
+import jax
+import jax.numpy as jnp
 
 from craftax.craftax_classic.constants import *
-from craftax.craftax_classic.game_logic import calculate_light_level, get_distance_map
 from craftax.craftax_classic.envs.craftax_state import EnvState, Inventory, Mobs
+from craftax.craftax_classic.game_logic import calculate_light_level, get_distance_map
 from craftax.craftax_classic.util.noise import generate_fractal_noise_2d
 
 
@@ -21,12 +22,8 @@ def generate_world(rng, params, static_params):
     player_proximity_map = jnp.clip(player_proximity_map, 0.0, 1.0)
 
     larger_res = (static_params.map_size[0] // 4, static_params.map_size[1] // 4)
-    large_res = (static_params.map_size[0] // 8, static_params.map_size[1] // 8)
     small_res = (static_params.map_size[0] // 16, static_params.map_size[1] // 16)
     x_res = (static_params.map_size[0] // 8, static_params.map_size[1] // 2)
-
-    # small_res = large_res
-    # x_res = large_res
 
     water = generate_fractal_noise_2d(
         _rng,

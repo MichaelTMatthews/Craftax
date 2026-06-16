@@ -1,21 +1,23 @@
-from jax import lax
-from typing import Tuple, Optional
+from typing import Optional, Tuple
 
-from craftax.environment_base import spaces
-from craftax.environment_base.environment_bases import (
-    EnvironmentNoAutoReset,
-    EnvironmentAutoReset,
-)
-from craftax.craftax_classic.envs.common import compute_score
+import jax
+from jax import lax
+
 from craftax.craftax_classic.constants import *
-from craftax.craftax_classic.game_logic import craftax_step, is_game_over
+from craftax.craftax_classic.envs.common import compute_score
 from craftax.craftax_classic.envs.craftax_state import (
-    EnvState,
     EnvParams,
+    EnvState,
     StaticEnvParams,
 )
+from craftax.craftax_classic.game_logic import craftax_step, is_game_over
 from craftax.craftax_classic.renderer import render_craftax_symbolic
 from craftax.craftax_classic.world_gen import generate_world
+from craftax.environment_base import spaces
+from craftax.environment_base.environment_bases import (
+    EnvironmentAutoReset,
+    EnvironmentNoAutoReset,
+)
 
 
 def get_map_obs_shape():
