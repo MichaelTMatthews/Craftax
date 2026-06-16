@@ -27,7 +27,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "black",
+    "ruff",
     "pre-commit",
 ]
 
@@ -41,3 +41,11 @@ Issues = "https://github.com/MichaelTMatthews/Craftax/issues"
 
 [tool.setuptools.packages.find]
 include=["craftax*"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = ["E501"]
