@@ -1,5 +1,7 @@
-import jax
 from functools import partial
+
+import jax
+import jax.numpy as jnp
 
 from craftax.craftax.constants import *
 from craftax.craftax.craftax_state import EnvState
@@ -629,15 +631,13 @@ def render_craftax_pixels(state, block_pixel_size, do_night_noise=True):
 
         pixels = pixels.at[
             y * block_pixel_size + number_offset : (y + 1) * block_pixel_size,
-            x * block_pixel_size
-            + number_double_offset : x * block_pixel_size
+            x * block_pixel_size + number_double_offset : x * block_pixel_size
             + number_offset,
         ].mul(1 - textures["number_textures_alpha"][tens])
 
         pixels = pixels.at[
             y * block_pixel_size + number_offset : (y + 1) * block_pixel_size,
-            x * block_pixel_size
-            + number_double_offset : x * block_pixel_size
+            x * block_pixel_size + number_double_offset : x * block_pixel_size
             + number_offset,
         ].add(textures["number_textures"][tens])
 
@@ -645,21 +645,17 @@ def render_craftax_pixels(state, block_pixel_size, do_night_noise=True):
 
     def _render_icon(pixels, texture, x, y):
         return pixels.at[
-            block_pixel_size * y
-            + inv_pixel_left_space : block_pixel_size * (y + 1)
+            block_pixel_size * y + inv_pixel_left_space : block_pixel_size * (y + 1)
             - inv_pixel_right_space,
-            block_pixel_size * x
-            + inv_pixel_left_space : block_pixel_size * (x + 1)
+            block_pixel_size * x + inv_pixel_left_space : block_pixel_size * (x + 1)
             - inv_pixel_right_space,
         ].set(texture)
 
     def _render_icon_with_alpha(pixels, texture, x, y):
         existing_slice = pixels[
-            block_pixel_size * y
-            + inv_pixel_left_space : block_pixel_size * (y + 1)
+            block_pixel_size * y + inv_pixel_left_space : block_pixel_size * (y + 1)
             - inv_pixel_right_space,
-            block_pixel_size * x
-            + inv_pixel_left_space : block_pixel_size * (x + 1)
+            block_pixel_size * x + inv_pixel_left_space : block_pixel_size * (x + 1)
             - inv_pixel_right_space,
         ]
 
@@ -669,11 +665,9 @@ def render_craftax_pixels(state, block_pixel_size, do_night_noise=True):
         )
 
         return pixels.at[
-            block_pixel_size * y
-            + inv_pixel_left_space : block_pixel_size * (y + 1)
+            block_pixel_size * y + inv_pixel_left_space : block_pixel_size * (y + 1)
             - inv_pixel_right_space,
-            block_pixel_size * x
-            + inv_pixel_left_space : block_pixel_size * (x + 1)
+            block_pixel_size * x + inv_pixel_left_space : block_pixel_size * (x + 1)
             - inv_pixel_right_space,
         ].set(new_slice)
 

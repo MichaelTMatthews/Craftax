@@ -23,14 +23,6 @@ def update_plants_with_eat(state, plant_position, static_params):
 
 
 def add_items_from_chest(rng, state, inventory, is_opening_chest):
-    # Wood (60%)
-    rng, _rng = jax.random.split(rng)
-    is_looting_wood = jax.random.uniform(_rng) < 0.6
-    rng, _rng = jax.random.split(rng)
-    wood_loot_amount = (
-        jax.random.randint(_rng, shape=(), minval=1, maxval=6) * is_looting_wood
-    )
-
     # Torch (60%)
     rng, _rng = jax.random.split(rng)
     is_looting_torch = jax.random.uniform(_rng) < 0.6
@@ -489,7 +481,9 @@ def do_action(rng, state, action, static_params):
     new_food = jax.lax.select(action_block_in_bounds, new_food, state.player_food)
     new_hunger = jax.lax.select(action_block_in_bounds, new_hunger, state.player_hunger)
     new_growing_plants_age = jax.lax.select(
-        jnp.logical_and(action_block_in_bounds, is_eating_plant), new_growing_plants_age, state.growing_plants_age
+        jnp.logical_and(action_block_in_bounds, is_eating_plant),
+        new_growing_plants_age,
+        state.growing_plants_age,
     )
 
     new_achievements = jax.lax.select(
@@ -2097,8 +2091,6 @@ def spawn_mobs(state, rng, params, static_params):
             ),
         ),
     )
-    grass_map = state.map[state.player_level] == BlockType.GRASS.value
-    path_map = state.map[state.player_level] == BlockType.PATH.value
     new_passive_mob_type = FLOOR_MOB_MAPPING[state.player_level, MobType.PASSIVE.value]
 
     passive_mobs_can_spawn_map = all_valid_blocks_map
