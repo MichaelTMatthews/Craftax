@@ -1,10 +1,13 @@
 import jax
 from jax import lax
-from gymnax.environments import spaces, environment
 from typing import Tuple, Optional
 
 from craftax.craftax.envs.common import log_achievements_to_info
-from craftax.environment_base.environment_bases import EnvironmentNoAutoReset
+from craftax.environment_base import spaces
+from craftax.environment_base.environment_bases import (
+    EnvironmentNoAutoReset,
+    EnvironmentAutoReset,
+)
 from craftax.craftax.constants import *
 from craftax.craftax.game_logic import craftax_step, is_game_over
 from craftax.craftax.craftax_state import EnvState, EnvParams, StaticEnvParams
@@ -107,7 +110,7 @@ class CraftaxSymbolicEnvNoAutoReset(EnvironmentNoAutoReset):
         )
 
 
-class CraftaxSymbolicEnv(environment.Environment):
+class CraftaxSymbolicEnv(EnvironmentAutoReset):
     def __init__(self, static_env_params: Optional[StaticEnvParams] = None):
         super().__init__()
 

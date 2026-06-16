@@ -1,8 +1,11 @@
 from jax import lax
-from gymnax.environments import spaces, environment
 from typing import Tuple, Optional
 
-from craftax.environment_base.environment_bases import EnvironmentNoAutoReset
+from craftax.environment_base import spaces
+from craftax.environment_base.environment_bases import (
+    EnvironmentNoAutoReset,
+    EnvironmentAutoReset,
+)
 from craftax.craftax_classic.envs.common import compute_score
 from craftax.craftax_classic.constants import *
 from craftax.craftax_classic.game_logic import craftax_step, is_game_over
@@ -87,7 +90,7 @@ class CraftaxClassicPixelsEnvNoAutoReset(EnvironmentNoAutoReset):
         )
 
 
-class CraftaxClassicPixelsEnv(environment.Environment):
+class CraftaxClassicPixelsEnv(EnvironmentAutoReset):
     def __init__(self, static_env_params: StaticEnvParams = None):
         super().__init__()
 
@@ -156,5 +159,4 @@ class CraftaxClassicPixelsEnv(environment.Environment):
                 3,
             ),
             dtype=jnp.float32,
-        )
         )
