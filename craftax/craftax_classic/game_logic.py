@@ -1637,6 +1637,21 @@ def cap_inventory(state):
     return state
 
 
+def update_health(state):
+    # Lava
+    in_lava = (
+        state.map[state.player_position[0], state.player_position[1]]
+        == BlockType.LAVA.value
+    )
+
+    player_health = jax.lax.select(in_lava, 0, state.player_health)
+
+    # Cap health (to avoid reward penalty - player dies either way though)
+    player_health = jnp.maximum(0, player_health)
+
+    return state.replace(player_health=player_health)
+
+
 def craftax_step(rng, state, action, params, static_params):
     init_achievements = state.achievements
     init_health = state.player_health
@@ -1672,6 +1687,9 @@ def craftax_step(rng, state, action, params, static_params):
 
     # Cap inv
     state = cap_inventory(state)
+
+    # Cap and manage health
+    state = update_health(state)
 
     # Reward
     achievement_reward = (
