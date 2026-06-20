@@ -11,7 +11,7 @@ from craftax.craftax_classic.envs.craftax_state import (
     StaticEnvParams,
 )
 from craftax.craftax_classic.game_logic import craftax_step, is_game_over
-from craftax.craftax_classic.renderer import render_craftax_pixels
+from craftax.craftax_classic.renderer import make_craftax_pixel_renderer
 from craftax.craftax_classic.world_gen import generate_world
 from craftax.environment_base import spaces
 from craftax.environment_base.environment_bases import (
@@ -27,6 +27,8 @@ class CraftaxClassicPixelsEnvNoAutoReset(EnvironmentNoAutoReset):
         if static_env_params is None:
             static_env_params = self.default_static_params()
         self.static_env_params = static_env_params
+
+        self._render_fn = make_craftax_pixel_renderer(BLOCK_PIXEL_SIZE_AGENT)
 
     @property
     def default_params(self) -> EnvParams:
@@ -62,7 +64,7 @@ class CraftaxClassicPixelsEnvNoAutoReset(EnvironmentNoAutoReset):
         return self.get_obs(state), state
 
     def get_obs(self, state: EnvState) -> jax.Array:
-        pixels = render_craftax_pixels(state, BLOCK_PIXEL_SIZE_AGENT) / 255.0
+        pixels = self._render_fn(state) / 255.0
         return pixels
 
     def is_terminal(self, state: EnvState, params: EnvParams) -> bool:
@@ -100,6 +102,8 @@ class CraftaxClassicPixelsEnv(EnvironmentAutoReset):
             static_env_params = self.default_static_params()
         self.static_env_params = static_env_params
 
+        self._render_fn = make_craftax_pixel_renderer(BLOCK_PIXEL_SIZE_AGENT)
+
     @property
     def default_params(self) -> EnvParams:
         return EnvParams()
@@ -134,7 +138,7 @@ class CraftaxClassicPixelsEnv(EnvironmentAutoReset):
         return self.get_obs(state), state
 
     def get_obs(self, state: EnvState) -> jax.Array:
-        pixels = render_craftax_pixels(state, BLOCK_PIXEL_SIZE_AGENT) / 255.0
+        pixels = self._render_fn(state) / 255.0
         return pixels
 
     def is_terminal(self, state: EnvState, params: EnvParams) -> bool:

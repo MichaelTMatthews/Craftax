@@ -1,17 +1,18 @@
+from typing import Optional, Tuple
+
 import jax
 from jax import lax
-from typing import Tuple, Optional
 
 from craftax.craftax.constants import *
+from craftax.craftax.craftax_state import EnvParams, EnvState, StaticEnvParams
 from craftax.craftax.envs.common import log_achievements_to_info
 from craftax.craftax.game_logic import craftax_step, is_game_over
-from craftax.craftax.craftax_state import EnvState, EnvParams, StaticEnvParams
-from craftax.craftax.renderer import render_craftax_pixels
+from craftax.craftax.renderer import make_craftax_pixel_renderer
 from craftax.craftax.world_gen.world_gen import generate_world
 from craftax.environment_base import spaces
 from craftax.environment_base.environment_bases import (
-    EnvironmentNoAutoReset,
     EnvironmentAutoReset,
+    EnvironmentNoAutoReset,
 )
 
 
@@ -22,6 +23,8 @@ class CraftaxPixelsEnvNoAutoReset(EnvironmentNoAutoReset):
         if static_env_params is None:
             static_env_params = self.default_static_params()
         self.static_env_params = static_env_params
+
+        self._render_fn = make_craftax_pixel_renderer(BLOCK_PIXEL_SIZE_AGENT)
 
     @property
     def default_params(self) -> EnvParams:
@@ -57,7 +60,7 @@ class CraftaxPixelsEnvNoAutoReset(EnvironmentNoAutoReset):
         return self.get_obs(state), state
 
     def get_obs(self, state: EnvState) -> jax.Array:
-        pixels = render_craftax_pixels(state, BLOCK_PIXEL_SIZE_AGENT) / 255.0
+        pixels = self._render_fn(state) / 255.0
         return pixels
 
     def is_terminal(self, state: EnvState, params: EnvParams) -> bool:
@@ -95,6 +98,8 @@ class CraftaxPixelsEnv(EnvironmentAutoReset):
             static_env_params = self.default_static_params()
         self.static_env_params = static_env_params
 
+        self._render_fn = make_craftax_pixel_renderer(BLOCK_PIXEL_SIZE_AGENT)
+
     @property
     def default_params(self) -> EnvParams:
         return EnvParams()
@@ -129,7 +134,7 @@ class CraftaxPixelsEnv(EnvironmentAutoReset):
         return self.get_obs(state), state
 
     def get_obs(self, state: EnvState) -> jax.Array:
-        pixels = render_craftax_pixels(state, BLOCK_PIXEL_SIZE_AGENT) / 255.0
+        pixels = self._render_fn(state) / 255.0
         return pixels
 
     def is_terminal(self, state: EnvState, params: EnvParams) -> bool:

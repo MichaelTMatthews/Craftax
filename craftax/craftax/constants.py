@@ -1,3 +1,4 @@
+import functools
 import os
 import pathlib
 from enum import Enum
@@ -643,7 +644,7 @@ def load_mob_texture_set(filenames, block_pixel_size):
     return jnp.array(textures), jnp.array(texture_alphas)
 
 
-def load_all_textures(block_pixel_size):
+def load_all_textures_given_size(block_pixel_size):
     small_block_pixel_size = int(block_pixel_size * 0.8)
 
     # Blocks
@@ -1114,37 +1115,51 @@ def load_all_textures(block_pixel_size):
     }
 
 
-load_cached_textures_success = True
-if os.path.exists(TEXTURE_CACHE_FILE) and not os.environ.get(
-    "CRAFTAX_RELOAD_TEXTURES", False
-):
-    print("Loading Craftax textures from cache.")
-    TEXTURES = load_compressed_pickle(TEXTURE_CACHE_FILE)
-    # Check validity of texture cache
-    for ts in (BLOCK_PIXEL_SIZE_AGENT, BLOCK_PIXEL_SIZE_IMG, BLOCK_PIXEL_SIZE_HUMAN):
-        tex_shape = TEXTURES[ts]["full_map_block_textures"].shape
-        if (
-            tex_shape[0] != len(BlockType)
-            or tex_shape[1] != OBS_DIM[0] * ts
-            or tex_shape[2] != OBS_DIM[1] * ts
-            or tex_shape[3] != 3
+@functools.lru_cache(maxsize=None)
+def load_all_textures():
+    all_textures = None
+
+    load_cached_textures_success = True
+    if os.path.exists(TEXTURE_CACHE_FILE) and not os.environ.get(
+        "CRAFTAX_RELOAD_TEXTURES", False
+    ):
+        print("Loading Craftax textures from cache.")
+        all_textures = load_compressed_pickle(TEXTURE_CACHE_FILE)
+        # Check validity of texture cache
+        for ts in (
+            BLOCK_PIXEL_SIZE_AGENT,
+            BLOCK_PIXEL_SIZE_IMG,
+            BLOCK_PIXEL_SIZE_HUMAN,
         ):
-            load_cached_textures_success = False
-            print("Invalid texture cache, going to reload textures.")
-            break
-    print("Textures successfully loaded from cache.")
-else:
-    load_cached_textures_success = False
+            tex_shape = all_textures[ts]["full_map_block_textures"].shape
+            if (
+                tex_shape[0] != len(BlockType)
+                or tex_shape[1] != OBS_DIM[0] * ts
+                or tex_shape[2] != OBS_DIM[1] * ts
+                or tex_shape[3] != 3
+            ):
+                load_cached_textures_success = False
+                print("Invalid texture cache, going to reload textures.")
+                break
+        print("Textures successfully loaded from cache.")
+    else:
+        load_cached_textures_success = False
 
-if not load_cached_textures_success:
-    print(
-        "Processing Craftax textures. This will take a minute but will be cached for future use."
-    )
-    TEXTURES = {
-        BLOCK_PIXEL_SIZE_AGENT: load_all_textures(BLOCK_PIXEL_SIZE_AGENT),
-        BLOCK_PIXEL_SIZE_IMG: load_all_textures(BLOCK_PIXEL_SIZE_IMG),
-        BLOCK_PIXEL_SIZE_HUMAN: load_all_textures(BLOCK_PIXEL_SIZE_HUMAN),
-    }
+    if not load_cached_textures_success:
+        print(
+            "Processing Craftax textures. This will take a minute but will be cached for future use."
+        )
+        all_textures = {
+            BLOCK_PIXEL_SIZE_AGENT: load_all_textures_given_size(
+                BLOCK_PIXEL_SIZE_AGENT
+            ),
+            BLOCK_PIXEL_SIZE_IMG: load_all_textures_given_size(BLOCK_PIXEL_SIZE_IMG),
+            BLOCK_PIXEL_SIZE_HUMAN: load_all_textures_given_size(
+                BLOCK_PIXEL_SIZE_HUMAN
+            ),
+        }
 
-    save_compressed_pickle(TEXTURE_CACHE_FILE, TEXTURES)
-    print("Textures loaded and saved to cache.")
+        save_compressed_pickle(TEXTURE_CACHE_FILE, all_textures)
+        print("Textures loaded and saved to cache.")
+
+    return all_textures

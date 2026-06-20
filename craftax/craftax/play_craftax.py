@@ -1,28 +1,26 @@
+import argparse
 import bz2
 import pickle
 import sys
 import time
 from pathlib import Path
-
-import argparse
 from typing import Any
-
-import pygame
 
 import jax
 import jax.numpy as jnp
 import numpy as np
+import pygame
 
 from craftax.craftax.constants import (
-    OBS_DIM,
     BLOCK_PIXEL_SIZE_HUMAN,
     INVENTORY_OBS_HEIGHT,
-    Action,
+    OBS_DIM,
     Achievement,
+    Action,
 )
 from craftax.craftax.envs.craftax_symbolic_env import CraftaxSymbolicEnv as CraftaxEnv
+from craftax.craftax.renderer import make_craftax_pixel_renderer
 from craftax.craftax_env import make_craftax_env_from_name
-from craftax.craftax.renderer import render_craftax_pixels
 
 KEY_MAPPING = {
     pygame.K_q: Action.NOOP,
@@ -96,7 +94,7 @@ class CraftaxRenderer:
 
         self.screen_surface = pygame.display.set_mode(self.screen_size)
 
-        self._render = jax.jit(render_craftax_pixels, static_argnums=(1,))
+        self._render = jax.jit(make_craftax_pixel_renderer(BLOCK_PIXEL_SIZE_HUMAN))
 
     def update(self):
         # Update pygame events
@@ -109,7 +107,7 @@ class CraftaxRenderer:
         # Clear
         self.screen_surface.fill((0, 0, 0))
 
-        pixels = self._render(env_state, block_pixel_size=BLOCK_PIXEL_SIZE_HUMAN)
+        pixels = self._render(env_state)
         pixels = jnp.repeat(pixels, repeats=self.pixel_render_size, axis=0)
         pixels = jnp.repeat(pixels, repeats=self.pixel_render_size, axis=1)
 
