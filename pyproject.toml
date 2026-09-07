@@ -20,12 +20,14 @@ dependencies = [
     "jax",
     "flax",
     "numpy",
-    "pygame",
-    "matplotlib",
     "imageio",
 ]
 
 [project.optional-dependencies]
+play = [
+    "pygame",
+    "matplotlib",
+]
 dev = [
     "ruff",
     "pre-commit",
