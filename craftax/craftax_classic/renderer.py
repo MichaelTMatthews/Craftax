@@ -35,8 +35,16 @@ def render_craftax_symbolic(state):
         ).all()
         on_screen *= mobs.mask[mob_index]
 
-        mob_map = mob_map.at[local_position[0], local_position[1], mob_type_index].set(
-            on_screen.astype(jnp.uint8)
+        # `local_position` is unbounded. A negative component would be wrapped by
+        # JAX's indexing rules and land on an unrelated in-view cell, and a mob
+        # that is not on screen would still clear the cell it lands on. Send
+        # every non-visible write off-grid instead and let `mode="drop"`
+        # discard it, so only genuinely visible mobs touch the map.
+        write_position = jnp.where(
+            on_screen, local_position, jnp.array([OBS_DIM[0], OBS_DIM[1]])
+        )
+        mob_map = mob_map.at[write_position[0], write_position[1], mob_type_index].set(
+            on_screen.astype(jnp.uint8), mode="drop"
         )
 
         return (mob_map, mobs, mob_type_index), None
