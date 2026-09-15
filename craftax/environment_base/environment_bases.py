@@ -4,10 +4,28 @@ import jax
 from typing import Union
 from functools import partial
 
+# it defines how an environment is expected to behave 
 
 # Adapted from Gymnax
 # Credit to the Gymnax authors https://github.com/RobertTLange/gymnax/blob/main/gymnax/environments/environment.py
 
+# Both define the standard environment API:
+#         EnvironmentAutoReset
+#         EnvironmentNoAutoReset
+
+# EnvironmentAutoReset
+#     episode ends
+#          ↓
+#     automatically reset
+#          ↓
+#     return NEW episode's state/observation
+
+# EnvironmentNoAutoReset
+#     episode ends
+#          ↓
+#     STOP
+#          ↓
+#     return terminal state
 
 class EnvironmentAutoReset(object):
     """The base Gymnax environment with auto-resets."""
@@ -17,6 +35,15 @@ class EnvironmentAutoReset(object):
         return NotImplementedError
 
     @partial(jax.jit, static_argnums=(0,))
+    # step()
+#  ├── perform normal environment transition
+#  ├── detect done
+#  ├── reset environment
+#  └── choose between:
+#        terminal state
+#        OR
+#        reset state
+# we don't have to call reset(), the step() itself performs the reset. 
     def step(
         self,
         key: jax.Array,
@@ -101,6 +128,12 @@ class EnvironmentAutoReset(object):
         """State space of the environment."""
         raise NotImplementedError
 
+# doesn't reset automatically 
+# and its step is simpler 
+
+# obs, state, reward, done, info = self.step_env(
+#     key, state, action, params
+# )
 
 class EnvironmentNoAutoReset(object):
     """Similar to the base Gymnax environment but without auto-resets."""
