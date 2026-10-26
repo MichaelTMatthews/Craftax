@@ -1,7 +1,6 @@
 import jax
 import jax.numpy as jnp
 
-
 # Code adapted for JAX from the original numpy implementation made by Pierre Vigier
 # Original code located at https://github.com/pvigier/perlin-numpy
 
@@ -74,16 +73,3 @@ def generate_fractal_noise_2d(
     noise = (noise - noise.min()) / (noise.max() - noise.min())
 
     return noise
-
-
-def main():
-    import matplotlib.pyplot as plt
-
-    rng = jax.random.PRNGKey(0)
-    noise = generate_fractal_noise_2d(rng, (256, 256), (16, 16), octaves=4)
-    plt.imshow(noise, cmap="gray")
-    plt.show()
-
-
-if __name__ == "__main__":
-    main()
