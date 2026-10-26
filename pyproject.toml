@@ -21,7 +21,6 @@ dependencies = [
     "flax",
     "numpy",
     "pygame",
-    "matplotlib",
     "imageio",
 ]
 
