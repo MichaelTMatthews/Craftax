@@ -92,15 +92,6 @@ play_craftax_classic
 ```
 Since Craftax runs entirely in JAX, it will take some time to compile the rendering and step functions - it might take around 30s to render the first frame and then another 20s to take the first action.  After this it should be very quick.  A tutorial for how to beat the game is present in `tutorial.md`.  The controls are printed out at the beginning of play.
 
-# 🔤 Glyph Rendering
-To render a state as Unicode text (e.g. for language model agents) use:
-```python
-from craftax.craftax.glyph_renderer import render_craftax_glyphs
-
-print(render_craftax_glyphs(state))
-```
-This prints the local view with one glyph per tile, followed by a HUD and a legend of the glyphs on screen. For Craftax-Classic, import it from `craftax.craftax_classic.glyph_renderer` instead.
-
 # 📈 Experiment
 To run experiments see the [Craftax Baselines](https://github.com/MichaelTMatthews/Craftax_Baselines) repository.
 
@@ -147,6 +138,18 @@ Note that all scores from outside the original Craftax paper are reported and ha
 | ICM       |            2.2 |   [Craftax_Baselines](https://github.com/MichaelTMatthews/Craftax_Baselines/blob/main/ppo.py)   | [ICM](https://arxiv.org/pdf/1705.05363) |
 | E3B       |            2.2 |   [Craftax_Baselines](https://github.com/MichaelTMatthews/Craftax_Baselines/blob/main/ppo.py)   | [E3B](https://arxiv.org/abs/2210.05805) |
 
+
+# 🔤 Language Agents
+Both Craftax and Craftax-Classic also support rendering observation as text for language agents.
+We recommend using the glyph-based rendering from [GlyphBench](https://arxiv.org/pdf/2609.34214) that has been shown to be [successful](https://roger-creus.github.io/blog/astra-craftax-nethack/) on Craftax.
+
+```python
+from craftax.craftax.glyph_renderer import render_craftax_glyphs
+
+print(render_craftax_glyphs(state))
+```
+
+This prints the local view with one glyph per tile, followed by a HUD and a legend of the glyphs on screen.
 
 # 💾 Offline Dataset
 
