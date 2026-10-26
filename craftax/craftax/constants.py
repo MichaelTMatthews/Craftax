@@ -614,12 +614,6 @@ def load_texture(filename, block_pixel_size):
 
     return jnp_img
 
-    # melee_mob_texture_rgba = jnp.array(load_texture("melee_mob.png", block_pixel_size))
-    # melee_mob_texture = apply_alpha(melee_mob_texture_rgba)
-    # melee_mob_texture_alpha = jnp.repeat(
-    #     jnp.expand_dims(melee_mob_texture_rgba[:, :, 3], axis=-1), repeats=3, axis=2
-    # )
-
 
 def apply_alpha(texture):
     return texture[:, :, :3] * jnp.repeat(

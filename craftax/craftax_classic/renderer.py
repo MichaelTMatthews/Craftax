@@ -451,18 +451,6 @@ def make_craftax_pixel_renderer(block_pixel_size):
             1 - state.is_sleeping
         ) * map_pixels + state.is_sleeping * sleep_pixels
 
-        # Render mob map
-        # mob_map_pixels = (
-        #     jnp.array([[[128, 0, 0]]]).repeat(OBS_DIM, axis=0).repeat(OBS_DIM, axis=1)
-        # )
-        # padded_mob_map = jnp.pad(state.mob_map, OBS_DIM // 2 + 2, constant_values=False)
-        # mob_map_view = jax.lax.dynamic_slice(padded_mob_map, tl_corner, (OBS_DIM, OBS_DIM))
-        # mob_map_pixels = mob_map_pixels * jnp.expand_dims(mob_map_view, axis=-1)
-        # mob_map_pixels = mob_map_pixels.repeat(block_pixel_size, axis=0).repeat(
-        #     block_pixel_size, axis=1
-        # )
-        # map_pixels = map_pixels + mob_map_pixels
-
         # RENDER INVENTORY
         inv_pixel_left_space = (block_pixel_size - int(0.8 * block_pixel_size)) // 2 - 1
         inv_pixel_right_space = (
@@ -703,9 +691,6 @@ def make_craftax_pixel_renderer(block_pixel_size):
 
         # Combine map and inventory
         pixels = jnp.concatenate([map_pixels, inv_pixels], axis=0)
-
-        # # Downscale by 2
-        # pixels = pixels[::downscale, ::downscale]
 
         return pixels
 

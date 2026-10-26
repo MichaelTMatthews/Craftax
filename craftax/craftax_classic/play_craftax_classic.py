@@ -68,7 +68,6 @@ class CraftaxRenderer:
 
         # Update screen
         pygame.display.flip()
-        # time.sleep(0.01)
 
     def render(self, env_state):
         # Clear

@@ -205,9 +205,6 @@ def load_all_textures_given_size(block_pixel_size):
         jnp.ones((block_pixel_size, block_pixel_size, 3), dtype=jnp.int32) * 128
     )
 
-    # rng = jax.random.prngkey(0)
-    # block_textures = jax.random.permutation(rng, block_textures)
-
     smaller_block_textures = jnp.array(
         [
             load_texture(fname, int(block_pixel_size * 0.8))[:, :, :3]

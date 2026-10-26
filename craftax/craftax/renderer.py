@@ -904,9 +904,6 @@ def make_craftax_pixel_renderer(block_pixel_size, do_night_noise=True):
         # Combine map and inventory
         pixels = jnp.concatenate([map_pixels, inv_pixels], axis=0)
 
-        # # Downscale by 2
-        # pixels = pixels[::downscale, ::downscale]
-
         return pixels
 
     return render_craftax_pixels

@@ -38,12 +38,6 @@ def generate_world(rng, params, static_params):
     rng, _rng = jax.random.split(rng)
     map = jnp.where(water > 0.7, BlockType.WATER.value, BlockType.GRASS.value)
 
-    # water = water - 0.15 * mountain + 0.15
-
-    # c_water_map = map == BlockType.WATER.value
-    # z = jnp.array([[0, 1, 0], [1, 0, 1], [0, 1, 0]])
-    # c_water_map = jsp.signal.convolve(c_water_map, z, mode="same")
-
     sand_map = jnp.logical_and(
         water < 0.75,
         jnp.logical_and(
@@ -51,11 +45,6 @@ def generate_world(rng, params, static_params):
             map != BlockType.WATER.value,
         ),
     )
-
-    # sand_map = jnp.logical_and(
-    #     sand_map,
-    #     c_water_map > 0.5,
-    # )
 
     map = jnp.where(sand_map, BlockType.SAND.value, map)
 
@@ -169,11 +158,6 @@ def generate_world(rng, params, static_params):
     z_health = jnp.ones(static_params.max_zombies, dtype=jnp.int32)
     z_mask = jnp.zeros(static_params.max_zombies, dtype=bool)
 
-    # z_pos = z_pos.at[0].set(player_position + jnp.array([1, 0]))
-    # z_mask = z_mask.at[0].set(True)
-    # z_pos = z_pos.at[1].set(player_position + jnp.array([2, 0]))
-    # z_mask = z_mask.at[1].set(True)
-
     zombies = Mobs(
         position=z_pos,
         health=z_health,
@@ -262,9 +246,6 @@ def generate_random_world(rng, params, static_params):
     z_pos = jnp.zeros((static_params.max_zombies, 2), dtype=jnp.int32)
     z_health = jnp.ones(static_params.max_zombies, dtype=jnp.int32)
     z_mask = jnp.zeros(static_params.max_zombies, dtype=bool)
-
-    # z_pos = z_pos.at[0].set(player_position + jnp.array([1, 0]))
-    # z_mask = z_mask.at[0].set(True)
 
     zombies = Mobs(
         position=z_pos,

@@ -3,7 +3,6 @@ from typing import Any
 import jax
 import jax.numpy as jnp
 
-
 # From gymnax
 # Credit to the gymnax authors https://github.com/RobertTLange/gymnax/blob/main/gymnax/environments/spaces.py
 
@@ -36,8 +35,6 @@ class Discrete(Space):
     def contains(self, x: jax.Array) -> jax.Array:
         """Check whether specific object is within space."""
         x = x.astype(jnp.int32)
-        # type_cond = isinstance(x, self.dtype)
-        # shape_cond = (x.shape == self.shape)
         range_cond = jnp.logical_and(x >= 0, x < self.n)
         return range_cond
 
@@ -65,7 +62,5 @@ class Box(Space):
 
     def contains(self, x: jax.Array) -> jax.Array:
         """Check whether specific object is within space."""
-        # type_cond = isinstance(x, self.dtype)
-        # shape_cond = (x.shape == self.shape)
         range_cond = jnp.logical_and(jnp.all(x >= self.low), jnp.all(x <= self.high))
         return range_cond
