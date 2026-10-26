@@ -35,7 +35,7 @@ def render_craftax_symbolic(state):
         ).all()
         on_screen *= mobs.mask[mob_index]
 
-        mob_map = mob_map.at[local_position[0], local_position[1], mob_type_index].set(
+        mob_map = mob_map.at[local_position[0], local_position[1], mob_type_index].max(
             on_screen.astype(jnp.uint8)
         )
 

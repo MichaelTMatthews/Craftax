@@ -53,7 +53,7 @@ def render_craftax_symbolic(state: EnvState):
         on_screen *= mobs.mask[mob_index]
 
         mob_identifier = mob_class_index * mob_types_per_class + mobs.type_id[mob_index]
-        mob_map = mob_map.at[local_position[0], local_position[1], mob_identifier].set(
+        mob_map = mob_map.at[local_position[0], local_position[1], mob_identifier].max(
             on_screen.astype(jnp.int32)
         )
 
@@ -960,7 +960,7 @@ def render_craftax_text(state: EnvState):
         on_screen *= mobs.mask[mob_index]
 
         mob_identifier = mob_class_index * mob_types_per_class + mobs.type_id[mob_index]
-        mob_map = mob_map.at[local_position[0], local_position[1], mob_identifier].set(
+        mob_map = mob_map.at[local_position[0], local_position[1], mob_identifier].max(
             on_screen.astype(jnp.int32)
         )
 
