@@ -20,7 +20,7 @@ dependencies = [
     "jax",
     "flax",
     "numpy",
-    "pygame",
+    "pygame-ce",
     "imageio",
 ]
 

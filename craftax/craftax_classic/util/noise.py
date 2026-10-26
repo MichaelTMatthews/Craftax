@@ -1,7 +1,6 @@
 import jax
 import jax.numpy as jnp
 
-
 # Code adapted for JAX from the original numpy implementation made by Pierre Vigier
 # Original code located at https://github.com/pvigier/perlin-numpy
 
