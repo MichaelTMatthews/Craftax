@@ -155,7 +155,7 @@ def generate_world(rng, params, static_params):
     # Zombies
 
     z_pos = jnp.zeros((static_params.max_zombies, 2), dtype=jnp.int32)
-    z_health = jnp.ones(static_params.max_zombies, dtype=jnp.int32)
+    z_health = jnp.zeros(static_params.max_zombies, dtype=jnp.int32)
     z_mask = jnp.zeros(static_params.max_zombies, dtype=bool)
 
     zombies = Mobs(
@@ -194,7 +194,7 @@ def generate_world(rng, params, static_params):
     # Cows
     cows = Mobs(
         position=jnp.zeros((static_params.max_cows, 2), dtype=jnp.int32),
-        health=jnp.ones(static_params.max_cows, dtype=jnp.int32) * params.cow_health,
+        health=jnp.zeros(static_params.max_cows, dtype=jnp.int32),
         mask=jnp.zeros(static_params.max_cows, dtype=bool),
         attack_cooldown=jnp.zeros(static_params.max_cows, dtype=jnp.int32),
     )

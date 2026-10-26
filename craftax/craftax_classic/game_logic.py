@@ -89,7 +89,7 @@ def do_action(rng, state, action, static_params):
     new_zombies = new_zombies.replace(health=new_zombie_health)
 
     old_mask = new_zombies.mask[target_zombie_index]
-    new_zombies = new_zombies.replace(mask=new_zombies.health > 0)
+    new_zombies = new_zombies.replace(mask=(new_zombies.health > 0) & new_zombies.mask)
     did_kill_zombie = jnp.logical_and(
         old_mask, jnp.logical_not(new_zombies.mask[target_zombie_index])
     )
@@ -122,7 +122,7 @@ def do_action(rng, state, action, static_params):
     new_cows = new_cows.replace(health=new_cow_health)
 
     old_mask = new_cows.mask[target_cow_index]
-    new_cows = new_cows.replace(mask=new_cows.health > 0)
+    new_cows = new_cows.replace(mask=(new_cows.health > 0) & new_cows.mask)
     did_kill_cow = jnp.logical_and(
         old_mask, jnp.logical_not(new_cows.mask[target_cow_index])
     )
@@ -155,7 +155,9 @@ def do_action(rng, state, action, static_params):
     new_skeletons = new_skeletons.replace(health=new_skeleton_health)
 
     old_mask = new_skeletons.mask[target_skeleton_index]
-    new_skeletons = new_skeletons.replace(mask=new_skeletons.health > 0)
+    new_skeletons = new_skeletons.replace(
+        mask=(new_skeletons.health > 0) & new_skeletons.mask
+    )
     did_kill_skeleton = jnp.logical_and(
         old_mask, jnp.logical_not(new_skeletons.mask[target_skeleton_index])
     )
