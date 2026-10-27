@@ -158,9 +158,10 @@ Once the zip file has been extracted, the trajectories can be loaded with the `l
 `run1` is the only trajectory to complete the game.
 
 # ❌ Errata
-
 - Prior to version 1.5.0 there was a bug that made it hard/impossible for the *first* planted plant to ever grow to ripeness in both Craftax and Craftax-Classic. This should have little effect on results as `EAT_PLANT` is an extremely rare achievement, and this only affected the first plant.
 - Prior to version 1.6.0 there were two minor bugs for reward on death in Craftax-Classic. Firstly, walking into lava did not give the negative health reward. Secondly, the player could incur extra negative health reward on the final timestep as health could become negative. These may cause minor behavioural differences in trained agents.
+- Prior to version 1.7.0 there was a bug in the symbolic renderer where mobs that were off-screen were rendered on-screen. There was also a bug where mobs that were on-screen would very rarely be invisible.
+- Prior to version 1.7.0 there was a bug in Craftax-Classic where the `DO` action could revive dead mobs.
 
 # 🔎 See Also
 - ⛏️ [Crafter](https://github.com/danijar/crafter) The original Crafter benchmark.
